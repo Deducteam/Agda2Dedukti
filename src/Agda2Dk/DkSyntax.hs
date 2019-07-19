@@ -26,9 +26,38 @@ data DkDefinition =
 
 printDecl :: DkModName -> DkDefinition -> Doc
 printDecl mods (DkDefinition {name=n, staticity=b, typ=t, kind=k}) =
-  let kw = if b then empty else text "def " in
+  let special =
+        case n of
+          DkQualified ["Agda", "Primitive"] (Nothing, "Level") ->
+            text "[] naiveAgda.Term _ Level --> naiveAgda.Nat.\n"
+          DkQualified ["Agda", "Primitive"] (Nothing, "lzero") ->
+            text "[] lzero --> naiveAgda.0.\n"
+          DkQualified ["Agda", "Primitive"] (Nothing, "lsuc")  ->
+            text "[] lsuc --> naiveAgda.s.\n"
+          DkQualified ["Agda", "Primitive"] (Nothing, "_⊔_")  ->
+            text "[] _$\\sqcup$_ --> naiveAgda.max.\n"
+          otherwise                                            -> empty
+  in
+  let kw =
+        case b of
+          Defin      -> text "def "
+          TypeConstr -> printDecodedDecl mods n t
+          Static     -> empty
+  in
   let typDecl = parens (prettyDk mods k) <+> parens (prettyDk mods t) in
-  kw <> withoutFile mods n <+> text ": naiveAgda.Term" <+> typDecl <> text ".\n"
+  kw <> prettyDk mods n <+> text ": naiveAgda.Term" <+> typDecl <> text ".\n" <> special
+
+printDecodedDecl :: DkModName -> DkName -> DkTerm -> Doc
+printDecodedDecl mods (DkQualified _ id) t =
+  text "TYPE__" <> printIdent id <+> char ':' <+> decodedType mods t <> text ".\n"
+
+decodedType :: DkModName -> DkTerm -> Doc
+decodedType mods (DkSort _)              = text "Type"
+decodedType mods (DkProd s1 _ id t u)    =
+  let domDecl = parens (prettyDk mods s1) <+> parens (prettyDk mods t) in
+  parens (printIdent id <+> text ": naiveAgda.Term" <+> domDecl) <+> text "->" <+> decodedType mods u
+decodedType mods (DkQuantifLevel _ id t) =
+  parens (printIdent id <+> text ": naiveAgda.Nat") <+> text "->" <+> decodedType mods t
 
 printRules :: DkModName -> DkDefinition -> [Doc]
 printRules mods (DkDefinition {rules=l}) = map (prettyDk mods) l
@@ -94,10 +123,10 @@ data DkTerm =
   | DkProd DkSort DkSort DkIdent DkTerm DkTerm
   | DkQuantifLevel DkSort DkIdent DkTerm
   | DkConst DkName
-  | DkApp DkTerm DkTerm [DkTerm]
+  | DkApp DkTerm DkTerm
   | DkLam DkIdent (Maybe (DkTerm,DkSort)) DkTerm
   | DkDB DkIdent Int
-  | DkFake String
+  | DkLevel Lvl
 
 instance PrettyDk DkTerm where
   prettyDk mods (DkSort s)               =
@@ -113,9 +142,8 @@ instance PrettyDk DkTerm where
     text "naiveAgda.qLevel" <+> sorts <+> codomain
   prettyDk mods  (DkConst f)             =
     prettyDk mods f
-  prettyDk mods (DkApp t u l)            =
-    let args = hsep (map (parens . (prettyDk mods)) l) in
-    parens (prettyDk mods t) <+> parens (prettyDk mods u) <+> args
+  prettyDk mods (DkApp t u)            =
+    parens (prettyDk mods t) <+> parens (prettyDk mods u)
   prettyDk mods (DkLam n Nothing t)      =
     printIdent n <+> text "=>" <+> prettyDk mods t
   prettyDk mods (DkLam n (Just (a,s)) t) =
@@ -124,8 +152,8 @@ instance PrettyDk DkTerm where
     printIdent n <+> char ':' <+> annot <+> text "=>" <+> prettyDk mods t
   prettyDk mods (DkDB n _)               =
     printIdent n
-  prettyDk mods (DkFake s)               =
-    text ("FAKE "++s)
+  prettyDk mods (DkLevel l)              =
+    prettyDk mods l
 
 data DkPattern =
     DkVar DkIdent Int [DkPattern]
@@ -163,35 +191,34 @@ data DkName =
 instance PrettyDk DkName where
   prettyDk mods (DkLocal n)            = printIdent n
   prettyDk mods (DkQualified qualif n) =
+    let
+      q = if last qualif == "DEFAULT"
+          then init qualif
+          else qualif
+    in
     let modName =
-          if isPrefixOf mods qualif
-          then hcat (punctuate (text "__") (map printIdent mods))
-          else hcat (punctuate (text "__") (map printIdent qualif))
+          if mods == q
+          then empty
+          else hcat (punctuate (text "__") (map text q)) <> char '.'
     in
-    let symList = case stripPrefix mods qualif of Nothing -> [n]
-                                                  Just s  -> s++[n]
-    in
-    let symName = hcat (punctuate (text "__") (map printIdent symList)) in
-    modName <> char '.'<> symName
+    let symName = printIdent n in
+    modName <> symName
 
-withoutFile :: DkModName -> DkName -> Doc
-withoutFile mods (DkLocal n)            = printIdent n
-withoutFile mods (DkQualified qualif n) =
-  let symList = case stripPrefix mods qualif of Nothing -> qualif++[n]
-                                                Just s  -> s++[n]
-  in
-  hcat (punctuate (text "__") (map printIdent symList))
+type DkModName = [String]
 
-type DkModName = [DkIdent]
+type DkIdent = (Maybe String, String)
 
-type DkIdent = String
+printIdent (Nothing, n) =
+    text $ replace convUnicode n
+printIdent (Just m,  n) =
+    text $ replace convUnicode (m++"__"++n)
 
-printIdent n =
-    text $ replace n [] convUnicode
+data IsStatic = Static | Defin | TypeConstr
 
-type IsStatic = Bool
+replace :: Eq a => [(a, [a])] -> [a] -> [a]
+replace = replace' []
 
-replace :: Eq a => [a] -> [a] -> [(a, [a])] -> [a]
-replace []   acc _       = reverse acc
-replace (x:tl) acc assoc = case lookup x assoc of Nothing    -> replace tl (x:acc) assoc
-                                                  Just latex -> replace tl ((reverse latex)++acc) assoc
+replace' :: Eq a => [a] -> [(a, [a])] -> [a] -> [a]
+replace' acc assoc []     = reverse acc
+replace' acc assoc (x:tl) = case lookup x assoc of Nothing    -> replace' (x:acc) assoc tl
+                                                   Just latex -> replace' ((reverse latex)++acc) assoc tl

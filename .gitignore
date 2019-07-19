@@ -1,5 +1,13 @@
 *~
 *.hi
 *.o
+*.agdai
 
 src/Main
+
+translation/*
+!translation/naiveAgda.dk
+!translation/std-lib/
+!translation/tests/
+translation/std-lib/*
+translation/tests/*

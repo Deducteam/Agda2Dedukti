@@ -1,0 +1,57 @@
+Nat : Type.
+
+0 : Nat.
+def s : Nat -> Nat.
+
+defac max [Nat].
+[n]     max n n --> n.
+[n,m]   max n (max n m) --> max n m.
+[n]     max n (s n) --> s n.
+[n,m]   max n (max (s n) m) --> max (s n) m.
+[n,m]   max (s n) (max n m) --> max (s n) m.
+[n]     max 0 n    --> n.
+[n]     max (s 0) (s n) --> s n.
+
+[n, m] s (max n m) --> max (s n) (s m).
+
+def plus : Nat -> Nat -> Nat.
+[j]   plus 0     j     --> j.
+[i]   plus i     0     --> i.
+[i,j] plus i     (s j) --> s (plus i j).
+[i,j] plus (s i) j     --> s (plus i j).
+
+(; Sorts ;)
+
+Sort : Type.
+
+set  : Nat -> Sort.
+prop : Nat -> Sort.
+setOmega : Sort.
+
+(; Universe successors ;)
+def succ : Sort -> Sort.
+[i] succ (set i) --> set (s i).
+[i] succ (prop i) --> set (s i).
+
+(; Universe product rules ;)
+def rule : Sort -> Sort -> Sort.
+[i, j] rule (set i) (set j) --> set (max i j).
+[i, j] rule (set i) (prop j) --> prop (max i j).
+[i, j] rule (prop i) (set j) --> set (max i j).
+[i, j] rule (prop i) (prop j) --> prop (max i j).
+[]     rule _        setOmega --> setOmega.
+
+(; Types and terms ;)
+
+Univ : s : Sort -> Type.
+def Term : s : Sort -> a : Univ s -> Type.
+
+univ : s : Sort -> Univ (succ s).
+prod : s1 : Sort -> s2 : Sort -> a : Univ s1 -> b : (Term s1 a -> Univ s2) -> Univ (rule s1 s2).
+
+qLevel : f: (Nat -> Sort) -> (l : Nat -> Univ (f l)) -> Univ setOmega.
+
+[s] Term _ (univ s) --> Univ s.
+[s1, s2, a, b]
+    Term _ (prod s1 s2 a b) --> x : Term s1 a -> Term s2 (b x).
+[f, t] Term _ (qLevel f t) --> l : Nat -> Term (f l) (t l).
