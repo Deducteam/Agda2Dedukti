@@ -124,7 +124,7 @@ dkCompileDef _ _ _ def@(Defn {defCopy=isCopy, defName=n, theDef=d, defType=t, de
     do
       reportSDoc "agda2Dedukti" 2 $ return $ pretty def
       rules   <- extractRules n d
-      tParams <- return t -- reconstructParametersInType t
+      tParams <- reconstructParametersInType t
       typ     <- return (translateType [] tParams)
       name    <- tcMonadQname2DkNameAux d n
       return $ Just DkDefinition
