@@ -124,18 +124,19 @@ dkCompileDef _ _ _ def@(Defn {defCopy=isCopy, defName=n, theDef=d, defType=t, de
     do
       reportSDoc "agda2Dedukti" 2 $ return $ pretty def
       rules   <- extractRules n d
-      tParams <- return t -- reconstructParametersInType t
-      typ     <- return (translateType [] tParams)
+      tParams <- reconstructParametersInType t
+      typ     <- translateType [] tParams
       name    <- tcMonadQname2DkNameAux d n
+      kk      <- getKind [] t
       return $ Just DkDefinition
         { name      = name
         , mut       = m
         , staticity = extractStaticity d
         , typ       = typ
-        , kind      = getKind [] t
+        , kind      = kk
         , rules     = rules}
 
-translateType :: [DkIdent] -> Type -> DkTerm
+translateType :: [DkIdent] -> Type -> TCM DkTerm
 translateType l (El {_getSort=_, unEl=x}) = translateTerm l x
 
 extractStaticity :: Defn -> IsStatic
@@ -216,9 +217,9 @@ clause2rule nam c =
             Nothing -> return r
             Just t  -> reconstructParameters (unArg t) r
         dkNames <- return $ separateVars [] $ map (\n -> plainName2DkIdent n) names
-        ctx <- return $ extractContext dkNames (clauseTel c)
+        ctx <- extractContext dkNames (clauseTel c)
         (patts,nn) <- extractPatterns dkNames (namedClausePats c)
-        rhs <- return $ translateTerm dkNames rr
+        rhs <- translateTerm dkNames rr
         headSymb <- tcMonadQname2DkName nam
         return $ Just DkRule
           { context   = ctx
@@ -228,15 +229,15 @@ clause2rule nam c =
           , rhs       = rhs
           }
 
-extractContext :: [DkIdent] -> Telescope -> DkCtx
+extractContext :: [DkIdent] -> Telescope -> TCM DkCtx
 extractContext = extractContextAux []
 
-extractContextAux :: [DkTerm] -> [DkIdent] -> Telescope -> DkCtx
+extractContextAux :: [DkTerm] -> [DkIdent] -> Telescope -> TCM DkCtx
 extractContextAux acc names EmptyTel                                    =
-  DkCtx (zip names acc)
+  return $ DkCtx (zip names acc)
 extractContextAux acc names (ExtendTel (Dom {unDom=t}) (Abs {unAbs=r})) =
-  let typ = translateType names t in
-  extractContextAux (typ:acc) names r
+  do typ <- translateType names t
+     extractContextAux (typ:acc) names r
 
 extractPatterns :: [DkIdent] -> [NamedArg DeBruijnPattern] -> TCM ([DkPattern],LastUsed)
 extractPatterns = auxPatt (-1) []
@@ -255,8 +256,8 @@ extractPattern n l x =
     VarP _ (DBPatVar {dbPatVarIndex=i}) ->
       return (DkVar (l!!i) i [], max i n)
     DotP _ t                           ->
-      let term = translateTerm l t in
-      return (DkBrackets term, n)
+      do term <- translateTerm l t
+         return (DkBrackets term, n)
     ConP (ConHead {conName=h}) _ tl     ->
       do (patts, nn) <- auxPatt n [] l tl
          mbNbParams <- getNumberOfParameters h
@@ -268,40 +269,43 @@ extractPattern n l x =
       error "Unexpected pattern"
 
 
-translateElim :: [DkIdent] -> DkTerm -> Elims -> DkTerm
-translateElim l t []                  = t
+translateElim :: [DkIdent] -> DkTerm -> Elims -> TCM DkTerm
+translateElim l t []                  = return t
 translateElim l t ((Apply e):tl)      =
-  let arg = translateTerm l (unArg e) in
-  translateElim l (DkApp t arg) tl
+  do arg <- translateTerm l (unArg e)
+     translateElim l (DkApp t arg) tl
 translateElim l t ((Proj _ qn):tl)    =
   let proj = DkConst $ labeledQname2DkName qn in
   translateElim l (DkApp proj t) tl
 translateElim l t ((IApply _ _ _):tl) = error "Unexpected IApply"
 
 
-translateTerm :: [DkIdent] -> Term -> DkTerm
+translateTerm :: [DkIdent] -> Term -> TCM DkTerm
 translateTerm l (Var i elims) =
   translateElim l (DkDB (l!!i) i) elims
 translateTerm l (Lam _ ab) =
   let n=absName ab in
   let id = unusedVar l $ idOfVar (if n=="_" then "UNNAMED_VAR_" else n) in
-  let body = translateTerm (id:l) (unAbs ab) in
-  DkLam id Nothing body
+  do body <- translateTerm (id:l) (unAbs ab)
+     return $ DkLam id Nothing body
 translateTerm l (Lit (LitNat _ i))            =
-  toBuildInNat i
+  return $ toBuildInNat i
 translateTerm l (Def n elims)                    =
   translateElim l (DkConst (plainQname2DkName n)) elims
 translateTerm l (Con (ConHead {conName=h}) _ elims)        =
   translateElim l  (DkConst (labeledQname2DkName h)) elims
-translateTerm l (Pi (Dom {unDom=t}) (Abs{absName=n, unAbs=u})) =
+translateTerm l (Pi d@(Dom {unDom=t}) (Abs{absName=n, unAbs=u})) =
   case t of
     El {unEl=Con (ConHead {conName=h}) _ _} ->
       let dom = plainQname2DkName h in
         if dom == DkQualified ["Agda","Primitive"] (Nothing, "Level")
         then
           let id = unusedVar l $ idOfVar n in
-          let body = translateType (id:l) u in
-          DkQuantifLevel (getKind (id:l) u) id body
+          addContext d $
+          do paramU <- reconstructParametersInType u
+             body <- translateType l paramU
+             ku <- getKind (id:l) u
+             return $ DkQuantifLevel ku id body
         else
           localAux
     El {unEl=Def h []} ->
@@ -309,71 +313,115 @@ translateTerm l (Pi (Dom {unDom=t}) (Abs{absName=n, unAbs=u})) =
         if dom == DkQualified ["Agda","Primitive"] (Nothing, "Level")
         then
           let id = unusedVar l $ idOfVar n in
-          let body = translateType (id:l) u in
-          DkQuantifLevel (getKind (id:l) u) id body
+          addContext d $
+          do paramU <- reconstructParametersInType u
+             body <- translateType l paramU
+             ku <- getKind (id:l) u
+             return $ DkQuantifLevel ku id body
         else
           localAux
     otherwise -> localAux
     where
       localAux =
         let id = unusedVar l $ idOfVar (if n=="_" then "UNNAMED_VAR_" else n) in
-        let dom = translateType l t in
-        let body = translateType (id:l) u in
-        DkProd (getKind l t) (getKind (id:l) u) id dom body
-translateTerm l (Pi (Dom {unDom=t}) (NoAbs{absName=n, unAbs=u})) =
+        do paramT <- reconstructParametersInType t
+           dom <- translateType l paramT
+           body <- addContext d $ do
+             paramU <- reconstructParametersInType u
+             translateType l paramU
+           kt <- getKind l t
+           ku <- getKind (id:l) u
+           return $ DkProd kt ku id dom body
+translateTerm l (Pi d@(Dom {unDom=t}) (NoAbs{absName=n, unAbs=u})) =
   let id = unusedVar l $ idOfVar (if n=="_" then "UNNAMED_VAR_" else n) in
-  let dom = translateType l t in
-  let body = translateType l u in
-  DkProd (getKind l t) (getKind l u) id dom body
-translateTerm l (Sort s)                      = DkSort (extractSort l s)
-translateTerm l (Level lev)                   = DkLevel (lvlFromLevel l lev)
+  do paramT <- reconstructParametersInType t
+     dom <- translateType l paramT
+     body <- addContext d $ do
+       paramU <- reconstructParametersInType u
+       translateType l paramU
+     kt <- getKind l t
+     ku <- getKind l u
+     return $ DkProd kt ku id dom body
+translateTerm l (Sort s)                      =
+  do ss <- extractSort l s
+     return $ DkSort ss
+translateTerm l (Level lev)                   =
+  do lv <- lvlFromLevel l lev
+     return $ DkLevel lv
 translateTerm l (MetaV {})                    = error "Not implemented yet : MetaV"
 translateTerm l (DontCare t)                  = translateTerm l t
 translateTerm l (Dummy _ _)                   = error "Not implemented yet : Dummy"
 translateTerm l (Lit _)                       = error "Not implemented yet : Lit"
 
-extractSort :: [DkIdent] -> Sort -> DkSort
-extractSort l (Type i)                  = DkSet (lvlFromLevel l i)
-extractSort l (Prop i)                  = DkSet (lvlFromLevel l i)
-extractSort l Inf                       = DkSetOmega
-extractSort l SizeUniv                  = DkSet (LvlInt 0)
+extractSort :: [DkIdent] -> Sort -> TCM DkSort
+extractSort l (Type i)                  =
+  do lv <- lvlFromLevel l i
+     return $ DkSet lv
+extractSort l (Prop i)                  =
+  do lv <- lvlFromLevel l i
+     return $ DkProp lv
+extractSort l Inf                       = return DkSetOmega
+extractSort l SizeUniv                  = return $ DkSet (LvlInt 0)
 extractSort l (PiSort (Dom{unDom=s}) t) =
-  DkPi (extractSort l (_getSort s)) (extractSort l (unAbs t))
-extractSort l (UnivSort s)              = DkUniv (extractSort l s)
-extractSort _ _                         = DkDefaultSort
+  do dom <- extractSort l (_getSort s)
+     codom <- extractSort l (unAbs t)
+     return $ DkPi dom codom
+extractSort l (UnivSort s)              =
+  do ss <- extractSort l s
+     return $ DkUniv ss
+extractSort _ _                         = return DkDefaultSort
 
-getKind :: [DkIdent] -> Type -> DkSort
+getKind :: [DkIdent] -> Type -> TCM DkSort
 getKind l (El {_getSort=s}) = extractSort l s
 
-lvlFromLevel :: [DkIdent] -> Level -> Lvl
-lvlFromLevel l (Max [])                             = LvlInt 0
-lvlFromLevel l (Max ((ClosedLevel i):[]))           = LvlInt (fromInteger i)
+lvlFromLevel :: [DkIdent] -> Level -> TCM Lvl
+lvlFromLevel l (Max [])                             = return $ LvlInt 0
+lvlFromLevel l (Max ((ClosedLevel i):[]))           = return $ LvlInt (fromInteger i)
 lvlFromLevel l (Max ((ClosedLevel i):tl))           =
-  LvlMax (LvlInt (fromInteger i)) (lvlFromLevel l (Max tl))
+  do r <- lvlFromLevel l (Max tl)
+     return $ LvlMax (LvlInt (fromInteger i)) r
 lvlFromLevel l (Max ((Plus 0 (BlockedLevel _ t)):[])) =
-  LvlTerm (translateTerm l t)
+  do tt <- translateTerm l t
+     return $ LvlTerm tt
 lvlFromLevel l (Max ((Plus i (BlockedLevel _ t)):[])) =
-  LvlPlus (LvlInt (fromInteger i)) (LvlTerm (translateTerm l t))
+  do tt <- translateTerm l t
+     return $ LvlPlus (LvlInt (fromInteger i)) (LvlTerm tt)
 lvlFromLevel l (Max ((Plus 0 (BlockedLevel _ t)):tl)) =
-  LvlMax (LvlTerm (translateTerm l t)) (lvlFromLevel l (Max tl))
+  do r <- lvlFromLevel l (Max tl)
+     tt <- translateTerm l t
+     return $ LvlMax (LvlTerm tt) r
 lvlFromLevel l (Max ((Plus i (BlockedLevel _ t)):tl)) =
-  LvlMax (LvlPlus (LvlInt (fromInteger i)) (LvlTerm (translateTerm l t))) (lvlFromLevel l (Max tl))
+  do r <- lvlFromLevel l (Max tl)
+     tt <- translateTerm l t
+     return $ LvlMax (LvlPlus (LvlInt (fromInteger i)) (LvlTerm tt)) r
 lvlFromLevel l (Max ((Plus 0 (NeutralLevel _ t)):[])) =
-  LvlTerm (translateTerm l t)
+  do tt <- translateTerm l t
+     return $ LvlTerm tt
 lvlFromLevel l (Max ((Plus i (NeutralLevel _ t)):[])) =
-  LvlPlus (LvlInt (fromInteger i)) (LvlTerm (translateTerm l t))
+  do tt <- translateTerm l t
+     return $ LvlPlus (LvlInt (fromInteger i)) (LvlTerm tt)
 lvlFromLevel l (Max ((Plus 0 (NeutralLevel _ t)):tl)) =
-  LvlMax (LvlTerm (translateTerm l t)) (lvlFromLevel l (Max tl))
+  do r <- lvlFromLevel l (Max tl)
+     tt <- translateTerm l t
+     return $ LvlMax (LvlTerm tt) r
 lvlFromLevel l (Max ((Plus i (NeutralLevel _ t)):tl)) =
-  LvlMax (LvlPlus (LvlInt (fromInteger i)) (LvlTerm (translateTerm l t))) (lvlFromLevel l (Max tl))
+  do r <- lvlFromLevel l (Max tl)
+     tt <- translateTerm l t
+     return $ LvlMax (LvlPlus (LvlInt (fromInteger i)) (LvlTerm tt)) r
 lvlFromLevel l (Max ((Plus 0 (UnreducedLevel t)):[])) =
-  LvlTerm (translateTerm l t)
+  do tt <- translateTerm l t
+     return $ LvlTerm tt
 lvlFromLevel l (Max ((Plus i (UnreducedLevel t)):[])) =
-  LvlPlus (LvlInt (fromInteger i)) (LvlTerm (translateTerm l t))
+  do tt <- translateTerm l t
+     return $ LvlPlus (LvlInt (fromInteger i)) (LvlTerm tt)
 lvlFromLevel l (Max ((Plus 0 (UnreducedLevel t)):tl)) =
-  LvlMax (LvlTerm (translateTerm l t)) (lvlFromLevel l (Max tl))
+  do r <- lvlFromLevel l (Max tl)
+     tt <- translateTerm l t
+     return $ LvlMax (LvlTerm tt) r
 lvlFromLevel l (Max ((Plus i (UnreducedLevel t)):tl)) =
-  LvlMax (LvlPlus (LvlInt (fromInteger i)) (LvlTerm (translateTerm l t))) (lvlFromLevel l (Max tl))
+  do r <- lvlFromLevel l (Max tl)
+     tt <- translateTerm l t
+     return $ LvlMax (LvlPlus (LvlInt (fromInteger i)) (LvlTerm tt)) r
 
 plainQname2DkName :: QName -> DkName
 plainQname2DkName n
