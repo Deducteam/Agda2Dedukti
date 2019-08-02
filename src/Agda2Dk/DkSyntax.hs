@@ -7,7 +7,9 @@ import Data.Int
 
 import Text.PrettyPrint
 
+import Agda.Syntax.Internal
 import qualified Agda.Syntax.Concrete.Name as CN
+import Agda.Utils.Impossible
 
 import Agda2Dk.ConvUnicode
 
@@ -17,7 +19,6 @@ class PrettyDk a where
 data DkDefinition =
    DkDefinition
     { name      :: DkName
-    , mut       :: Int32
     , staticity :: IsStatic
     , typ       :: DkTerm
     , kind      :: DkSort
@@ -28,13 +29,13 @@ printDecl :: DkModName -> DkDefinition -> Doc
 printDecl mods (DkDefinition {name=n, staticity=b, typ=t, kind=k}) =
   let special =
         case n of
-          DkQualified ["Agda", "Primitive"] (Nothing, "Level") ->
+          DkQualified ["Agda", "Primitive"] [] "Level" ->
             text "[] naiveAgda.Term _ Level --> naiveAgda.Nat.\n"
-          DkQualified ["Agda", "Primitive"] (Nothing, "lzero") ->
+          DkQualified ["Agda", "Primitive"] [] "lzero" ->
             text "[] lzero --> naiveAgda.0.\n"
-          DkQualified ["Agda", "Primitive"] (Nothing, "lsuc")  ->
+          DkQualified ["Agda", "Primitive"] [] "lsuc"  ->
             text "[] lsuc --> naiveAgda.s.\n"
-          DkQualified ["Agda", "Primitive"] (Nothing, "_⊔_")  ->
+          DkQualified ["Agda", "Primitive"] [] "_⊔_"  ->
             text "[] _$\\sqcup$_ --> naiveAgda.max.\n"
           otherwise                                            -> empty
   in
@@ -44,17 +45,18 @@ printDecl mods (DkDefinition {name=n, staticity=b, typ=t, kind=k}) =
           TypeConstr -> printDecodedDecl mods n t
           Static     -> empty
   in
-  let typDecl = parens (prettyDk mods k) <+> parens (prettyDk mods t) in
+  let typDecl = printSort Nested mods k <+> printTerm Nested mods t in
   kw <> prettyDk mods n <+> text ": naiveAgda.Term" <+> typDecl <> text ".\n" <> special
 
 printDecodedDecl :: DkModName -> DkName -> DkTerm -> Doc
-printDecodedDecl mods (DkQualified _ id) t =
-  text "TYPE__" <> printIdent id <+> char ':' <+> decodedType mods t <> text ".\n"
+printDecodedDecl mods (DkQualified _ pseudo id) t =
+  let ident = hcat (punctuate (text "__") (map printIdent pseudo)) <> printIdent id in
+  text "TYPE__" <> ident <+> char ':' <+> decodedType mods t <> text ".\n"
 
 decodedType :: DkModName -> DkTerm -> Doc
 decodedType mods (DkSort _)              = text "Type"
 decodedType mods (DkProd s1 _ id t u)    =
-  let domDecl = parens (prettyDk mods s1) <+> parens (prettyDk mods t) in
+  let domDecl = printSort Nested mods s1 <+> printTerm Nested mods t in
   parens (printIdent id <+> text ": naiveAgda.Term" <+> domDecl) <+> text "->" <+> decodedType mods u
 decodedType mods (DkQuantifLevel _ id t) =
   parens (printIdent id <+> text ": naiveAgda.Nat") <+> text "->" <+> decodedType mods t
@@ -70,11 +72,11 @@ data Lvl =
 
 instance PrettyDk Lvl where
  prettyDk mods (LvlInt i)    = unary i
- prettyDk mods (LvlTerm t)   = prettyDk mods t
+ prettyDk mods (LvlTerm t)   = printTerm Nested mods t
  prettyDk mods (LvlMax a b)  =
-   text "naiveAgda.max" <+> parens (prettyDk mods a) <+> parens (prettyDk mods b)
+   parens (text "naiveAgda.max" <+> prettyDk mods a <+> prettyDk mods b)
  prettyDk mods (LvlPlus a b) =
-   text "naiveAgda.plus" <+> parens (prettyDk mods a) <+> parens (prettyDk mods b)
+   parens (text "naiveAgda.plus" <+> prettyDk mods a <+> prettyDk mods b)
 
 unary :: Int -> Doc
 unary x
@@ -89,34 +91,40 @@ data DkSort =
   | DkPi DkSort DkSort
   | DkDefaultSort
 
-instance PrettyDk DkSort where
-  prettyDk mods (DkSet i)     = text "naiveAgda.set"  <+> parens (prettyDk mods i)
-  prettyDk mods (DkProp i)    = text "naiveAgda.prop" <+> parens (prettyDk mods i)
-  prettyDk _    DkSetOmega    = text "naiveAgda.setOmega"
-  prettyDk mods (DkUniv s)    = text "naiveAgda.succ" <+> parens (prettyDk mods s)
-  prettyDk mods (DkPi s t)    = text "naiveAgda.rule" <+> parens (prettyDk mods s) <+> parens (prettyDk mods t)
-  prettyDk _    DkDefaultSort = text "DEFAULT_SORT"
+printSort :: Position -> DkModName -> DkSort -> Doc
+printSort pos mods (DkSet i)     =
+  paren pos $ text "naiveAgda.set"  <+> prettyDk mods i
+printSort pos mods (DkProp i)    =
+  paren pos $ text "naiveAgda.prop" <+> prettyDk mods i
+printSort pos _    DkSetOmega    =
+  text "naiveAgda.setOmega"
+printSort pos mods (DkUniv s)    =
+  paren pos $ text "naiveAgda.succ" <+> printSort pos mods s
+printSort pos mods (DkPi s t)    =
+  paren pos $
+    text "naiveAgda.rule" <+> printSort pos mods s <+> printSort pos mods t
+printSort pos _    DkDefaultSort =
+  text "DEFAULT_SORT"
 
 data DkRule =
    DkRule
     { context   :: DkCtx
     , headsymb  :: DkName
-    , implicits :: Int
     , patts     :: [DkPattern]
     , rhs       :: DkTerm
     }
 
 instance PrettyDk DkRule where
-  prettyDk mods (DkRule {context=c, headsymb=hd, patts=l, rhs=t, implicits=imp}) =
-    let varList = concat (map usedIndex l) in
-    let lhs = prettyDk mods hd <+> text (concat (replicate imp "_ ")) <> hsep (map (parens . (prettyDk mods)) l) in
-    printContext varList c <+> lhs <+> text "-->" <+> prettyDk mods t <> text ".\n"
+  prettyDk mods (DkRule {context=c, headsymb=hd, patts=patts, rhs=rhs}) =
+    let varList = concat (map usedIndex patts) in
+    let lhs = prettyDk mods hd <+> hsep (map (printPattern Nested mods) patts) in
+    printContext varList c <+> lhs <+> text "-->" <+> printTerm Top mods rhs <> text ".\n"
 
 usedIndex :: DkPattern -> [Int]
 usedIndex (DkVar _ i l)  = i:(concat (map usedIndex l))
-usedIndex (DkFun _ _ l)    = concat (map usedIndex l)
+usedIndex (DkFun f l)  = concat (map usedIndex l)
 usedIndex (DkLambda _ p) = map (\n -> n-1) (usedIndex p)
-usedIndex (DkBrackets _) = []
+usedIndex _              = []
 
 data DkTerm =
     DkSort DkSort
@@ -128,55 +136,80 @@ data DkTerm =
   | DkDB DkIdent Int
   | DkLevel Lvl
 
-instance PrettyDk DkTerm where
-  prettyDk mods (DkSort s)               =
-    text "naiveAgda.univ"<+>parens (prettyDk mods s)
-  prettyDk mods (DkProd s1 s2 n t u)     =
-    let sorts = parens (prettyDk mods s1) <+> parens (prettyDk mods s2) in
-    let domain =  parens (prettyDk mods t) in
-    let codomain = parens (printIdent n <+> text "=>" <+> prettyDk mods u) in
+printTerm :: Position -> DkModName -> DkTerm -> Doc
+printTerm pos mods (DkSort s)               =
+  paren pos $
+    text "naiveAgda.univ" <+> printSort Nested mods s
+printTerm pos mods (DkProd s1 s2 n t u)     =
+  let sorts = printSort Nested mods s1 <+> printSort Nested mods s2 in
+  let domain =  printTerm Nested mods t in
+  let codomain = parens (printIdent n <+> text "=>" <+> printTerm Top mods u) in
+  paren pos $
     text "naiveAgda.prod" <+> sorts <+> domain <+> codomain
-  prettyDk mods (DkQuantifLevel s n u)   =
-    let sorts = parens (printIdent n <+> text "=>" <+> prettyDk mods s) in
-    let codomain = parens (printIdent n <+> text "=>" <+> prettyDk mods u) in
+printTerm pos mods (DkQuantifLevel s n u)   =
+  let sorts = parens (printIdent n <+> text "=>" <+> printSort Top mods s) in
+  let codomain = parens (printIdent n <+> text "=>" <+> printTerm Top mods u) in
+  paren pos $
     text "naiveAgda.qLevel" <+> sorts <+> codomain
-  prettyDk mods  (DkConst f)             =
-    prettyDk mods f
-  prettyDk mods (DkApp t u)            =
-    parens (prettyDk mods t) <+> parens (prettyDk mods u)
-  prettyDk mods (DkLam n Nothing t)      =
-    printIdent n <+> text "=>" <+> prettyDk mods t
-  prettyDk mods (DkLam n (Just (a,s)) t) =
-    let typCode = parens (prettyDk mods a) in
-    let annot = text "naiveAgda.Term" <+> parens (prettyDk mods s) <+> typCode in
-    printIdent n <+> char ':' <+> annot <+> text "=>" <+> prettyDk mods t
-  prettyDk mods (DkDB n _)               =
-    printIdent n
-  prettyDk mods (DkLevel l)              =
-    prettyDk mods l
+printTerm pos mods  (DkConst f)             =
+  prettyDk mods f
+printTerm pos mods (DkApp t u)              =
+  paren pos $
+    printTerm Top mods t <+> printTerm Nested mods u
+printTerm pos mods (DkLam n Nothing t)      =
+  paren pos $
+    printIdent n <+> text "=>" <+> printTerm Top mods t
+printTerm pos mods (DkLam n (Just (a,s)) t) =
+  let typCode = printTerm Nested mods a in
+  let annot = text "naiveAgda.Term" <+> printSort Nested mods s <+> typCode in
+  paren pos $
+    parens (printIdent n <+> char ':' <+> annot) <+> text "=>" <+> printTerm Top mods t
+printTerm pos mods (DkDB n _)               =
+  printIdent n
+printTerm pos mods (DkLevel l)              =
+  prettyDk mods l
+
+paren :: Position -> Doc -> Doc
+paren pos =
+  case pos of
+    Top    -> id
+    Nested -> parens
 
 data DkPattern =
     DkVar DkIdent Int [DkPattern]
-  | DkFun DkName Int [DkPattern]
+  | DkFun DkName [DkPattern]
   | DkLambda DkIdent DkPattern
+  | DkBuiltin DkTerm
   | DkBrackets DkTerm
+  | DkJoker
 
-instance PrettyDk DkPattern where
-  prettyDk mods (DkVar n _ l)  =
-    printIdent n <+> hsep (map (parens . (prettyDk mods)) l)
-  prettyDk mods (DkFun n params l)    =
-    prettyDk mods n <+> text (concat (replicate params "_ ")) <> hsep (map (parens . (prettyDk mods)) l)
-  prettyDk mods (DkLambda n t) =
-    printIdent n <+> text "=>" <+> prettyDk mods t
-  prettyDk mods (DkBrackets t) =
-    braces (prettyDk mods t)
+printPattern ::   Position -> DkModName -> DkPattern -> Doc
+printPattern pos mods (DkVar n _ [])  =
+  printIdent n
+printPattern pos mods (DkVar n _ l)  =
+  paren pos $
+    printIdent n <+> hsep (map (printPattern Nested mods) l)
+printPattern pos mods (DkFun n [])    =
+  prettyDk mods n
+printPattern pos mods (DkFun n l)    =
+  paren pos $
+    prettyDk mods n <+> hsep (map (printPattern Nested mods) l)
+printPattern pos mods (DkLambda n t) =
+  paren pos $
+    printIdent n <+> text "=>" <+> printPattern Top mods t
+printPattern pos mods (DkBuiltin t) =
+  printTerm pos mods t
+printPattern pos mods (DkBrackets t) =
+  braces (printTerm Top mods t)
+printPattern pos mods DkJoker =
+  char '_'
 
-newtype DkCtx = DkCtx [(DkIdent,DkTerm)]
+type DkCtx = [DkIdent]
 
 printContext :: [Int] -> DkCtx -> Doc
-printContext used (DkCtx l) =
+printContext used l =
   let ll = extractIndex 0 (sortUniq used) l in
-  brackets (hsep (punctuate (char ',') (map (printIdent . fst) (reverse ll))))
+  brackets (hsep (punctuate (char ',') (map printIdent (reverse ll))))
   where
     extractIndex _ []     _        = []
     extractIndex a (b:tl) (x:vars)
@@ -185,33 +218,26 @@ printContext used (DkCtx l) =
 
 data DkName =
     DkLocal DkIdent
-  | DkQualified DkModName DkIdent
+  | DkQualified DkModName DkModName DkIdent
   deriving (Eq, Show)
 
 instance PrettyDk DkName where
   prettyDk mods (DkLocal n)            = printIdent n
-  prettyDk mods (DkQualified qualif n) =
-    let
-      q = if last qualif == "DEFAULT"
-          then init qualif
-          else qualif
-    in
+  prettyDk mods (DkQualified qualif pseudo n) =
     let modName =
-          if mods == q
+          if mods == qualif
           then empty
-          else hcat (punctuate (text "__") (map text q)) <> char '.'
+          else hcat (punctuate (text "__") (map text qualif)) <> char '.'
     in
-    let symName = printIdent n in
+    let symName = hcat (map (\x -> printIdent (x++"__")) pseudo) <> printIdent n in
     modName <> symName
 
 type DkModName = [String]
 
-type DkIdent = (Maybe String, String)
+type DkIdent = String
 
-printIdent (Nothing, n) =
+printIdent n=
     text $ replace convUnicode n
-printIdent (Just m,  n) =
-    text $ replace convUnicode (m++"__"++n)
 
 data IsStatic = Static | Defin | TypeConstr
 
@@ -222,3 +248,5 @@ replace' :: Eq a => [a] -> [(a, [a])] -> [a] -> [a]
 replace' acc assoc []     = reverse acc
 replace' acc assoc (x:tl) = case lookup x assoc of Nothing    -> replace' (x:acc) assoc tl
                                                    Just latex -> replace' ((reverse latex)++acc) assoc tl
+
+data Position = Nested | Top
