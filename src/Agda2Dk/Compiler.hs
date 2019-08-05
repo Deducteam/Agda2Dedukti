@@ -178,16 +178,16 @@ extractRules n (Function {funCovering=f})     =
     l <- mapM (clause2rule n) f
     return $ catMaybes l
 extractRules n (Datatype {dataClause=Just c, dataPars=i, dataIxs=j}) =
-  do l <- sequence [clause2rule n c, decodedVersion n (i+j) >>= (return . Just)]
+  do l <- sequence [clause2rule n c, Just <$> decodedVersion n (i+j)]
      return $ catMaybes l
 extractRules n (Record {recClause=Just c, recPars=i})    =
-  do l <- sequence [clause2rule n c, decodedVersion n i >>= (return . Just)]
+  do l <- sequence [clause2rule n c, Just <$> decodedVersion n i]
      return $ catMaybes l
 extractRules n (Datatype {dataClause=Nothing, dataPars=i, dataIxs=j}) =
-  do l <- sequence [decodedVersion n (i+j) >>= (return . Just)]
+  do l <- sequence [Just <$> decodedVersion n (i+j)]
      return $ catMaybes l
 extractRules n (Record {recClause=Nothing, recPars=i})    =
-  do l <- sequence [decodedVersion n i >>= (return . Just)]
+  do l <- sequence [Just <$> decodedVersion n i]
      return $ catMaybes l
 extractRules n (Primitive {primClauses=p})    =
   do
