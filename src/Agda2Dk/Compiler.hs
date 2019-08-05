@@ -178,16 +178,16 @@ extractRules n (Function {funCovering=f})     =
     l <- mapM (clause2rule n) f
     return $ catMaybes l
 extractRules n (Datatype {dataClause=Just c, dataPars=i, dataIxs=j}) =
-  do l <- sequence [clause2rule n c, Just <$> decodedVersion n (i+j)]
-     return $ catMaybes l
-extractRules n (Record {recClause=Just c, recPars=i})    =
-  do l <- sequence [clause2rule n c, Just <$> decodedVersion n i]
+  do l <- sequence [clause2rule n c, Just <$> decodedVersion n (i+j), Just <$> etaIsId n i]
      return $ catMaybes l
 extractRules n (Datatype {dataClause=Nothing, dataPars=i, dataIxs=j}) =
-  do l <- sequence [Just <$> decodedVersion n (i+j)]
+  do l <- sequence [Just <$> decodedVersion n (i+j), Just <$> etaIsId n i]
      return $ catMaybes l
-extractRules n (Record {recClause=Nothing, recPars=i})    =
-  do l <- sequence [Just <$> decodedVersion n i]
+extractRules n (Record {recClause=Just c, recPars=i, recConHead=hd, recFields=f}) =
+  do l <- sequence [clause2rule n c, Just <$> decodedVersion n i, Just <$> etaExpansion n i hd f]
+     return $ catMaybes l
+extractRules n (Record {recClause=Nothing, recPars=i, recConHead=hd, recFields=f})    =
+  do l <- sequence [Just <$> decodedVersion n i, Just <$> etaExpansion n i hd f]
      return $ catMaybes l
 extractRules n (Primitive {primClauses=p})    =
   do
@@ -195,6 +195,56 @@ extractRules n (Primitive {primClauses=p})    =
     l <- mapM (clause2rule n) recordCleaned
     return $ catMaybes l
 extractRules _ _                              = sequence []
+
+etaIsId :: QName -> Int -> TCM DkRule
+etaIsId n i = do
+  let hd = DkQualified ["naiveAgda"] [] "etaExpand"
+  nn <- qName2DkName n
+  return $ DkRule
+    { context   = genCtx i
+    , headsymb  = hd
+    , patts     = [DkJoker, DkFun nn (genVars i), DkVar "y" i []]
+    , rhs       = DkDB "y" i
+    }
+  where
+    genCtx = genCtxAux ["y"]
+    genCtxAux acc 0 = acc
+    genCtxAux acc j = genCtxAux (ind2DkIdent j:acc) (j-1)
+    genVars = genVarsAux []
+    genVarsAux acc 0 = acc
+    genVarsAux acc j = genVarsAux ((DkVar (ind2DkIdent j) (j-1) []):acc) (j-1)
+    ind2DkIdent j = "x"++ show j
+
+
+etaExpansion :: QName -> Int -> ConHead -> [Arg QName] -> TCM DkRule
+etaExpansion n i ConHead{conName = cons} l = do
+  let hd = DkQualified ["naiveAgda"] [] "etaExpand"
+  nn <- qName2DkName n
+  cc <- qName2DkName cons
+  rhs <- constructRhs (DkConst cc)
+  return $ DkRule
+    { context   = genCtx i
+    , headsymb  = hd
+    , patts     = [DkJoker, DkFun nn (genVars i), DkVar "y" i []]
+    , rhs       = rhs
+    }
+  where
+    genCtx = genCtxAux ["y"]
+    genCtxAux acc 0 = acc
+    genCtxAux acc j = genCtxAux (ind2DkIdent j:acc) (j-1)
+    genVars = genVarsAux []
+    genVarsAux acc 0 = acc
+    genVarsAux acc j = genVarsAux ((DkVar (ind2DkIdent j) (j-1) []):acc) (j-1)
+    constructRhs t = constructRhsFields (constructRhsParams 0 t) (map unArg l)
+    constructRhsParams j t =
+      if i==j
+      then t
+      else constructRhsParams (j+1) (DkApp t (DkDB (ind2DkIdent (j+1)) j))
+    constructRhsFields t [] = return t
+    constructRhsFields t (u:tl) = do
+      uu <- qName2DkName u
+      constructRhsFields (DkApp t (DkApp (constructRhsParams 0 (DkConst uu)) (DkDB "y" i))) tl
+    ind2DkIdent j = "x"++ show j
 
 decodedVersion :: QName -> Int -> TCM DkRule
 decodedVersion nam i = do
@@ -205,20 +255,21 @@ decodedVersion nam i = do
     { context   = genCtx i
     , headsymb  = hd
     , patts     = [DkJoker,DkFun nn (genVars i)]
-    , rhs       = constructRhs (DkConst decodedName) i}
+    , rhs       = constructRhs (DkConst decodedName)
+    }
   where
     genCtx = genCtxAux []
     genCtxAux acc 0 = acc
-    genCtxAux acc i = genCtxAux (name2DkIdentInd i:acc) (i-1)
+    genCtxAux acc j = genCtxAux (ind2DkIdent i:acc) (j-1)
     genVars = genVarsAux []
     genVarsAux acc 0 = acc
-    genVarsAux acc i = genVarsAux ((DkVar (name2DkIdentInd i) (i-1) []):acc) (i-1)
+    genVarsAux acc j = genVarsAux ((DkVar (ind2DkIdent j) (j-1) []):acc) (j-1)
     constructRhs = constructRhsAux 0
-    constructRhsAux j t i =
+    constructRhsAux j t =
       if i==j
       then t
-      else constructRhsAux (j+1) (DkApp t (DkDB (name2DkIdentInd (j+1)) (i-j-1))) i
-    name2DkIdentInd i = "x"++ show i
+      else constructRhsAux (j+1) (DkApp t (DkDB (ind2DkIdent (j+1)) j))
+    ind2DkIdent j = "x"++ show j
 
 clause2rule :: QName -> Clause -> TCM (Maybe DkRule)
 clause2rule nam c = do
