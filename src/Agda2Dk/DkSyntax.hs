@@ -30,13 +30,13 @@ printDecl mods (DkDefinition {name=n, staticity=b, typ=t, kind=k}) =
   let special =
         case n of
           DkQualified ["Agda", "Primitive"] [] "Level" ->
-            text "[] naiveAgda.Term _ Level --> naiveAgda.Nat.\n"
+            text "[] naiveAgda.Term _ Level --> naiveAgda.Lvl.\n"
           DkQualified ["Agda", "Primitive"] [] "lzero" ->
-            text "[] lzero --> naiveAgda.0.\n"
+            text "[] lzero -->" <+> printLvl mods [] <> text ".\n"
           DkQualified ["Agda", "Primitive"] [] "lsuc"  ->
-            text "[] lsuc --> naiveAgda.s.\n"
+            text "[] lsuc --> naiveAgda.sucLvl.\n"
           DkQualified ["Agda", "Primitive"] [] "_⊔_"  ->
-            text "[] _$\\sqcup$_ --> naiveAgda.max.\n"
+            text "[] _$\\sqcup$_ --> naiveAgda.maxLvl.\n"
           otherwise                                            -> empty
   in
   let kw =
@@ -59,24 +59,30 @@ decodedType mods (DkProd s1 _ id t u)    =
   let domDecl = printSort Nested mods s1 <+> printTerm Nested mods t in
   parens (printIdent id <+> text ": naiveAgda.Term" <+> domDecl) <+> text "->" <+> decodedType mods u
 decodedType mods (DkQuantifLevel _ id t) =
-  parens (printIdent id <+> text ": naiveAgda.Nat") <+> text "->" <+> decodedType mods t
+  parens (printIdent id <+> text ": naiveAgda.Lvl") <+> text "->" <+> decodedType mods t
 
 printRules :: DkModName -> DkDefinition -> [Doc]
 printRules mods (DkDefinition {rules=l}) = map (prettyDk mods) l
 
-data Lvl =
-    LvlInt Int
-  | LvlTerm DkTerm
-  | LvlMax Lvl Lvl
-  | LvlPlus Lvl Lvl
+type Lvl = [PreLvl]
 
-instance PrettyDk Lvl where
- prettyDk mods (LvlInt i)    = unary i
- prettyDk mods (LvlTerm t)   = printTerm Nested mods t
- prettyDk mods (LvlMax a b)  =
-   parens (text "naiveAgda.max" <+> prettyDk mods a <+> prettyDk mods b)
- prettyDk mods (LvlPlus a b) =
-   parens (text "naiveAgda.plus" <+> prettyDk mods a <+> prettyDk mods b)
+printLvl :: DkModName -> Lvl -> Doc
+printLvl mods l =
+  parens (text "naiveAgda.Max naiveAgda.0 naiveAgda.Empty" <+> printPreLvlList mods l)
+
+printPreLvlList mods []     = text "naiveAgda.Empty"
+printPreLvlList mods (a:tl) =
+  parens $ text "naiveAgda.Cons" <+> prettyDk mods a <+> printPreLvlList mods tl
+
+data PreLvl =
+    LvlInt Int
+  | LvlPlus Int DkTerm
+
+instance PrettyDk PreLvl where
+ prettyDk mods (LvlInt i)    =
+    parens (text "naiveAgda.Int" <+> (unary i))
+ prettyDk mods (LvlPlus i t) =
+   parens (text "naiveAgda.Plus" <+> (unary i) <+> printTerm Nested mods t)
 
 unary :: Int -> Doc
 unary x
@@ -93,9 +99,9 @@ data DkSort =
 
 printSort :: Position -> DkModName -> DkSort -> Doc
 printSort pos mods (DkSet i)     =
-  paren pos $ text "naiveAgda.set"  <+> prettyDk mods i
+  paren pos $ text "naiveAgda.set"  <+> printLvl mods i
 printSort pos mods (DkProp i)    =
-  paren pos $ text "naiveAgda.prop" <+> prettyDk mods i
+  paren pos $ text "naiveAgda.prop" <+> printLvl mods i
 printSort pos _    DkSetOmega    =
   text "naiveAgda.setOmega"
 printSort pos mods (DkUniv s)    =
@@ -163,11 +169,11 @@ printTerm pos mods (DkLam n (Just (a,s)) t) =
   let typCode = printTerm Nested mods a in
   let annot = text "naiveAgda.Term" <+> printSort Nested mods s <+> typCode in
   paren pos $
-    parens (printIdent n <+> char ':' <+> annot) <+> text "=>" <+> printTerm Top mods t
+    printIdent n <+> char ':' <+> annot <+> text "=>" <+> printTerm Top mods t
 printTerm pos mods (DkDB n _)               =
   printIdent n
 printTerm pos mods (DkLevel l)              =
-  prettyDk mods l
+  printLvl mods l
 
 paren :: Position -> Doc -> Doc
 paren pos =
