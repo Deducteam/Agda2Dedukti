@@ -6,7 +6,7 @@
 src/Main
 
 translation/*
-!translation/naiveAgda.dk
+!translation/*.dk
 !translation/std-lib/
 !translation/tests/
 translation/std-lib/*

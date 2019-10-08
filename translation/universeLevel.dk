@@ -1,0 +1,49 @@
+Nat : Type.
+
+0 : Nat.
+s : Nat -> Nat.
+
+(; Those rules are sufficient since there are no variables of type Nat in the encoding ;)
+def plus : Nat -> Nat -> Nat.
+[y]   plus 0     y     --> y.
+[x,y] plus (s x) y     --> s (plus x y).
+
+def max : Nat -> Nat -> Nat.
+[x]   max x     0     --> x.
+[y]   max 0     y     --> y.
+[x,y] max (s x) (s y) --> s (max x y).
+
+Lvl : Type.
+PreLvl : Type.
+Int : Nat -> PreLvl.
+Plus : Nat -> Lvl -> PreLvl.
+
+(; PreLvl and PreLvlList are the same thing in the encoding ;)
+Empty : PreLvl.
+defac Cons [PreLvl].
+[i,j,x] Cons (Plus i x) (Plus j x) --> Plus (max i j) x.
+[] Cons Empty Empty --> Empty.
+
+def map : (Nat -> Nat) -> PreLvl -> PreLvl.
+[f] map f Empty --> Empty.
+[f,i,tl] map f (Cons (Int i) tl) --> Cons (Int (f i)) (map f tl).
+[f,i,y,tl] map f (Cons (Plus i y) tl) --> Cons (Plus (f i) y) (map f tl).
+
+def Max : Nat -> PreLvl -> PreLvl -> Lvl.
+(;
+The invariants are :
+ - [Max i (Cons (Plus j x) _) _] is such that if x is a variable, i>=j
+ - The first list does not contain Int
+The snd list is here for Lvl which does not satisfies the invariant yet.
+;)
+[i,acc,j,tl]   Max i acc (Cons (Int j) tl)    --> Max (max i j) acc tl.
+[i,acc,j,y,tl] Max i acc (Cons (Plus j y) tl) --> Max (max i j) (Cons (Plus j y) acc) tl.
+
+[x] Max 0 (Cons (Plus 0 x) Empty) Empty --> x
+[j,i1,i2,acc1,acc2,notTreated1,notTreated2] Max i1 (Cons (Plus j (Max i2 acc2 notTreated2)) acc1) notTreated1 --> Max (max i1 (plus i2 j)) (Cons acc1 (map (plus j) acc2)) (Cons notTreated1 (map (plus j) notTreated2)).
+
+def sucLvl : Lvl -> Lvl.
+[x] sucLvl x --> Max (s 0) Empty (Cons (Plus (s 0) x) Empty).
+
+def maxLvl : Lvl -> Lvl -> Lvl.
+[x,y] maxLvl x y --> Max 0 Empty (Cons (Plus 0 x) (Cons (Plus 0 y) Empty)).
