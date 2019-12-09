@@ -286,12 +286,12 @@ decodedVersion eta nam i = do
 
 clause2rule :: DkModuleEnv -> QName -> Clause -> TCM (Maybe DkRule)
 clause2rule eta nam cc = do
-  reportSDoc "agda2Dedukti" 5  $ ((text "We are treating:") <+>) <$> (AP.prettyTCM nam)
-  reportSDoc "agda2Dedukti" 10 $ return $ (text "The clause is") <+> (pretty cc)
-  reportSDoc "agda2Dedukti" 20 $ ((text "In the context:") <+> ) <$> (AP.prettyTCM (clauseTel cc))
-  reportSDoc "agda2Dedukti" 20 $ return $ (text "The type is:") <+> (pretty (clauseType cc))
-  reportSDoc "agda2Dedukti" 20 $ return $ (text "The body is:") <+> (pretty (clauseBody cc))
-  reportSDoc "agda2Dedukti" 50 $ return $ text $ "More precisely:" ++ show (clauseBody cc)
+  reportSDoc "toDk.clause" 5  $ ((text "We are treating:") <+>) <$> (AP.prettyTCM nam)
+  reportSDoc "toDk.clause" 10 $ return $ (text "The clause is") <+> (pretty cc)
+  reportSDoc "toDk.clause" 20 $ ((text "In the context:") <+> ) <$> (AP.prettyTCM (clauseTel cc))
+  reportSDoc "toDk.clause" 20 $ return $ (text "The type is:") <+> (pretty (clauseType cc))
+  reportSDoc "toDk.clause" 20 $ return $ (text "The body is:") <+> (pretty (clauseBody cc))
+  reportSDoc "toDk.clause" 50 $ return $ text $ "More precisely:" ++ show (clauseBody cc)
   isProj <- isProjection nam
   c <-
     -- case isProj of
@@ -300,12 +300,12 @@ clause2rule eta nam cc = do
     --   Just Projection{projProper=Nothing} ->
     --     translateRecordPatterns' AllRecordPatterns cc
     --   Just{} -> do
-    --      reportSDoc "agda2Dedukti" 30 $ (<+> text " is considered as a projection") <$> (AP.prettyTCM nam)
+    --      reportSDoc "toDk.clause" 30 $ (<+> text " is considered as a projection") <$> (AP.prettyTCM nam)
          return cc
-  reportSDoc "agda2Dedukti" 30 $ ((text "The new clause is") <+>) <$> (AP.prettyTCM c)
-  reportSDoc "agda2Dedukti" 30 $ ((text "In the context:") <+> ) <$> (AP.prettyTCM (clauseTel c))
-  reportSDoc "agda2Dedukti" 30 $ return $ (text "The new body is:") <+> (pretty (clauseBody c))
-  reportSDoc "agda2Dedukti" 50 $ return $ text $ "More precisely:" ++ show (clauseBody c)
+  reportSDoc "toDk.clause" 30 $ ((text "The new clause is") <+>) <$> (AP.prettyTCM c)
+  reportSDoc "toDk.clause" 30 $ ((text "In the context:") <+> ) <$> (AP.prettyTCM (clauseTel c))
+  reportSDoc "toDk.clause" 30 $ return $ (text "The new body is:") <+> (pretty (clauseBody c))
+  reportSDoc "toDk.clause" 50 $ return $ text $ "More precisely:" ++ show (clauseBody c)
   case (clauseBody c) of
     Nothing  -> return Nothing
     Just r   ->
@@ -326,12 +326,12 @@ clause2rule eta nam cc = do
           case clauseType c of
             Nothing -> return r
             Just t  -> do
-              reportSDoc "agda2Dedukti" 20 $ return $ (text "Type is:") <+> pretty t
+              reportSDoc "toDk.clause" 20 $ return $ (text "Type is:") <+> pretty t
               r1 <- checkInternal' (etaExpandButInParamAction eta implicits) r (unArg t)
               reportSDoc "agda2Dedukti" 20 $ return $ (text "Eta expansion done")
               reconstructParameters' (etaExpandAction eta) (unArg t) r1
-        reportSDoc "agda2Dedukti" 30 $ return $ text "Parameters reconstructed"
-        reportSDoc "agda2Dedukti" 40 $ return $ (text "The final body is") <+> (pretty rr)
+        reportSDoc "toDk.clause" 30 $ return $ text "Parameters reconstructed"
+        reportSDoc "toDk.clause" 40 $ return $ (text "The final body is") <+> (pretty rr)
         (patts,_) <- extractPatterns eta (namedClausePats c)
         let impArgs = implicitArgs implicits (reverse ctx)
         rhs <- translateTerm eta rr
@@ -887,12 +887,7 @@ etaExpansion eta i t u = do
       case unEl t of
         Var _ _   -> etaExp t u
         Def n _   -> do
-          nn <- qName2DkName eta n
-          case nn of
-            DkQualified ["Agda", "Primitive"] [] "Level" -> do
-              return u
-            otherwise -> do
-              etaExp t u
+          ifM (isLevel n) (return u) (etaExp t u)
         Pi (a@Dom{domInfo=info}) b -> do
           reportSDoc "toDk.eta" 30 $ (text "In the product" <+>) <$> AP.prettyTCM t
           ctx <- getContext
@@ -900,7 +895,16 @@ etaExpansion eta i t u = do
           aExp <- etaExpandType eta (unDom a) i
           addContext (n,a) $ do
             let s = raise 1 (getElimSort (unDom a))
-            let theVar = Def eta [Apply s, Apply . defaultArg . (raise 1) . unEl $ aExp, Apply $ defaultArg (Var 0 [])]
+            let varLong =
+                  Def eta
+                    [Apply s,
+                     Apply . defaultArg . (raise 1) . unEl $ aExp,
+                     Apply $ defaultArg (Var 0 [])
+                    ]
+            theVar <- case aExp of
+              El _ (Def n _) -> do
+                (\b -> if b then Var 0 [] else varLong) <$> (isLevel n)
+              otherwise -> return varLong
             let appli = applyE (raise 1 u) [Apply (Arg info theVar)]
             body <- etaExpansion eta i (absBody b) appli
             return $ Lam info (Abs n body)
@@ -918,3 +922,12 @@ etaExpansion eta i t u = do
       case _getSort t of
         Type l -> Arg defaultArgInfo{argInfoHiding=Hidden} (Level l)
         otherwise -> __IMPOSSIBLE__
+
+    isLevel :: QName -> TCM Bool
+    isLevel n = do
+      nn <- qName2DkName eta n
+      case nn of
+        DkQualified ["Agda", "Primitive"] [] "Level" ->
+          return True
+        otherwise ->
+          return False
