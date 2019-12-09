@@ -680,15 +680,15 @@ createEtaExpandSymbol () =
       , clauseUnreachable = Nothing
     }
 
-etaExpandType :: DkModuleEnv -> Type -> TCM Type
-etaExpandType eta (El s (Pi a@Dom{unDom=El sa u} b)) = do
-  uu <- checkInternal' (etaExpandAction eta) u (sort sa)
+etaExpandType :: DkModuleEnv -> Type -> Nat -> TCM Type
+etaExpandType eta (El s (Pi a@Dom{unDom=El sa u} b)) i = do
+  uu <- checkInternal' (etaExpandButInParamAction eta i) u (sort sa)
   let dom = El sa uu
   addContext a $ do
-    codom <- etaExpandType eta (absBody b)
+    codom <- etaExpandType eta (absBody b) i
     return $ El s (Pi a{unDom=dom} (Abs (absName b) codom))
-etaExpandType eta (El s u) = do
-  uu <- checkInternal' (etaExpandAction eta) u (sort s)
+etaExpandType eta (El s u) i = do
+  uu <- checkInternal' (etaExpandButInParamAction eta i) u (sort s)
   return $ El s uu
 
 etaExpOnlyInDomain :: DkModuleEnv -> Type -> Nat -> Nat -> TCM Type
@@ -719,7 +719,7 @@ etaExpOnlyInCodom eta (El s (Pi a b)) j k = do
 
 etaIsId :: DkModuleEnv -> QName -> Nat -> Nat -> [QName] -> TCM [DkRule]
 etaIsId eta n i j cons = do
-  reportSDoc "toDk.Eta" 3 $ (text "Eta is id of" <+>) <$> AP.prettyTCM n
+  reportSDoc "toDk.eta" 3 $ (text "Eta is id of" <+>) <$> AP.prettyTCM n
   mapM oneCase cons
 
   where
@@ -870,11 +870,12 @@ etaContractFun _ u = case u of
 
 etaExpansion :: QName -> Int -> Type -> Term -> TCM Term
 etaExpansion eta i t u = do
-  reportSDoc "toDk.Eta" 3 <$> return $ text "Eta expansion of" <+> pretty u
-  reportSDoc "toDk.eta" 3 <$> return $ text "   of type" <+> pretty t
+  reportSDoc "toDk.eta" 3 $ (text "Eta expansion of" <+>) <$> AP.prettyTCM u
+  reportSDoc "toDk.eta" 3 $ (text "   of type" <+>) <$> AP.prettyTCM t
   case u of
     Var j _ -> do
       n <- getContextSize
+      -- Variables are numbered between 0 and n-1 hence the `>=`.
       if j >= n-i
         then return u
         else defaultCase t u
@@ -893,11 +894,13 @@ etaExpansion eta i t u = do
             otherwise -> do
               etaExp t u
         Pi (a@Dom{domInfo=info}) b -> do
+          reportSDoc "toDk.eta" 30 $ (text "In the product" <+>) <$> AP.prettyTCM t
           ctx <- getContext
           let n = freshStr ctx (absName b)
+          aExp <- etaExpandType eta (unDom a) i
           addContext (n,a) $ do
             let s = raise 1 (getElimSort (unDom a))
-            let theVar = Def eta [Apply s, Apply . defaultArg . (raise 1) . unEl . unDom $ a, Apply $ defaultArg (Var 0 [])]
+            let theVar = Def eta [Apply s, Apply . defaultArg . (raise 1) . unEl $ aExp, Apply $ defaultArg (Var 0 [])]
             let appli = applyE (raise 1 u) [Apply (Arg info theVar)]
             body <- etaExpansion eta i (absBody b) appli
             return $ Lam info (Abs n body)
