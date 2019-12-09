@@ -1,49 +1,62 @@
+
+(; The usual encoding of Natural Number (Peano like) ;)
+
 Nat : Type.
 
-0 : Nat.
-s : Nat -> Nat.
+0_N : Nat.
+s_N : Nat -> Nat.
 
-(; Those rules are sufficient since there are no variables of type Nat in the encoding ;)
-def plus : Nat -> Nat -> Nat.
-[y]   plus 0     y     --> y.
-[x,y] plus (s x) y     --> s (plus x y).
+def max_N : Nat -> Nat -> Nat.
+[y]   max_N 0_N     y       --> y.
+[x]   max_N x       0_N     --> x.
+[x,y] max_N (s_N x) (s_N y) --> s_N (max_N x y).
 
-def max : Nat -> Nat -> Nat.
-[x]   max x     0     --> x.
-[y]   max 0     y     --> y.
-[x,y] max (s x) (s y) --> s (max x y).
+(; The function plus is not in the grammar, however it is required to compute. ;)
+
+def plus_N : Nat -> Nat -> Nat.
+[y]   plus_N 0_N     y --> y.
+[x,y] plus_N (s_N x) y --> s_N (plus_N x y).
+
+(; The type of level and an intermediary type encoding (somehow) a set of levels. ;)
 
 Lvl : Type.
-PreLvl : Type.
-Int : Nat -> PreLvl.
-Plus : Nat -> Lvl -> PreLvl.
+LvlSet : Type.
 
-(; PreLvl and PreLvlList are the same thing in the encoding ;)
-Empty : PreLvl.
-defac Cons [PreLvl].
-[i,j,x] Cons (Plus i x) (Plus j x) --> Plus (max i j) x.
-[] Cons Empty Empty --> Empty.
+(; The grammar we are interested in is
+t,u ::= x | 0 | s t | max t u
+with x a variable. ;)
 
-def map : (Nat -> Nat) -> PreLvl -> PreLvl.
-[f] map f Empty --> Empty.
-[f,i,tl] map f (Cons (Int i) tl) --> Cons (Int (f i)) (map f tl).
-[f,i,y,tl] map f (Cons (Plus i y) tl) --> Cons (Plus (f i) y) (map f tl).
+(; Nothing is definable, since it is purely syntax. ;)
+def 0 : Lvl.
+def s : Lvl -> Lvl.
+def max : Lvl -> Lvl -> Lvl.
 
-def Max : Nat -> PreLvl -> PreLvl -> Lvl.
-(;
-The invariants are :
- - [Max i (Cons (Plus j x) _) _] is such that if x is a variable, i>=j
- - The first list does not contain Int
-The snd list is here for Lvl which does not satisfies the invariant yet.
-;)
-[i,acc,j,tl]   Max i acc (Cons (Int j) tl)    --> Max (max i j) acc tl.
-[i,acc,j,y,tl] Max i acc (Cons (Plus j y) tl) --> Max (max i j) (Cons (Plus j y) acc) tl.
 
-[x] Max 0 (Cons (Plus 0 x) Empty) Empty --> x
-[j,i1,i2,acc1,acc2,notTreated1,notTreated2] Max i1 (Cons (Plus j (Max i2 acc2 notTreated2)) acc1) notTreated1 --> Max (max i1 (plus i2 j)) (Cons acc1 (map (plus j) acc2)) (Cons notTreated1 (map (plus j) notTreated2)).
+(; The "constructor" of Lvl (between quotation marks, because it is a defined function, since some computation must be performed under a Max).
+A Lvl in normal form is Max i {Plus j1 x1, Plus j2 x2,...} with i >= jk for all k. ;)
+def Max : Nat -> LvlSet -> Lvl.
 
-def sucLvl : Lvl -> Lvl.
-[x] sucLvl x --> Max (s 0) Empty (Cons (Plus (s 0) x) Empty).
+(; Encoding of sets of level ;)
+(; Empty set ;)
+Empty : LvlSet.
+(; A singleton ;)
+Plus : Nat -> Lvl -> LvlSet.
+(; More elements ;)
+defac Union [LvlSet].
 
-def maxLvl : Lvl -> Lvl -> Lvl.
-[x,y] maxLvl x y --> Max 0 Empty (Cons (Plus 0 x) (Cons (Plus 0 y) Empty)).
+[x]     Union x          Empty      --> x.
+[i,j,l] Union (Plus i l) (Plus j l) --> Plus (max_N i j) l.
+
+def mapPlus : Nat -> LvlSet -> LvlSet.
+[i]       mapPlus i Empty         --> Empty.
+[i,j,l]   mapPlus i (Plus j l)    --> Plus (plus_N i j) l.
+[i,l1,l2] mapPlus i (Union l1 l2) --> Union (mapPlus i l1) (mapPlus i l2).
+
+[i,j,k,l]    Max i   (Plus j (Max k l))            --> Max (max_N i (plus_N j k)) (mapPlus j l).
+[i,j,k,l,tl] Max i   (Union (Plus j (Max k l)) tl) --> Max (max_N i (plus_N j k)) (Union (mapPlus j l) tl).
+[x]          Max 0_N (Plus 0_N x)                  --> x.
+
+(; The reflection of the syntax on Lvl. ;)
+[]    0       --> Max 0_N Empty.
+[x]   s x     --> Max (s_N 0_N) (Plus (s_N 0_N) x).
+[x,y] max x y --> Max 0_N (Union (Plus 0_N x) (Plus 0_N y)).

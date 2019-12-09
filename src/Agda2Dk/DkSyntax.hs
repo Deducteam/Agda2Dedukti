@@ -4,14 +4,13 @@ import Data.Word
 import Data.List
 import Data.List.Unique
 import Data.Int
+import Data.Char
 
 import Text.PrettyPrint
 
 import Agda.Syntax.Internal
 import qualified Agda.Syntax.Concrete.Name as CN
 import Agda.Utils.Impossible
-
-import Agda2Dk.ConvUnicode
 
 class PrettyDk a where
   prettyDk :: DkModName -> a -> Doc
@@ -30,13 +29,13 @@ printDecl mods (DkDefinition {name=n, staticity=b, typ=t, kind=k}) =
   let special =
         case n of
           DkQualified ["Agda", "Primitive"] [] "Level" ->
-            text "[] naiveAgda.Term _ Level --> naiveAgda.Lvl.\n"
+            text "[] naiveAgda.Term _ Level --> universeLevel.Lvl.\n"
           DkQualified ["Agda", "Primitive"] [] "lzero" ->
-            text "[] lzero -->" <+> printLvl mods [] <> text ".\n"
+            text "[] lzero --> universeLevel.0.\n"
           DkQualified ["Agda", "Primitive"] [] "lsuc"  ->
-            text "[] lsuc --> naiveAgda.sucLvl.\n"
+            text "[] lsuc --> universeLevel.s.\n"
           DkQualified ["Agda", "Primitive"] [] "_⊔_"  ->
-            text "[] _$\\sqcup$_ --> naiveAgda.maxLvl.\n"
+            text "[] {|_⊔_|} --> universeLevel.max.\n"
           otherwise                                            -> empty
   in
   let kw =
@@ -50,8 +49,8 @@ printDecl mods (DkDefinition {name=n, staticity=b, typ=t, kind=k}) =
 
 printDecodedDecl :: DkModName -> DkName -> DkTerm -> Doc
 printDecodedDecl mods (DkQualified _ pseudo id) t =
-  let ident = hcat (punctuate (text "__") (map printIdent pseudo)) <> printIdent id in
-  text "TYPE__" <> ident <+> char ':' <+> decodedType mods t <> text ".\n"
+  let ident = "TYPE__" ++ (concat (map (++ "__") pseudo)) ++ id in
+  printIdent ident <+> char ':' <+> decodedType mods t <> text ".\n"
 
 decodedType :: DkModName -> DkTerm -> Doc
 decodedType mods (DkSort _)              = text "Type"
@@ -59,7 +58,7 @@ decodedType mods (DkProd s1 _ id t u)    =
   let domDecl = printSort Nested mods s1 <+> printTerm Nested mods t in
   parens (printIdent id <+> text ": naiveAgda.Term" <+> domDecl) <+> text "->" <+> decodedType mods u
 decodedType mods (DkQuantifLevel _ id t) =
-  parens (printIdent id <+> text ": naiveAgda.Lvl") <+> text "->" <+> decodedType mods t
+  parens (printIdent id <+> text ": universeLevel.Lvl") <+> text "->" <+> decodedType mods t
 
 printRules :: DkModName -> DkDefinition -> [Doc]
 printRules mods (DkDefinition {rules=l}) = map (prettyDk mods) l
@@ -68,11 +67,12 @@ type Lvl = [PreLvl]
 
 printLvl :: DkModName -> Lvl -> Doc
 printLvl mods l =
-  parens (text "naiveAgda.Max naiveAgda.0 naiveAgda.Empty" <+> printPreLvlList mods l)
+  printPreLvlList mods l
 
-printPreLvlList mods []     = text "naiveAgda.Empty"
+printPreLvlList mods []     = text "universeLevel.0"
+printPreLvlList mods (a:[]) = prettyDk mods a
 printPreLvlList mods (a:tl) =
-  parens $ text "naiveAgda.Cons" <+> prettyDk mods a <+> printPreLvlList mods tl
+  parens $ text "universeLevel.max" <+> prettyDk mods a <+> printPreLvlList mods tl
 
 data PreLvl =
     LvlInt Int
@@ -80,14 +80,15 @@ data PreLvl =
 
 instance PrettyDk PreLvl where
  prettyDk mods (LvlInt i)    =
-    parens (text "naiveAgda.Int" <+> (unary i))
+   unary i
  prettyDk mods (LvlPlus i t) =
-   parens (text "naiveAgda.Plus" <+> (unary i) <+> printTerm Nested mods t)
+   applyN i (parens . (text "universeLevel.s" <+>)) (printTerm Nested mods t)
+  where applyN i f x = iterate f x !! i
 
 unary :: Int -> Doc
 unary x
-  | x==0 = text "naiveAgda.0"
-  | x>0  = parens $ (text "naiveAgda.s")<+> (unary (x-1))
+  | x==0 = text "universeLevel.0"
+  | x>0  = parens $ (text "universeLevel.s")<+> (unary (x-1))
 
 data DkSort =
     DkSet Lvl
@@ -173,7 +174,7 @@ printTerm pos mods (DkLam n (Just (a,s)) t) =
 printTerm pos mods (DkDB n _)               =
   printIdent n
 printTerm pos mods (DkLevel l)              =
-  printLvl mods l
+  printPreLvlList mods l
 
 paren :: Position -> Doc -> Doc
 paren pos =
@@ -235,7 +236,7 @@ instance PrettyDk DkName where
           then empty
           else hcat (punctuate (text "__") (map text qualif)) <> char '.'
     in
-    let symName = hcat (map (\x -> printIdent (x++"__")) pseudo) <> printIdent n in
+    let symName = printIdent $ (concat (map (++ "__") pseudo)) ++ n in
     modName <> symName
 
 type DkModName = [String]
@@ -243,16 +244,16 @@ type DkModName = [String]
 type DkIdent = String
 
 printIdent n=
-    text $ replace convUnicode n
+    text $ encapsulate n
 
 data IsStatic = Static | Defin | TypeConstr
 
-replace :: Eq a => [(a, [a])] -> [a] -> [a]
-replace = replace' []
+keywords = ["Type", "def", "thm"]
 
-replace' :: Eq a => [a] -> [(a, [a])] -> [a] -> [a]
-replace' acc assoc []     = reverse acc
-replace' acc assoc (x:tl) = case lookup x assoc of Nothing    -> replace' (x:acc) assoc tl
-                                                   Just latex -> replace' ((reverse latex)++acc) assoc tl
+encapsulate :: String -> String
+encapsulate l =
+  if all (`elem` ['a'..'z']++['A'..'Z']++['0'..'9']++['_']) l && not (elem l keywords)
+  then l
+  else "{|"++l++"|}"
 
 data Position = Nested | Top
