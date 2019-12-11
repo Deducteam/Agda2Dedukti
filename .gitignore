@@ -8,4 +8,8 @@
 src/Main
 
 translation/*/
+!translation/tests/
+!translation/std-lib/
+
+translation/*/*
 !translation/*/Makefile
