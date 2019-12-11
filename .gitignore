@@ -2,12 +2,10 @@
 *.hi
 *.o
 *.agdai
+.#*
+*.dko
 
 src/Main
 
-translation/*
-!translation/*.dk
-!translation/std-lib/
-!translation/tests/
-translation/std-lib/*
-translation/tests/*
+translation/*/
+!translation/*/Makefile
