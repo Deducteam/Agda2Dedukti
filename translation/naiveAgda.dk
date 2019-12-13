@@ -25,17 +25,20 @@ Univ : s : Sort -> Type.
 def Term : s : Sort -> a : Univ s -> Type.
 
 univ : s : Sort -> Univ (succ s).
-prod : s1 : Sort -> s2 : Sort -> a : Univ s1 -> b : (Term s1 a -> Univ s2) -> Univ (rule s1 s2).
 
 qLevel : f: (universeLevel.Lvl -> Sort) -> (l : universeLevel.Lvl -> Univ (f l)) -> Univ setOmega.
 
 [s] Term _ (univ s) --> Univ s.
-[s1, s2, a, b]
-    Term _ (prod s1 s2 a b) --> x : Term s1 a -> Term s2 (b x).
 [f, t] Term _ (qLevel f t) --> l : universeLevel.Lvl -> Term (f l) (t l).
 
 def etaExpand : (l : universeLevel.Lvl) -> (A : Univ (set l)) -> Term (set l) A -> Term (set l) A.
+prod : s1 : Sort -> s2 : Sort -> A : Univ s1 -> B : (Term s1 A -> Univ s2) -> Univ (rule s1 s2).
 
+[a, b, A, B] Term _ (prod (set a) b A B) --> x : Term (set a) A -> Term b (B (etaExpand a A x)).
+[a, b, A, B] Term _ (prod (prop a) b A B) --> x : Term (prop a) A -> Term b (B x).
+
+[l,A,x] etaExpand _ _ (etaExpand l A x) --> etaExpand l A x.
 [x] etaExpand _ (univ _) x --> x.
-[a,A,n,B,f] etaExpand _ (prod a (set n) A B) f --> x : Term a A => etaExpand n (B x) (f x)
-[n,A,x] etaExpand n A (etaExpand n A x) --> etaExpand n A x.
+
+[a,A,b,B,f] etaExpand _ (prod (set a)  (set b)  A B) f --> x : Term (set  a) A => etaExpand b (B (etaExpand a A x)) (f (etaExpand a A x)).
+[a,A,b,B,f] etaExpand _ (prod (prop a) (set b)  A B) f --> x : Term (prop a) A => etaExpand b (B x) (f x).

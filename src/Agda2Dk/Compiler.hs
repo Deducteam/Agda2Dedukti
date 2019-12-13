@@ -885,13 +885,14 @@ etaExpansion eta t u = do
       ctx <- getContext
       let n = freshStr ctx (absName b)
       aExp <- etaExpandType eta (unDom a)
+      aIsLevel <-
+        case aExp of
+          El _ (Def n _) -> isLevel n
+          otherwise      -> return False
       addContext (n,a) $ do
         let s = raise 1 (getElimSort (unDom a))
         let varLong = Def eta [Apply s, Apply . defaultArg . (raise 1) . unEl $ aExp, Apply $ defaultArg (Var 0 [])]
-        theVar <- case aExp of
-          El _ (Def n _) -> do
-            (\b -> if b then Var 0 [] else varLong) <$> (isLevel n)
-          otherwise -> return varLong
+        let theVar = if aIsLevel then Var 0 [] else varLong
         let appli = applyE (raise 1 u) [Apply (Arg info theVar)]
         body <- etaExpansion eta (absBody b) appli
         return $ Lam info (Abs n body)
