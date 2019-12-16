@@ -6,6 +6,7 @@ import Data.Maybe
 import System.Directory (doesFileExist)
 import Data.Int
 import Data.List (sortOn, stripPrefix, intercalate, (++))
+import qualified Data.Set as Set
 import Text.PrettyPrint
 import Debug.Trace
 
@@ -149,15 +150,15 @@ orderDeclRules' mut accTy accOther waitingRules l@((m,d):tl) mods
       case staticity d of
         TypeConstr ->
           orderDeclRules' mut
-            (accTy<>(printDecl mods d))
+            (accTy<>(printDecl mods d)<>hcat (printRules mods d decoding))
             accOther
-            (waitingRules++(printRules mods d))
+            (waitingRules++(printRules mods d (not . decoding)))
             tl mods
         _ ->
           orderDeclRules' mut
             accTy
             (accOther<>(printDecl mods d))
-            (waitingRules++(printRules mods d))
+            (waitingRules++(printRules mods d (\x -> True)))
             tl mods
   | otherwise =
       orderDeclRules' m (accTy<>accOther<>(hcat waitingRules)) empty [] l mods
@@ -174,36 +175,26 @@ dkCompileDef _ eta _ def@(Defn {defCopy=isCopy, defName=n, theDef=d, defType=t, 
     do
       reportSDoc "toDk" 3 $ (text "Compiling definition of" <+>) <$> AP.prettyTCM n
       reportSDoc "toDk" 60 $ return $ text $ show def
-      tParam <-
+      (projPar,tParam) <-
         case d of
-          Constructor {conData=dat} -> do
-            -- If dat is a Datatype, isRecord dat is Nothing
-            recOrData <- isRecord dat
-            case recOrData of
-              Nothing -> defaultCase
-              Just {} -> do
-                Defn{theDef=Record{recPars=i}} <- getConstInfo dat
-                -- In case of record constructor, because of the eta-rule,
-                -- the return type must not be eta-expanded.
-                tExpand <- etaExpOnlyInDomain eta t
-                inTopContext $ do
-                  reconstructParametersInType' (etaExpandAction eta) tExpand
           Function {funProjection=pr} ->
             case pr of
-              Nothing -> defaultCase
-              Just Projection{projProper=Nothing} -> defaultCase
+              Nothing                               -> defaultCase
+              Just Projection{projProper=Nothing}   -> defaultCase
                 -- In case of record projector, symetrically, because of the eta-rule,
                 -- the argument type must not be eta-expanded.
               Just Projection{projProper=Just recN} -> do
                 Defn{theDef=Record{recPars=i}} <- getConstInfo recN
-                tExpand <- etaExpButTheRecordArgs eta t i recN
-                inTopContext $ do
-                  El s preTy <- reconstructParametersInType' (etaExpandAction eta) tExpand
-                  El s <$> removeEtaOnProj eta recN i preTy
+                tExpand <- etaExpandType eta t
+                tPar <- inTopContext $ do
+                  reconstructParametersInType' (etaExpandAction eta) tExpand
+                  -- El s preTy <- reconstructParametersInType' (etaExpandAction eta) tExpand
+                  -- El s <$> removeEtaOnProj eta recN i preTy
+                return (Just i, tPar)
           _ -> defaultCase
       reportSDoc "toDk.eta" 5 $ (text "tParam is" <+>) <$> AP.pretty tParam
       inTopContext $ do
-        typ     <- translateType eta tParam
+        typ     <- translateType eta tParam projPar
         name    <- qName2DkName eta n
         kk      <- getKind eta t
         stat    <- extractStaticity n d
@@ -218,11 +209,12 @@ dkCompileDef _ eta _ def@(Defn {defCopy=isCopy, defName=n, theDef=d, defType=t, 
   where
     defaultCase = do
       tExpand <- checkInternalType' (etaExpandAction eta) t
-      inTopContext $ do
+      tPar <- inTopContext $ do
         reconstructParametersInType' (etaExpandAction eta) tExpand
+      return (Nothing, tPar)
 
-translateType :: DkModuleEnv -> Type -> TCM DkTerm
-translateType eta (El {unEl=ty}) = translateTerm eta ty
+translateType :: DkModuleEnv -> Type -> Maybe Nat -> TCM DkTerm
+translateType eta (El {unEl=ty}) i = translateTerm' eta ty i
 
 extractStaticity :: QName -> Defn -> TCM IsStatic
 extractStaticity _ Axiom             = return Static
@@ -268,50 +260,44 @@ extractRules _ _ _ _                            = sequence []
 
 decodedVersion :: DkModuleEnv -> QName -> Int -> TCM DkRule
 decodedVersion eta nam i = do
+  reportSDoc "toDk" 5 $ return $ text "Decoding" <+> pretty nam
   nn@(DkQualified mods pseudo n) <- qName2DkName eta nam
   let decodedName = DkQualified mods ("TYPE":pseudo) n
   let hd = DkQualified ["naiveAgda"] [] "Term"
-  return $ DkRule
-    { context   = genCtx i
-    , headsymb  = hd
-    , patts     = [DkJoker,DkFun nn (genVars i)]
-    , rhs       = constructRhs (DkConst decodedName)
-    }
+  ty <- defType <$> getConstInfo nam
+  tele <- theTel <$> (telView ty)
+  reportSDoc "toDk" 15 $ ((text "In the context:") <+> ) <$> (AP.prettyTCM tele)
+  addContext tele $
+    modifyContext separateVars $ do
+    tel <- getContext
+    ctx <- extractContext tel
+    patVars <- sequence (genVars ctx)
+    rhs <- constructRhs tel 0 return (DkConst decodedName)
+    return $ DkRule
+      { decoding  = True
+      , context   = ctx
+      , headsymb  = hd
+      , patts     = [DkJoker,DkFun nn patVars]
+      , rhs       = rhs
+      }
   where
-    genCtx = genCtxAux []
-    genCtxAux acc 0 = acc
-    genCtxAux acc j = genCtxAux (ind2DkIdent j:acc) (j-1)
-    genVars = genVarsAux []
-    genVarsAux acc 0 = acc
-    genVarsAux acc j = genVarsAux ((DkVar (ind2DkIdent j) (j-1) []):acc) (j-1)
-    constructRhs = constructRhsAux 0
-    constructRhsAux j t =
-      if i==j
-      then t
-      else constructRhsAux (j+1) (DkApp t (DkDB (ind2DkIdent (j+1)) j))
-    ind2DkIdent j = "x"++ show j
+    genVars = genVarsAux [] 0
+    genVarsAux acc i []     = acc
+    genVarsAux acc i (a:tl) =
+      genVarsAux (((\x -> DkVar x i []) <$> (name2DkIdent <$> (nameOfBV i))):acc) (i+1) tl
+    constructRhs :: [Dom(Name,Type)] -> Nat -> (DkTerm -> TCM DkTerm) -> DkTerm -> TCM DkTerm
+    constructRhs []                     _ clo t = clo t
+    constructRhs (Dom{unDom=(a,ty)}:tl) i clo t = do
+      va <- etaExpansion eta (raise (i+1) ty) (var i)
+      constructRhs tl (i+1) (\x -> clo =<< (DkApp x <$> translateTerm eta va)) t
 
 clause2rule :: DkModuleEnv -> QName -> Clause -> TCM (Maybe DkRule)
-clause2rule eta nam cc = do
+clause2rule eta nam c = do
   reportSDoc "toDk.clause" 5  $ ((text "We are treating:") <+>) <$> (AP.prettyTCM nam)
-  reportSDoc "toDk.clause" 10 $ return $ (text "The clause is") <+> (pretty cc)
-  reportSDoc "toDk.clause" 20 $ ((text "In the context:") <+> ) <$> (AP.prettyTCM (clauseTel cc))
-  reportSDoc "toDk.clause" 20 $ return $ (text "The type is:") <+> (pretty (clauseType cc))
-  reportSDoc "toDk.clause" 20 $ return $ (text "The body is:") <+> (pretty (clauseBody cc))
-  reportSDoc "toDk.clause" 50 $ return $ text $ "More precisely:" ++ show (clauseBody cc)
-  isProj <- isProjection nam
-  c <-
-    -- case isProj of
-    --   Nothing ->
-    --     translateRecordPatterns' AllRecordPatterns cc
-    --   Just Projection{projProper=Nothing} ->
-    --     translateRecordPatterns' AllRecordPatterns cc
-    --   Just{} -> do
-    --      reportSDoc "toDk.clause" 30 $ (<+> text " is considered as a projection") <$> (AP.prettyTCM nam)
-         return cc
-  reportSDoc "toDk.clause" 30 $ ((text "The new clause is") <+>) <$> (AP.prettyTCM c)
-  reportSDoc "toDk.clause" 30 $ ((text "In the context:") <+> ) <$> (AP.prettyTCM (clauseTel c))
-  reportSDoc "toDk.clause" 30 $ return $ (text "The new body is:") <+> (pretty (clauseBody c))
+  reportSDoc "toDk.clause" 10 $ return $ (text "The clause is") <+> (pretty c)
+  reportSDoc "toDk.clause" 20 $ ((text "In the context:") <+> ) <$> (AP.prettyTCM (clauseTel c))
+  reportSDoc "toDk.clause" 20 $ return $ (text "The type is:") <+> (pretty (clauseType c))
+  reportSDoc "toDk.clause" 20 $ return $ (text "The body is:") <+> (pretty (clauseBody c))
   reportSDoc "toDk.clause" 50 $ return $ text $ "More precisely:" ++ show (clauseBody c)
   case (clauseBody c) of
     Nothing  -> return Nothing
@@ -335,25 +321,68 @@ clause2rule eta nam cc = do
             Just t  -> do
               reportSDoc "toDk.clause" 20 $ return $ (text "Type is:") <+> pretty t
               r1 <- checkInternal' (etaExpandAction eta) r (unArg t)
-              reportSDoc "agda2Dedukti" 20 $ return $ (text "Eta expansion done")
+              reportSDoc "toDk.clause" 20 $ return $ (text "Eta expansion done")
               reconstructParameters' (etaExpandAction eta) (unArg t) r1
         reportSDoc "toDk.clause" 30 $ return $ text "Parameters reconstructed"
         reportSDoc "toDk.clause" 40 $ return $ (text "The final body is") <+> (pretty rr)
-        (patts,_) <- extractPatterns eta (namedClausePats c)
-        let impArgs = implicitArgs implicits (reverse ctx)
+        tyHd <- defType <$> getConstInfo nam
         rhs <- translateTerm eta rr
+        let impArgs = implicitArgs implicits (reverse ctx)
+        let appVars = isAppliedIn rhs
+        (patts,_) <- extractPatterns eta (namedClausePats c) (drop implicits tyHd) appVars (reverse impArgs)
+
+        -- let pattsCleaned =
+        --       if implicits /= 0
+        --       then
+        --         let pos = map (isAppliedIn rhs) impArgs in
+        --         case patts of
+        --           (DkFun f l):[] ->
+        --             (DkFun f (replaceIf pos impArgs l)):[]
+        --           otherwise -> __IMPOSSIBLE__
+        --       else
+        --         patts
         headSymb <- qName2DkName eta nam
         return $ Just DkRule
-          { context   = ctx
+          { decoding  = False
+          , context   = ctx
           , headsymb  = headSymb
-          , patts     = impArgs ++ patts
+          , patts     = patts
           , rhs       = rhs
           }
 
-          where
-            implicitArgs 0 locCtx = []
-            implicitArgs n (h:tl) =
-              (DkVar h (length tl) []):(implicitArgs (n-1) tl)
+    where
+      implicitArgs 0 locCtx = []
+      implicitArgs n (h:tl) =
+        (DkVar h (length tl) []):(implicitArgs (n-1) tl)
+
+      replaceIf []          []       l                         = l
+      replaceIf (True:pos)  ((DkVar h i []):args) (DkJoker:tl) =
+        (DkGuarded (DkDB h i)):(replaceIf pos args tl)
+      replaceIf (False:pos) (_:args)              (DkJoker:tl) =
+        DkJoker:(replaceIf pos args tl)
+
+      isAppliedIn :: DkTerm -> Set.Set DkIdent
+      isAppliedIn (DkSort _)                = Set.empty
+      isAppliedIn (DkProd _ _ _ t1 t2)      =
+        Set.union (isAppliedIn t1) (isAppliedIn t2)
+      isAppliedIn (DkProjProd _ _ _ t1 t2)  =
+        Set.union (isAppliedIn t1) (isAppliedIn t2)
+      isAppliedIn (DkQuantifLevel _ _ t)    =
+        isAppliedIn t
+      isAppliedIn (DkConst f)               = Set.empty
+      isAppliedIn (DkApp (DkDB h _) t)      =
+        Set.insert h (isAppliedIn t)
+      isAppliedIn (DkApp t1 t2)             =
+        Set.union (isAppliedIn t1) (isAppliedIn t2)
+      isAppliedIn (DkLam _ (Just(t1,_)) t2) =
+        Set.union (isAppliedIn t1) (isAppliedIn t2)
+      isAppliedIn (DkLam _ Nothing    t)    =
+        isAppliedIn t
+      isAppliedIn (DkDB _ _)                = Set.empty
+      isAppliedIn (DkLevel _)               = Set.empty
+
+      drop 0 t = t
+      drop i (El _ (Pi _ u)) = drop (i-1) (absBody u)
 
 extractContext :: Context -> TCM DkCtx
 extractContext = extractContextAux []
@@ -364,39 +393,42 @@ extractContextAux acc []                                    =
 extractContextAux acc (Dom {unDom=(n,t)}:r) =
   extractContextAux (name2DkIdent n:acc) r
 
-extractPatterns :: DkModuleEnv -> [NamedArg DeBruijnPattern] -> TCM ([DkPattern],LastUsed)
-extractPatterns = auxPatt (-1) []
+extractPatterns :: DkModuleEnv -> [NamedArg DeBruijnPattern] -> Type -> Set.Set DkIdent -> [DkPattern] -> TCM ([DkPattern],LastUsed)
+extractPatterns = auxPatt (-1)
 
-auxPatt ::  LastUsed -> [DkPattern] -> DkModuleEnv -> [NamedArg DeBruijnPattern] -> TCM ([DkPattern],LastUsed)
-auxPatt n acc eta [] =
+auxPatt ::  LastUsed -> DkModuleEnv -> [NamedArg DeBruijnPattern] -> Type -> Set.Set DkIdent -> [DkPattern] -> TCM ([DkPattern],LastUsed)
+auxPatt n eta [] _ _ acc =
   return (reverse acc,n)
-auxPatt n acc eta (p:patts) =
-  do (t, nn) <- extractPattern eta n p
-     auxPatt (max n nn) (t:acc) eta patts
+auxPatt n eta (p:patts) (El _ (Pi (Dom{unDom=t}) u)) appVars acc = do
+  (t, nn) <- extractPattern eta acc n p t appVars
+  auxPatt (max n nn) eta patts (absBody u) appVars (t:acc)
 
-extractPattern :: DkModuleEnv -> LastUsed -> NamedArg DeBruijnPattern -> TCM (DkPattern,LastUsed)
-extractPattern eta n x =
+extractPattern :: DkModuleEnv -> [DkPattern] -> LastUsed -> NamedArg DeBruijnPattern -> Type -> Set.Set DkIdent -> TCM (DkPattern,LastUsed)
+extractPattern eta ctx n x ty appVars =
   let pat = namedThing (unArg x) in
   case pat of
-    VarP _ (DBPatVar {dbPatVarIndex=i}) ->
-      do
-        nam <- nameOfBV i
-        return (DkVar (name2DkIdent nam) i [], max i n)
-    DotP _ t                           ->
-      do term <- translateTerm eta t
-         return (DkBrackets term, n)
-    ConP (ConHead {conName=h}) ci tl     ->
-      do
-        (patts, nn) <- auxPatt n [] eta tl
-        mbNbParams <- getNumberOfParameters h
-        nbParams <-
-          case mbNbParams of
-            Nothing -> error "Why no Parameters?"
-            Just n  -> return n
-        nam <- qName2DkName eta h
-        let args = (replicate nbParams DkJoker) ++ patts
-        return (DkFun nam args, max n nn)
-    LitP l                              -> return (DkBuiltin (translateLiteral l),n)
+    VarP _ (DBPatVar {dbPatVarIndex=i})  -> do
+      nam <- nameOfBV i
+      return (DkVar (name2DkIdent nam) i [], max i n)
+    DotP _ t                             -> do
+      term <- translateTerm eta t
+      return (DkGuarded term, n)
+    ConP (ConHead {conName=h}) ci tl     -> do
+      tyLoc <- defType <$> getConstInfo h
+      (patts, nn) <- auxPatt n eta tl tyLoc appVars []
+      nbParams <- fromMaybe (error "Why no Parameters?") <$> getNumberOfParameters h
+      nam <- qName2DkName eta h
+      reportSDoc "toDk.clause" 30 $ return $ text "The type of this applied constructor is" <+> pretty ty
+      reportSDoc "toDk.clause" 30 $ return $ text "  in context" <+> hsep (punctuate (char ',') (map (printPattern Top []) ctx))
+      let argsParam =
+            case ty of
+              El _ (Def _ l) ->
+                 map caseParamFun $ take nbParams l
+              otherwise        ->  replicate nbParams DkJoker
+      let args = argsParam ++ patts
+      return (DkFun nam args, max n nn)
+    LitP l                              ->
+      return (DkBuiltin (translateLiteral l),n)
     ProjP _ nam                         ->
       do
         imp <- isProjection nam
@@ -414,6 +446,17 @@ extractPattern eta n x =
         return (DkFun dkNam args, n)
     otherwise                           ->
       error "Unexpected pattern of HoTT"
+  where
+
+    caseParamFun :: Elim -> DkPattern
+    caseParamFun (Apply (Arg _ (Var i []))) =
+      case (ctx !! i) of
+        DkVar h j [] ->
+          if Set.member h appVars
+          then DkGuarded (DkDB h j)
+          else DkJoker
+        otherwise -> DkJoker
+    caseParamFun (Apply e) = DkJoker
 
 translateElim :: DkModuleEnv -> DkTerm -> Term -> Elims -> TCM DkTerm
 translateElim eta t tAg []                  = return t
@@ -423,35 +466,15 @@ translateElim eta t tAg (el@(Apply e):tl)      =
 translateElim eta t tAg (el@(Proj _ qn):tl)    = do
   reportSDoc "agda2Dedukti" 2 $ AP.prettyTCM (applyE tAg [el])
   error "Unspining not performed!"
-  -- let proj = DkConst $ qName2DkName qn in
-  -- do
-  --   reportSDoc "agda2Dedukti" 15 $ (AP.prettyTCM tAg) >>= (\x -> return $ (text "The term:") <+> x)
-  --   reportSDoc "agda2Dedukti" 15 $ (AP.prettyTCM el) >>= (\x -> return $ (text "Is eliminated with:") <+> x)
-  --   def <- getConstInfo qn
-  --   let tyProj = defType def
-  --   reportSDoc "agda2Dedukti" 15 $ (AP.prettyTCM tyProj) >>= (\x -> return $ (text "Of type:") <+> x)
-  --   let nbPar = countHiddenArgs tyProj
-  --   reportSDoc "agda2Dedukti" 16 $ return $ text $ "Hence has "++show nbPar++" parameters"
-  --   res <-
-  --     do
-  --       ty <- infer tAg
-  --       reportSDoc "agda2Dedukti" 2 $ (AP.prettyTCM ty) >>= (\x -> return $ (text "Inferred type:") <+> x)
-  --       dkTy <-
-  --         case unEl ty of
-  --           Dummy _ _ -> appNbDummyHd nbPar
-  --           _         -> translateType ty
-  --       reportSDoc "agda2Dedukti" 2 $ return $ (text "Translated as:") <+> (prettyDk [] dkTy)
-  --       return $ replaceHd proj dkTy
-  --   translateElim (DkApp res t) (addEl tAg el) tl
 translateElim eta t tAg ((IApply _ _ _):tl) = error "Unexpected IApply"
 
 
-translateTerm :: DkModuleEnv -> Term -> TCM DkTerm
-translateTerm eta (Var i elims) =
+translateTerm' :: DkModuleEnv -> Term -> Maybe Nat -> TCM DkTerm
+translateTerm' eta (Var i elims) Nothing =
   do
     nam <- nameOfBV i
     translateElim eta (DkDB (name2DkIdent nam) i) (Var i []) elims
-translateTerm eta (Lam _ ab) =
+translateTerm' eta (Lam _ ab) Nothing =
   do
     ctx <- getContext
     let n = freshStr ctx (absName ab)
@@ -460,85 +483,54 @@ translateTerm eta (Lam _ ab) =
         body <- translateTerm eta (unAbs ab)
         nam <- nameOfBV 0
         return $ DkLam (name2DkIdent nam) Nothing body
-translateTerm eta (Lit l)            =
+translateTerm' eta (Lit l)   Nothing         =
   return $ translateLiteral l
-translateTerm eta (Def n elims)                    = do
+translateTerm' eta (Def n elims)     Nothing              = do
   nam <- qName2DkName eta n
   translateElim eta (DkConst nam) (Def n []) elims
-translateTerm eta (Con hh@(ConHead {conName=h}) i elims)        = do
+translateTerm' eta (Con hh@(ConHead {conName=h}) i elims)  Nothing      = do
   nam <- qName2DkName eta h
   translateElim eta (DkConst nam) (Con hh i []) elims
-translateTerm eta (Pi d@(Dom {unDom=t}) (Abs{absName=n, unAbs=u})) =
-  case t of
-    El {unEl=Def h []} -> do
-      dom <- qName2DkName eta h
-      if dom == DkQualified ["Agda","Primitive"] [] "Level"
-      then
-        do
-          ctx <- getContext
-          let nn = freshStr ctx n
-          addContext (nn,d) $
-            do
-              body <-translateType eta u
-              ku <- getKind eta u
-              nam <- nameOfBV 0
-              return $ DkQuantifLevel ku (name2DkIdent nam) body
-      else
-          localAux
-    otherwise -> localAux
-    where
-      localAux =
-        do
-          ctx <- getContext
-          let nn = freshStr ctx n
-          dom <- translateType eta t
-          body <- addContext (nn,d) $ translateType eta u
-          kt <- getKind eta t
-          ku <- addContext (nn,d) $ getKind eta u
-          nam <- addContext (nn,d) $ nameOfBV 0
-          return $ DkProd kt ku (name2DkIdent nam) dom body
-translateTerm eta (Pi d@(Dom {unDom=t}) (NoAbs{absName=n, unAbs=u})) =
-  do
-    ctx <- getContext
-    let nn = freshStr ctx n
-    dom <- translateType eta t
-    body <- translateType eta u
-    kt <- getKind eta t
-    ku <- getKind eta u
-    nam <- addContext (nn,d) $ nameOfBV 0
-    return $ DkProd kt ku (name2DkIdent nam) dom body
-translateTerm eta (Sort s)                      =
+translateTerm' eta (Pi d@(Dom {unDom=t}) uu) mb_j= do
+  ctx <- getContext
+  let nn = freshStr ctx (absName uu)
+  dom <- translateType eta t Nothing
+  kt <- getKind eta t
+  case uu of
+    Abs n u ->
+      addContext (nn,d) $ do
+        body <- translateType eta u (pred mb_j)
+        ku <- getKind eta u
+        nam <- nameOfBV 0
+        case t of
+          El {unEl=Def h []} -> do
+            hd <- qName2DkName eta h
+            if hd == DkQualified ["Agda","Primitive"] [] "Level"
+              then return $ DkQuantifLevel ku (name2DkIdent nam) body
+              else return $ (sp_prod mb_j) kt ku (name2DkIdent nam) dom body
+          otherwise -> return $ (sp_prod mb_j) kt ku (name2DkIdent nam) dom body
+    NoAbs n u -> do
+      body <- translateType eta u (pred mb_j)
+      ku <- getKind eta u
+      nam <- addContext (nn,d) $ nameOfBV 0
+      return $ (sp_prod mb_j) kt ku (name2DkIdent nam) dom body
+  where
+    pred Nothing  = Nothing
+    pred (Just 0) = Nothing
+    pred (Just j) = Just (j-1)
+    sp_prod (Just 0) = DkProjProd
+    sp_prod _        = DkProd
+translateTerm' eta (Sort s)           Nothing           =
   do ss <- extractSort eta s
      return $ DkSort ss
-translateTerm eta (Level lev)                   =
+translateTerm' eta (Level lev)         Nothing          =
   do lv <- lvlFromLevel eta lev
      return $ DkLevel lv
-translateTerm eta (MetaV {})                    = error "Not implemented yet : MetaV"
-translateTerm eta (DontCare t)                  = translateTerm eta t
-translateTerm eta (Dummy _ _)                   = error "Not implemented yet : Dummy"
+translateTerm' eta (MetaV {})         Nothing           = error "Not implemented yet : MetaV"
+translateTerm' eta (DontCare t)       Nothing           = translateTerm eta t
+translateTerm' eta (Dummy _ _)         Nothing          = error "Not implemented yet : Dummy"
 
--- extractAsPattern :: DkModuleEnv -> Term -> TCM DkPattern
--- extractAsPattern eta (Var i elims) =
---   do
---     nam <- nameOfBV i
---     DkVar (name2DkIdent nam) i <$> elimAsPattern eta elims
--- extractAsPattern eta (Lam _ ab) =
---   do
---     ctx <- getContext
---     let n = freshStr ctx (absName ab)
---     addContext n $
---       do
---         body <- extractAsPattern eta (unAbs ab)
---         nam <- nameOfBV 0
---         return $ DkLambda (name2DkIdent nam) body
--- extractAsPattern eta (Lit l)            =
---   error "Litteral cannot be seen as pattern yet"
--- extractAsPattern eta (Def n elims)                    = do
---   nam <- qName2DkName eta n
---   DkFun nam <$> elimAsPattern eta elims
--- extractAsPattern eta (Con hh@(ConHead {conName=h}) i elims)        = do
---   nam <- qName2DkName eta h
---   DkFun nam <$> elimAsPattern eta elims
+translateTerm eta t = translateTerm' eta t Nothing
 
 extractSort :: DkModuleEnv -> Sort -> TCM DkSort
 extractSort eta (Type i)                  =
@@ -698,31 +690,6 @@ etaExpandType eta (El s u) = do
   uu <- checkInternal' (etaExpandAction eta) u (sort s)
   return $ El s uu
 
-etaExpOnlyInDomain :: DkModuleEnv -> Type -> TCM Type
-etaExpOnlyInDomain eta (El s (Pi a@Dom{unDom=El sa u} b)) = do
-  uu <- checkInternal' (etaExpandAction eta) u (sort sa)
-  let dom = El sa uu
-  addContext (absName b,a) $ do
-    codom <- etaExpOnlyInDomain eta (absBody b)
-    escapeContext 1 $ return $ El s (Pi a{unDom=dom} (Abs (absName b) codom))
-etaExpOnlyInDomain _ u = return u
-
-etaExpButTheRecordArgs :: DkModuleEnv -> Type -> Nat -> QName -> TCM Type
-etaExpButTheRecordArgs eta u@(El s (Pi a b)) 0 recN = do
-  reportSDoc "toDk.eta" 10 $ (text "Type to exp is" <+>) <$> AP.pretty u
-  reportSDoc "toDk.eta" 10 $ return. text $ "And the int is 0"
-  addContext (absName b,a) $ do
-    codom <- etaExpandType eta (absBody b)
-    escapeContext 1 $ return $ El s (Pi a (Abs (absName b) codom))
-etaExpButTheRecordArgs eta (El s (Pi a@Dom{unDom=El sa u} b)) j recN = do
-  reportSDoc "toDk.eta" 10 $ (text "Type is" <+>) <$> AP.pretty (Pi a b)
-  reportSDoc "toDk.eta" 10 $ return . text $ "And the int is "++show j
-  uu <- checkInternal' (etaExpandAction eta) u (sort sa)
-  let dom = El sa uu
-  addContext (absName b,a) $ do
-    codom <- etaExpButTheRecordArgs eta (absBody b) (j-1) recN
-    escapeContext 1 $ return $ El s (Pi a{unDom=dom} (Abs (absName b) codom))
-
 etaIsId :: DkModuleEnv -> QName -> Nat -> Nat -> [QName] -> TCM [DkRule]
 etaIsId eta n i j cons = do
   reportSDoc "toDk.eta" 3 $ (text "Eta is id of" <+>) <$> AP.prettyTCM n
@@ -742,7 +709,8 @@ etaIsId eta n i j cons = do
         consArg <- pattCons cc ctx
         rhs <- constructRhsFields 0 (DkConst cc) ctx
         return $ DkRule
-          { context   = context
+          { decoding  = False
+          , context   = context
           , headsymb  = hd
           , patts     = [DkJoker, DkFun nn (replicate (i+j) DkJoker), consArg]
           , rhs       = rhs
@@ -752,18 +720,13 @@ etaIsId eta n i j cons = do
       DkFun cc <$> nextIndex [] 0 args
     nextIndex acc j []     = return acc
     nextIndex acc j (_:tl) = do
-      (vj,_) <- extractPattern eta 0 $ defaultArg $ unnamed $ varP (DBPatVar "_" j)
+      (vj,_) <- extractPattern eta [] 0 (defaultArg $ unnamed $ varP (DBPatVar "_" j)) __DUMMY_TYPE__ Set.empty
       nextIndex (vj:acc) (j+1) tl
 
     constructRhsFields _ t [] = return t
     constructRhsFields j t (Dom{unDom=(_,tt)}:tl) = do
       let ttGoodDB = raise (j+1) tt
-      vEta <-
-        -- if length tl <i
-        -- then
-        --   return $ Var j []
-        -- else
-          checkInternal' (etaExpandAction eta) (Var j []) ttGoodDB
+      vEta <- checkInternal' (etaExpandAction eta) (Var j []) ttGoodDB
       vParam <- reconstructParameters' (etaExpandAction eta) ttGoodDB vEta
       dkArg <- translateTerm eta vParam
       (`DkApp` dkArg) <$> constructRhsFields (j+1) t tl
@@ -787,7 +750,8 @@ etaExpansionDecl eta n nbPars ConHead{conName = cons} l = do
       tyArg <- pattTy nn ctx
       rhs <- constructRhs (DkConst cc) ctx y
       return $ DkRule
-        { context   = context
+        { decoding  = False
+        , context   = context
         , headsymb  = hd
         , patts     = [DkJoker, tyArg, DkVar y 0 []]
         , rhs       = rhs
@@ -799,17 +763,19 @@ etaExpansionDecl eta n nbPars ConHead{conName = cons} l = do
     nextIndex acc 0 (_:tl) = nextIndex acc 1 tl
     nextIndex acc j []     = return acc
     nextIndex acc j (_:tl) = do
-      (vj,_) <- extractPattern eta 0 $ defaultArg $ unnamed $ varP (DBPatVar "_" j)
+      (vj,_) <- extractPattern eta [] 0 (defaultArg $ unnamed $ varP (DBPatVar "_" j)) __DUMMY_TYPE__ Set.empty
       nextIndex (vj:acc) (j+1) tl
-
+    constructRhs :: DkTerm -> [Dom (Name, Type)] -> DkIdent -> TCM DkTerm
     constructRhs t args y = do
-      tParam <- constructRhsParams 0 t args
+      tParam <- constructRhsParams t args
       constructRhsFields tParam args (map unArg l)
-    constructRhsParams 0 t (_:tl) = constructRhsParams 1 t tl
-    constructRhsParams _ t [] = return t
-    constructRhsParams j t (_:tl) = do
-      dkArg <- translateTerm eta (Var j [])
-      (`DkApp` dkArg) <$> constructRhsParams (j+1) t tl
+
+    constructRhsParams t (_:tl) = constructRhsParams' 1 t tl return
+    constructRhsParams t []     = return t
+    constructRhsParams' _ t []                     clo = clo t
+    constructRhsParams' j t (Dom{unDom=(a,ty)}:tl) clo = do
+      va <- etaExpansion eta (raise (j+1) ty) (var j)
+      constructRhsParams' (j+1) t tl (\x -> clo =<< (DkApp x <$> translateTerm eta va))
 
     rightType 0 u = u
     rightType j (El _ (Pi _ b)) = rightType (j-1) (absBody b)
@@ -822,12 +788,11 @@ etaExpansionDecl eta n nbPars ConHead{conName = cons} l = do
       reportSDoc "toDk.eta" 15 $ (text "tyProj" <+>) <$> AP.prettyTCM tyProj
       let tyRes = rightType (nbPars+1) tyProj
       reportSDoc "toDk.eta" 15 $ (text "tyRes" <+>) <$> AP.prettyTCM tyRes
-      prEta <- etaExpansion eta tyRes (Var 0 [Proj ProjSystem u])
+      prEta <- checkInternal' (etaExpandAction eta) (Var 0 [Proj ProjSystem u]) tyRes
       reportSDoc "toDk.eta" 15 $ return $ text "Eta expansion done"
       reportSDoc "toDk.eta" 15 $ return $ pretty prEta
       prDkName <- qName2DkName eta u
       prDk <- studyEtaExpansion prEta args prDkName 0 tyRes (\x -> x)
-      -- prDk <- translateTerm eta <$> reconstructParameters' (etaExpandAction eta) tyRes prEta
       constructRhsFields (DkApp t prDk) args tl
 
     studyEtaExpansion t args prName i tyRes clo = case t of
@@ -837,17 +802,18 @@ etaExpansionDecl eta n nbPars ConHead{conName = cons} l = do
           case unArg s of
             Level ss -> do
               tyBisRecons <- reconstructParameters' (etaExpandAction eta) (sort (Type ss)) (unArg tyBis)
-              tyBisFinal <- removeEtaOnProj eta n 0 tyBisRecons
+              -- tyBisFinal <- removeEtaOnProj eta n 0 tyBisRecons
+              let tyBisFinal = tyBisRecons
               etaCtx <- translateTerm eta (Def nam [Apply s,Apply tyBis{unArg=tyBisFinal}])
               escapeContext i $ do
                 v <- translateTerm eta (Var 0 [])
-                DkApp etaCtx <$> clo <$> (`DkApp` v) <$> constructRhsParams 0 (DkConst prName) args
+                DkApp etaCtx <$> clo <$> (`DkApp` v) <$> constructRhsParams (DkConst prName) args
             otherwise -> __IMPOSSIBLE__
         else __IMPOSSIBLE__
       Var i _ -> do
         v <- translateTerm eta (Var i [])
         escapeContext i $
-          clo <$> (`DkApp` v) <$> constructRhsParams 0 (DkConst prName) args
+          clo <$> (`DkApp` v) <$> constructRhsParams (DkConst prName) args
       Lam _ body -> do
         case unEl tyRes of
           Pi a b -> do

@@ -60,8 +60,8 @@ decodedType mods (DkProd s1 _ id t u)    =
 decodedType mods (DkQuantifLevel _ id t) =
   parens (printIdent id <+> text ": universeLevel.Lvl") <+> text "->" <+> decodedType mods t
 
-printRules :: DkModName -> DkDefinition -> [Doc]
-printRules mods (DkDefinition {rules=l}) = map (prettyDk mods) l
+printRules :: DkModName -> DkDefinition -> (DkRule -> Bool) -> [Doc]
+printRules mods (DkDefinition {rules=l}) f = map (prettyDk mods) (filter f l)
 
 type Lvl = [PreLvl]
 
@@ -115,10 +115,11 @@ printSort pos _    DkDefaultSort =
 
 data DkRule =
    DkRule
-    { context   :: DkCtx
-    , headsymb  :: DkName
-    , patts     :: [DkPattern]
-    , rhs       :: DkTerm
+    { decoding :: Bool
+    , context  :: DkCtx
+    , headsymb :: DkName
+    , patts    :: [DkPattern]
+    , rhs      :: DkTerm
     }
 
 instance PrettyDk DkRule where
@@ -136,6 +137,7 @@ usedIndex _              = []
 data DkTerm =
     DkSort DkSort
   | DkProd DkSort DkSort DkIdent DkTerm DkTerm
+  | DkProjProd DkSort DkSort DkIdent DkTerm DkTerm
   | DkQuantifLevel DkSort DkIdent DkTerm
   | DkConst DkName
   | DkApp DkTerm DkTerm
@@ -153,6 +155,12 @@ printTerm pos mods (DkProd s1 s2 n t u)     =
   let codomain = parens (printIdent n <+> text "=>" <+> printTerm Top mods u) in
   paren pos $
     text "naiveAgda.prod" <+> sorts <+> domain <+> codomain
+printTerm pos mods (DkProjProd s1 s2 n t u)     =
+  let sorts = printSort Nested mods s1 <+> printSort Nested mods s2 in
+  let domain =  printTerm Nested mods t in
+  let codomain = parens (printIdent n <+> text "=>" <+> printTerm Top mods u) in
+  paren pos $
+    text "naiveAgda.proj_prod" <+> sorts <+> domain <+> codomain
 printTerm pos mods (DkQuantifLevel s n u)   =
   let sorts = parens (printIdent n <+> text "=>" <+> printSort Top mods s) in
   let codomain = parens (printIdent n <+> text "=>" <+> printTerm Top mods u) in
@@ -187,7 +195,7 @@ data DkPattern =
   | DkFun DkName [DkPattern]
   | DkLambda DkIdent DkPattern
   | DkBuiltin DkTerm
-  | DkBrackets DkTerm
+  | DkGuarded DkTerm
   | DkJoker
 
 printPattern ::   Position -> DkModName -> DkPattern -> Doc
@@ -206,7 +214,7 @@ printPattern pos mods (DkLambda n t) =
     printIdent n <+> text "=>" <+> printPattern Top mods t
 printPattern pos mods (DkBuiltin t) =
   printTerm pos mods t
-printPattern pos mods (DkBrackets t) =
+printPattern pos mods (DkGuarded t) =
   braces (printTerm Top mods t)
 printPattern pos mods DkJoker =
   char '_'
