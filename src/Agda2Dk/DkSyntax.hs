@@ -242,7 +242,7 @@ instance PrettyDk DkName where
     let modName =
           if mods == qualif
           then empty
-          else hcat (punctuate (text "__") (map text qualif)) <> char '.'
+          else hcat (punctuate (text "__") (map (text . dropAll) qualif)) <> char '.'
     in
     let symName = printIdent $ (concat (map (++ "__") pseudo)) ++ n in
     modName <> symName
@@ -264,4 +264,22 @@ encapsulate l =
   then l
   else "{|"++l++"|}"
 
+dropAll :: String -> String
+dropAll []    = []
+dropAll (h:t) =
+  if elem h (['a'..'z']++['A'..'Z']++['0'..'9']++['_'])
+  then h:(dropAll t)
+  else dropAll t
+
 data Position = Nested | Top
+
+termOfPattern :: DkPattern -> DkTerm
+termOfPattern (DkVar x i l)  = multiApp (DkDB x i) (map termOfPattern l)
+termOfPattern (DkFun f l)    = multiApp (DkConst f) (map termOfPattern l)
+termOfPattern (DkLambda x p) = DkLam x Nothing (termOfPattern p)
+termOfPattern (DkBuiltin t)  = t
+termOfPattern (DkGuarded t)  = t
+
+multiApp :: DkTerm -> [DkTerm] -> DkTerm
+multiApp t []     = t
+multiApp t (x:tl) = multiApp (DkApp t x) tl
