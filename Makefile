@@ -3,7 +3,7 @@ EXEC = $(shell pwd)/src/Main
 
 TEST_DIR = translation/tests/
 STD_DIR = translation/std-lib/
-OPTS = --dk
+OPTS ?= --dk
 
 AGDAS = $(wildcard tests/*.agda)
 DKS = $(patsubst tests/%.agda, translation/tests/%.dk, $(AGDAS))

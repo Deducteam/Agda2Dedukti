@@ -175,7 +175,7 @@ dkCompileDef _ eta _ def@(Defn {defCopy=isCopy, defName=n, theDef=d, defType=t, 
   then return Nothing
   else
     do
-      reportSDoc "toDk" 3 $ (text "Compiling definition of" <+>) <$> AP.prettyTCM n
+      reportSDoc "toDk" 3 $ (text "  Compiling definition of" <+>) <$> AP.prettyTCM n
       reportSDoc "toDk" 60 $ return $ text $ show def
       (projPar,tParam) <-
         case d of
@@ -345,7 +345,7 @@ clause2rule eta nam c = do
     where
       implicitArgs 0 locCtx = []
       implicitArgs n (h:tl) =
-        (DkVar h (length tl) []):(implicitArgs (n-1) tl)
+        (DkVar h (length tl) [], varP (DBPatVar h (length tl))):(implicitArgs (n-1) tl)
 
       replaceIf []          []       l                         = l
       replaceIf (True:pos)  ((DkVar h i []):args) (DkJoker:tl) =
@@ -385,23 +385,23 @@ extractContextAux acc []                                    =
 extractContextAux acc (Dom {unDom=(n,t)}:r) =
   extractContextAux (name2DkIdent n:acc) r
 
-extractPatterns :: DkModuleEnv -> [NamedArg DeBruijnPattern] -> Type -> Set.Set DkIdent -> [DkPattern] -> TCM ([DkPattern],LastUsed)
+extractPatterns :: DkModuleEnv -> [NamedArg DeBruijnPattern] -> Type -> Set.Set DkIdent -> [(DkPattern, DeBruijnPattern)] -> TCM ([DkPattern],LastUsed)
 extractPatterns eta patts ty appVars acc = do
   normTy <- normalise ty
   auxPatt (-1) eta patts normTy appVars acc
 
-auxPatt ::  LastUsed -> DkModuleEnv -> [NamedArg DeBruijnPattern] -> Type -> Set.Set DkIdent -> [DkPattern] -> TCM ([DkPattern],LastUsed)
+auxPatt ::  LastUsed -> DkModuleEnv -> [NamedArg DeBruijnPattern] -> Type -> Set.Set DkIdent -> [(DkPattern, DeBruijnPattern)] -> TCM ([DkPattern],LastUsed)
 auxPatt n eta []         _                           _       acc =
-  return (reverse acc,n)
+  return (reverse (map fst acc),n)
 auxPatt n eta (p:patts) (El _ (Pi (Dom{unDom=t}) u)) appVars acc = do
   (t, nn) <- extractPattern eta acc n p t appVars
   normTy <- normalise (absBody u)
-  auxPatt (max n nn) eta patts normTy appVars (t:acc)
+  auxPatt (max n nn) eta patts normTy appVars ((t,namedThing (unArg p)):acc)
 auxPatt  n eta (p:patts) ty                          appVars acc = do
   (t, nn) <- extractPattern eta acc n p __DUMMY_TYPE__ appVars
-  auxPatt (max n nn) eta patts __DUMMY_TYPE__ appVars (t:acc)
+  auxPatt (max n nn) eta patts __DUMMY_TYPE__ appVars ((t,namedThing (unArg p)):acc)
 
-extractPattern :: DkModuleEnv -> [DkPattern] -> LastUsed -> NamedArg DeBruijnPattern -> Type -> Set.Set DkIdent -> TCM (DkPattern,LastUsed)
+extractPattern :: DkModuleEnv -> [(DkPattern, DeBruijnPattern)] -> LastUsed -> NamedArg DeBruijnPattern -> Type -> Set.Set DkIdent -> TCM (DkPattern,LastUsed)
 extractPattern eta ctx n x ty appVars =
   let pat = namedThing (unArg x) in
   case pat of
@@ -413,17 +413,20 @@ extractPattern eta ctx n x ty appVars =
       return (DkGuarded term, n)
     ConP (ConHead {conName=h}) ci tl     -> do
       tyLoc <- normalise =<< defType <$> getConstInfo h
-      (patts, nn) <- auxPatt n eta tl tyLoc appVars []
       nbParams <- fromMaybe (error "Why no Parameters?") <$> getNumberOfParameters h
-      nam <- qName2DkName eta h
       reportSDoc "toDk.clause" 30 $ return $ text "The type of this applied constructor is" <+> pretty ty
-      reportSDoc "toDk.clause" 30 $ return $ text "  in context" <+> hsep (punctuate (char ',') (map (printPattern Top []) ctx))
-      argsParam <-
+      reportSDoc "toDk.clause" 30 $ return $ text "  in context" <+> hsep (punctuate (char ',') (map ((printPattern Top []) . fst) ctx))
+      reportSDoc "toDk.clause" 50 $ return $ text "Type of the constructor is" <+>  pretty tyLoc
+      reportSDoc "toDk.clause" 30 $ return $ text "We investigate for" <+>int nbParams<+>text "params"
+      (tyArgs,argsParam) <-
             case ty of
               El _ (Def _ l) ->
-                 sequence $ map caseParamFun $ take nbParams l
-              otherwise      ->  return $ replicate nbParams DkJoker
+                 caseParamFun tyLoc (take nbParams l)
+              otherwise      ->  return $ (__DUMMY_TYPE__,replicate nbParams DkJoker)
+      (patts, nn) <- auxPatt n eta tl tyArgs appVars []
       let args = argsParam ++ patts
+      reportSDoc "bla" 5 $ return $ text "extactPattern fini"
+      nam <- qName2DkName eta h
       return (DkFun nam args, max n nn)
     LitP l                              ->
       return (DkBuiltin (translateLiteral l),n)
@@ -446,32 +449,85 @@ extractPattern eta ctx n x ty appVars =
       error "Unexpected pattern of HoTT"
   where
 
-    caseParamFun :: Elim -> TCM DkPattern
-    caseParamFun (Apply (Arg _ (Var i []))) =
-      case (ctx !! i) of
+    caseParamFun :: Type -> Elims -> TCM (Type,[DkPattern])
+    caseParamFun tyCons els = caseParamFun' tyCons els []
+
+    caseParamFun' tyCons [] acc = do
+      return (tyCons, reverse acc)
+    caseParamFun' tyCons ((Apply (Arg _ (Var i []))):tl) acc =
+      case fst (ctx !! i) of
         DkVar h j [] ->
           if Set.member h appVars
           then do
+            reportSDoc "bla" 5 $ return $ text "Situation 1"
             ctxGlob <- getContext
             let (_,ty) = unDom (ctxGlob !! j)
-            tt <- translateTerm eta =<< etaExpansion eta (raise (j+1) ty) (var j)
-            return $ DkGuarded tt
-          else return DkJoker
-        otherwise -> return DkJoker
-    caseParamFun (Apply (Arg _ t)) =
-      DkGuarded . (substi ctx) <$> translateTerm eta t
+            tEta <- etaExpansion eta (raise (j+1) ty) (var j)
+            tPar <- reconstructParameters' (etaExpandAction eta) (raise (j+1) ty) tEta
+            reportSDoc "bla" 5 $ return $ text "tPar is" <+> pretty tPar
+            tt <- translateTerm eta tPar
+            caseParamFun' (piApply tyCons [defaultArg (patternToTerm (snd (ctx !! i)))]) tl (DkGuarded tt:acc)
+          else do
+            reportSDoc "bla" 5 $ return $ text "Situation 2"
+            ctxGlob <- getContext
+            let (_,ty) = unDom (ctxGlob !! j)
+            tyNorm <- normalise ty
+            case unEl tyNorm of
+              Pi _ _    -> do
+                tEta <- etaExpansion eta (raise (j+1) ty) (var j)
+                tPar <- reconstructParameters' (etaExpandAction eta) (raise (j+1) ty) tEta
+                reportSDoc "bla" 5 $ return $ text "tPar in the OTHER case is" <+> pretty tPar
+                tt <- translateTerm eta tPar
+                caseParamFun'  (piApply tyCons [defaultArg (patternToTerm (snd (ctx !! i)))]) tl (DkGuarded tt:acc)
+              otherwise ->
+                caseParamFun'  (piApply tyCons [defaultArg (patternToTerm (snd (ctx !! i)))]) tl (DkJoker:acc)
+        otherwise ->
+          caseParamFun'  (piApply tyCons [defaultArg (patternToTerm (snd (ctx !! i)))]) tl (DkJoker:acc)
+    caseParamFun' tyCons@(El _ (Pi (Dom {unDom=tyArg}) _)) ((Apply (Arg _ t)):tl) acc = do
+      let tt = applySubst (parallelS (map (patternToTerm . snd) ctx)) t
+      reportSDoc "bla" 5 $ return $ text "tt is"
+      reportSDoc "bla" 5 $ return $ text "  " <> pretty tt
+      tyNorm <- normalise tyArg
+      case unEl tyNorm of
+        Pi _ _    -> do
+          tEta <- checkInternal' (etaExpandAction eta) tt tyArg
+          tPar <- reconstructParameters' (etaExpandAction eta) tyArg tEta
+          reportSDoc "bla" 5 $ return $ text "tPar in the cas casse-couille is" <+> pretty tPar
+          tDk <- translateTerm eta tPar
+          caseParamFun' (piApply tyCons [defaultArg tt]) tl (DkGuarded tDk:acc)
+        otherwise ->
+          caseParamFun' (piApply tyCons [defaultArg tt]) tl (DkJoker:acc)
 
 substi :: [DkPattern] -> DkTerm -> DkTerm
-substi _ t@(DkSort _)             = t
-substi l (DkProd s1 s2 x a b)     = DkProd s1 s2 x (substi l a) (substi l b)
-substi l (DkProjProd s1 s2 x a b) = DkProjProd s1 s2 x (substi l a) (substi l b)
-substi l (DkQuantifLevel s x a)   = DkQuantifLevel s x (substi l a)
+substi l (DkSort s)               =
+  DkSort (substiSort l s)
+substi l (DkProd s1 s2 x a b)     =
+  DkProd (substiSort l s1) (substiSort l s2) x (substi l a) (substi l b)
+substi l (DkProjProd s1 s2 x a b) =
+  DkProjProd (substiSort l s1) (substiSort l s2) x (substi l a) (substi l b)
+substi l (DkQuantifLevel s x a)   =
+  DkQuantifLevel (substiSort l s) x (substi l a)
 substi _ t@(DkConst _)            = t
-substi l (DkApp t u)              = DkApp (substi l t) (substi l u)
-substi l (DkLam x _ t)            = DkLam x Nothing (substi l t)
-substi _ t@(DkLevel _)            = t
-substi l (DkDB _ i)               = termOfPattern (l !! i)
+substi l (DkApp t u)              =
+  DkApp (substi l t) (substi l u)
+substi l (DkLam x _ t)            =
+  DkLam x Nothing (substi l t)
+substi l (DkDB _ i)               =
+  termOfPattern (l !! i)
+substi l (DkLevel lv)             =
+  DkLevel (substiLvl l lv)
 
+substiLvl l lv = map (substiPreLvl l) lv
+
+substiPreLvl _ lv@(LvlInt _) = lv
+substiPreLvl l (LvlPlus i t) = LvlPlus i (substi l t)
+
+substiSort l (DkSet lv)    = DkSet (substiLvl l lv)
+substiSort l (DkProp lv)   = DkProp (substiLvl l lv)
+substiSort _ DkSetOmega    = DkSetOmega
+substiSort l (DkUniv s)    = DkUniv (substiSort l s)
+substiSort l (DkPi s1 s2)  = DkPi (substiSort l s1) (substiSort l s2)
+substiSort _ DkDefaultSort = DkDefaultSort
 
 translateElim :: DkModuleEnv -> DkTerm -> Term -> Elims -> TCM DkTerm
 translateElim eta t tAg []                  = return t
@@ -706,7 +762,7 @@ etaExpandType eta (El s u) = do
 
 etaIsId :: DkModuleEnv -> QName -> Nat -> Nat -> [QName] -> TCM [DkRule]
 etaIsId eta n i j cons = do
-  reportSDoc "toDk.eta" 3 $ (text "Eta is id of" <+>) <$> AP.prettyTCM n
+  reportSDoc "toDk.eta" 5 $ (text "Eta is id of" <+>) <$> AP.prettyTCM n
   mapM oneCase cons
 
   where
@@ -882,8 +938,8 @@ etaExpansion eta t u = do
 
     etaExp t u = do
       let s = getElimSort t
-      let tExpand = checkInternalType' (etaExpandAction eta) t
-      ty <- defaultArg . unEl <$> tExpand
+      tPar <- etaExpandType eta t
+      let ty = defaultArg (unEl tPar)
       let uu = defaultArg u
       return $ Def eta [Apply s, Apply ty, Apply uu]
 
