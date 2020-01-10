@@ -17,3 +17,6 @@ f (cons n m) x = cons x n
 
 bla : ∀ (x : R Nat) -> x ≡ cons (R.n x) (R.m x)
 bla x = refl
+
+bla2 : ∀ (x : A → A) -> x ≡ λ y -> x y
+bla2 x = refl
