@@ -479,6 +479,17 @@ extractPattern eta ctx n x ty appVars =
                 reportSDoc "bla" 5 $ return $ text "tPar in the OTHER case is" <+> pretty tPar
                 tt <- translateTerm eta tPar
                 caseParamFun'  (piApply tyCons [defaultArg (patternToTerm (snd (ctx !! i)))]) tl (DkGuarded tt:acc)
+              Def n _ -> do
+                isRec <- isRecord n
+                pat <-
+                  case isRec of
+                    Nothing -> return DkJoker
+                    Just _ -> do
+                      tEta <- etaExpansion eta (raise (j+1) ty) (var j)
+                      tPar <- reconstructParameters' (etaExpandAction eta) (raise (j+1) ty) tEta
+                      tt <- translateTerm eta tPar
+                      return $ DkGuarded tt
+                caseParamFun'  (piApply tyCons [defaultArg (patternToTerm (snd (ctx !! i)))]) tl (pat:acc)
               otherwise ->
                 caseParamFun'  (piApply tyCons [defaultArg (patternToTerm (snd (ctx !! i)))]) tl (DkJoker:acc)
         otherwise ->

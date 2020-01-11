@@ -7,7 +7,7 @@ declare -i NB=$5
 
 i=0
 cd $AGDA_DIR
-find . -name "*.agda" |
+find . -name "*.agda" | sort |
     while read fil;
     do
         if (("$NB" == "$i"))
