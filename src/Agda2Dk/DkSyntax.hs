@@ -24,6 +24,9 @@ data DkDefinition =
     , rules     :: [DkRule]
     }
 
+etaExpandSymb :: DkName
+etaExpandSymb = DkQualified ["naiveAgda"] [] "etaExpand"
+
 printDecl :: DkModName -> DkDefinition -> Doc
 printDecl mods (DkDefinition {name=n, staticity=b, typ=t, kind=k}) =
   let special =
@@ -169,8 +172,17 @@ printTerm pos mods (DkQuantifLevel s n u)   =
 printTerm pos mods  (DkConst f)             =
   prettyDk mods f
 printTerm pos mods (DkApp t u)              =
-  paren pos $
-    printTerm Top mods t <+> printTerm Nested mods u
+  case t of
+    DkApp (DkApp (DkConst n) s) ty | n == etaExpandSymb ->
+      case u of
+        DkApp (DkApp (DkApp (DkConst n2) s2) ty2) v | n2 == etaExpandSymb ->
+          printTerm pos mods u
+        otherwise -> defaultCase
+    otherwise -> defaultCase
+  where
+    defaultCase =
+      paren pos $
+        printTerm Top mods t <+> printTerm Nested mods u
 printTerm pos mods (DkLam n Nothing t)      =
   paren pos $
     printIdent n <+> text "=>" <+> printTerm Top mods t
