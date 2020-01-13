@@ -171,40 +171,37 @@ orderDeclRules' mut accTy accOther waitingRules l@((m,d):tl) mods
 
 dkCompileDef :: DkOptions -> DkModuleEnv -> IsMain -> Definition -> TCM DkCompiled
 dkCompileDef _ eta _ def@(Defn {defCopy=isCopy, defName=n, theDef=d, defType=t, defMutual=MutId m}) =
-  if isCopy
-  then return Nothing
-  else
-    do
-      reportSDoc "toDk" 3 $ (text "  Compiling definition of" <+>) <$> AP.prettyTCM n
-      reportSDoc "toDk" 60 $ return $ text $ show def
-      (projPar,tParam) <-
-        case d of
-          Function {funProjection=pr} ->
-            case pr of
-              Nothing                               -> defaultCase
-              Just Projection{projProper=Nothing}   -> defaultCase
-                -- In case of record projector, symetrically, because of the eta-rule,
-                -- the argument type must not be eta-expanded.
-              Just Projection{projProper=Just recN} -> do
-                Defn{theDef=Record{recPars=i}} <- getConstInfo recN
-                tExpand <- etaExpandType eta t
-                tPar <- inTopContext $ do
-                  reconstructParametersInType' (etaExpandAction eta) tExpand
-                return (Just i, tPar)
-          _ -> defaultCase
-      reportSDoc "toDk.eta" 5 $ (text "tParam is" <+>) <$> AP.pretty tParam
-      inTopContext $ do
-        typ     <- translateType eta tParam projPar
-        name    <- qName2DkName eta n
-        kk      <- getKind eta t
-        stat    <- extractStaticity n d
-        rules   <- extractRules eta n d t
-        return $ Just (m,DkDefinition
-          { name      = name
-          , staticity = stat
-          , typ       = typ
-          , kind      = kk
-          , rules     = rules})
+  do
+    reportSDoc "toDk" 3 $ (text "  Compiling definition of" <+>) <$> AP.prettyTCM n
+    reportSDoc "toDk" 60 $ return $ text $ show def
+    (projPar,tParam) <-
+      case d of
+        Function {funProjection=pr} ->
+          case pr of
+            Nothing                               -> defaultCase
+            Just Projection{projProper=Nothing}   -> defaultCase
+            -- In case of record projector, symetrically, because of the eta-rule,
+            -- the argument type must not be eta-expanded.
+            Just Projection{projProper=Just recN} -> do
+              Defn{theDef=Record{recPars=i}} <- getConstInfo recN
+              tExpand <- etaExpandType eta t
+              tPar <- inTopContext $ do
+                reconstructParametersInType' (etaExpandAction eta) tExpand
+              return (Just i, tPar)
+        _ -> defaultCase
+    reportSDoc "toDk.eta" 15 $ (text "tParam is" <+>) <$> AP.pretty tParam
+    inTopContext $ do
+      typ     <- translateType eta tParam projPar
+      name    <- qName2DkName eta n
+      kind    <- getKind eta t
+      stat    <- extractStaticity n d
+      rules   <- extractRules eta n d t
+      return $ Just (m,DkDefinition
+        { name      = name
+        , staticity = stat
+        , typ       = typ
+        , kind      = kind
+        , rules     = rules})
 
   where
     defaultCase = do
@@ -319,7 +316,6 @@ clause2rule eta nam c = do
         rr <-
           case clauseType c of
             Nothing -> do
-              reportSDoc "bla" 3 $ return $ text "NOTHING"
               return r
             Just t  -> do
               reportSDoc "toDk.clause" 20 $ return $ (text "Type is:") <+> pretty t
@@ -425,7 +421,6 @@ extractPattern eta ctx n x ty appVars =
               otherwise      ->  return $ (__DUMMY_TYPE__,replicate nbParams DkJoker)
       (patts, nn) <- auxPatt n eta tl tyArgs appVars []
       let args = argsParam ++ patts
-      reportSDoc "bla" 5 $ return $ text "extactPattern fini"
       nam <- qName2DkName eta h
       return (DkFun nam args, max n nn)
     LitP l                              ->
@@ -454,14 +449,16 @@ extractPattern eta ctx n x ty appVars =
 
     caseParamFun' tyCons [] acc = do
       return (tyCons, reverse acc)
-    caseParamFun' tyCons ((Apply (Arg _ (Var i []))):tl) acc =
+    caseParamFun' tyCons ((Apply (Arg _ (Var i []))):tl) acc = do
+      reportSDoc "bla" 5 $ return $ text "i vaut" <+> int i <+> text "et le contexte est de taille" <+> int (length ctx)
       case fst (ctx !! i) of
-        DkVar h j [] ->
+        DkVar h j [] -> do
+          ctxGlob <- getContext
+          reportSDoc "bla" 5 $ return $ text "j vaut" <+> int j <+> text "et le contexte glob est de taille" <+> int (length ctxGlob)
+          let (_,ty) = unDom (ctxGlob !! j)
           if Set.member h appVars
           then do
             reportSDoc "bla" 5 $ return $ text "Situation 1"
-            ctxGlob <- getContext
-            let (_,ty) = unDom (ctxGlob !! j)
             tEta <- etaExpansion eta (raise (j+1) ty) (var j)
             tPar <- reconstructParameters' (etaExpandAction eta) (raise (j+1) ty) tEta
             reportSDoc "bla" 5 $ return $ text "tPar is" <+> pretty tPar
@@ -469,8 +466,6 @@ extractPattern eta ctx n x ty appVars =
             caseParamFun' (piApply tyCons [defaultArg (patternToTerm (snd (ctx !! i)))]) tl (DkGuarded tt:acc)
           else do
             reportSDoc "bla" 5 $ return $ text "Situation 2"
-            ctxGlob <- getContext
-            let (_,ty) = unDom (ctxGlob !! j)
             tyNorm <- normalise ty
             case unEl tyNorm of
               Pi _ _    -> do
@@ -686,6 +681,7 @@ qName2DkName eta qn@QName{qnameModule=mods, qnameName=nam}
   | qn == eta = return $ DkQualified ["naiveAgda"] [] "etaExpand"
   | otherwise = do
       topMod <- topLevelModuleName mods
+      def <- getConstInfo qn
       let otherMods = stripPrefix (mnameToList topMod) (mnameToList mods)
       return $
         DkQualified (modName2DkModIdent topMod) (maybe [] (map name2DkIdent) otherMods) (name2DkIdent nam)
