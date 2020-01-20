@@ -171,9 +171,11 @@ orderDeclRules' mut accTy accOther waitingRules l@((m,d):tl) mods
 
 dkCompileDef :: DkOptions -> DkModuleEnv -> IsMain -> Definition -> TCM DkCompiled
 dkCompileDef _ eta _ def@(Defn {defCopy=isCopy, defName=n, theDef=d, defType=t, defMutual=MutId m}) =
-  do
+  if isCopy
+  then return Nothing
+  else do
     reportSDoc "toDk" 3 $ (text "  Compiling definition of" <+>) <$> AP.prettyTCM n
-    reportSDoc "toDk" 60 $ return $ text $ show def
+    reportSDoc "toDk" 60 $ return $ pretty def
     (projPar,tParam) <-
       case d of
         Function {funProjection=pr} ->
@@ -183,7 +185,9 @@ dkCompileDef _ eta _ def@(Defn {defCopy=isCopy, defName=n, theDef=d, defType=t, 
             -- In case of record projector, symetrically, because of the eta-rule,
             -- the argument type must not be eta-expanded.
             Just Projection{projProper=Just recN} -> do
-              Defn{theDef=Record{recPars=i}} <- getConstInfo recN
+              dd@Defn{theDef=Record{recPars=i}} <- getConstInfo recN
+              reportSDoc "bla" 2 $ return $ text "Le RECORD"
+              reportSDoc "bla" 2 $ return $ pretty dd
               tExpand <- etaExpandType eta t
               tPar <- inTopContext $ do
                 reconstructParametersInType' (etaExpandAction eta) tExpand
@@ -549,6 +553,7 @@ translateElim eta t tAg ((IApply _ _ _):tl) = error "Unexpected IApply"
 translateTerm' :: DkModuleEnv -> Term -> Maybe Nat -> TCM DkTerm
 translateTerm' eta t mb = do
   reportSDoc "toDk.translate" 30 $ return $ text "Translation of" <+> pretty t
+  reportSDoc "bla" 3 $ return $ text "Translation of" <+> pretty t <+> pretty mb
   case (t,mb) of
     ((Var i elims),                          Nothing) -> do
         nam <- nameOfBV i

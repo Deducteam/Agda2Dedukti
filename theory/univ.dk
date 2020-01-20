@@ -5,6 +5,7 @@ Nat : Type.
 
 0_N : Nat.
 s_N : Nat -> Nat.
+def 1_N := s_N 0_N.
 
 def max_N : Nat -> Nat -> Nat.
 [y]   max_N 0_N     y       --> y.
@@ -54,9 +55,8 @@ def mapPlus : Nat -> LvlSet -> LvlSet.
 
 [i,j,k,l]    Max i   (Plus j (Max k l))            --> Max (max_N i (plus_N j k)) (mapPlus j l).
 [i,j,k,l,tl] Max i   (Union (Plus j (Max k l)) tl) --> Max (max_N i (plus_N j k)) (Union (mapPlus j l) tl).
-[x]          Max 0_N (Plus 0_N x)                  --> x.
 
 (; The reflection of the syntax on Lvl. ;)
 []    0       --> Max 0_N Empty.
-[x]   s x     --> Max (s_N 0_N) (Plus (s_N 0_N) x).
+[x]   s x     --> Max 1_N (Plus 1_N x).
 [x,y] max x y --> Max 0_N (Union (Plus 0_N x) (Plus 0_N y)).
