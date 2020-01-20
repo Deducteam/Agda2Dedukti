@@ -17,7 +17,9 @@ def rule : Sort -> Sort -> Sort.
 [i, j] rule (set i)  (prop j) --> prop (universeLevel.max i j).
 [i, j] rule (prop i) (set j)  --> set  (universeLevel.max i j).
 [i, j] rule (prop i) (prop j) --> prop (universeLevel.max i j).
+(;
 []     rule _        setOmega --> setOmega.
+ ;)
 
 (; Types and terms ;)
 
