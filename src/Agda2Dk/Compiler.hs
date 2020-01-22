@@ -195,11 +195,11 @@ dkCompileDef _ eta _ def@(Defn {defCopy=isCopy, defName=n, theDef=d, defType=t, 
         _ -> defaultCase
     reportSDoc "toDk.eta" 15 $ (text "tParam is" <+>) <$> AP.pretty tParam
     inTopContext $ do
-      typ     <- translateType eta tParam projPar
-      name    <- qName2DkName eta n
-      kind    <- getKind eta t
-      stat    <- extractStaticity n d
-      rules   <- extractRules eta n d t
+      typ        <- translateType eta tParam projPar
+      Right name <- qName2DkName eta n -- n is not a copy
+      kind       <- getKind eta t
+      stat       <- extractStaticity n d
+      rules      <- extractRules eta n d t
       return $ Just (m,DkDefinition
         { name      = name
         , staticity = stat
@@ -262,9 +262,9 @@ extractRules _ _ _ _                            = sequence []
 decodedVersion :: DkModuleEnv -> QName -> Int -> TCM DkRule
 decodedVersion eta nam i = do
   reportSDoc "toDk" 5 $ return $ text "Decoding" <+> pretty nam
-  nn@(DkQualified mods pseudo n) <- qName2DkName eta nam
+  Right nn@(DkQualified mods pseudo n) <- qName2DkName eta nam -- nam is not a copy
   let decodedName = DkQualified mods ("TYPE":pseudo) n
-  let hd = DkQualified ["naiveAgda"] [] "Term"
+  let hd = DkQualified ["Agda"] [] "Term"
   ty <- defType <$> getConstInfo nam
   tele <- theTel <$> (telView ty)
   reportSDoc "toDk" 15 $ ((text "In the context:") <+> ) <$> (AP.prettyTCM tele)
@@ -333,7 +333,7 @@ clause2rule eta nam c = do
         let impArgs = implicitArgs implicits (reverse ctx)
         let appVars = isAppliedIn rhs
         (patts,_) <- extractPatterns eta (namedClausePats c) (drop implicits tyHd) appVars (reverse impArgs)
-        headSymb <- qName2DkName eta nam
+        Right headSymb <- qName2DkName eta nam -- nam is not a copy
         return $ Just DkRule
           { decoding  = False
           , context   = ctx
@@ -425,7 +425,7 @@ extractPattern eta ctx n x ty appVars =
               otherwise      ->  return $ (__DUMMY_TYPE__,replicate nbParams DkJoker)
       (patts, nn) <- auxPatt n eta tl tyArgs appVars []
       let args = argsParam ++ patts
-      nam <- qName2DkName eta h
+      Right nam <- qName2DkName eta h
       return (DkFun nam args, max n nn)
     LitP l                              ->
       return (DkBuiltin (translateLiteral l),n)
@@ -441,7 +441,7 @@ extractPattern eta ctx n x ty appVars =
           case mbNbParams of
             Nothing -> error "Why no Parameters?"
             Just n  -> return n
-        dkNam <- qName2DkName eta nam
+        Right dkNam <- qName2DkName eta nam
         let args = (replicate nbParams DkJoker)
         return (DkFun dkNam args, n)
     otherwise                           ->
@@ -556,24 +556,28 @@ translateTerm' eta t mb = do
   reportSDoc "bla" 3 $ return $ text "Translation of" <+> pretty t <+> pretty mb
   case (t,mb) of
     ((Var i elims),                          Nothing) -> do
-        nam <- nameOfBV i
-        translateElim eta (DkDB (name2DkIdent nam) i) (Var i []) elims
+      nam <- nameOfBV i
+      translateElim eta (DkDB (name2DkIdent nam) i) (Var i []) elims
     ((Lam _ ab),                             Nothing) -> do
-        ctx <- getContext
-        let n = freshStr ctx (absName ab)
-        addContext n $
-          do
-            body <- translateTerm eta (unAbs ab)
-            nam <- nameOfBV 0
-            return $ DkLam (name2DkIdent nam) Nothing body
+      ctx <- getContext
+      let n = freshStr ctx (absName ab)
+      addContext n $
+        do
+          body <- translateTerm eta (unAbs ab)
+          nam <- nameOfBV 0
+          return $ DkLam (name2DkIdent nam) Nothing body
     ((Lit l),                                Nothing) ->
       return $ translateLiteral l
     ((Def n elims),                          Nothing) -> do
-        nam <- qName2DkName eta n
-        translateElim eta (DkConst nam) (Def n []) elims
+      nn <- qName2DkName eta n
+      case nn of
+        Right nam -> translateElim eta (DkConst nam) (Def n []) elims
+        Left tt -> translateTerm' eta (tt `applyE` elims) mb
     ((Con hh@(ConHead {conName=h}) i elims), Nothing) -> do
-        nam <- qName2DkName eta h
-        translateElim eta (DkConst nam) (Con hh i []) elims
+      nn <- qName2DkName eta h
+      case nn of
+        Right nam -> translateElim eta (DkConst nam) (Con hh i []) elims
+        Left tt -> translateTerm' eta (tt `applyE` elims) mb
     ((Pi d@(Dom {unDom=a}) bb),              mb_j)    -> do
         ctx <- getContext
         let nn = freshStr ctx (absName bb)
@@ -588,7 +592,7 @@ translateTerm' eta t mb = do
               case a of
                 El {unEl=Def h []} -> do
                   hd <- qName2DkName eta h
-                  if hd == DkQualified ["Agda","Primitive"] [] "Level"
+                  if hd == Right (DkQualified ["Agda","Primitive"] [] "Level")
                   then return $ DkQuantifLevel kb (name2DkIdent nam) body
                   else return $ (sp_prod mb_j) ka kb (name2DkIdent nam) dom body
                 otherwise ->
@@ -681,15 +685,25 @@ addEl _ _ = error "Those terms do not expect elimination"
 -- Translation of Name and QName function
 --------------------------------------------------------------------------------
 
-qName2DkName :: DkModuleEnv -> QName -> TCM DkName
+qName2DkName :: DkModuleEnv -> QName -> TCM (Either Term DkName)
 qName2DkName eta qn@QName{qnameModule=mods, qnameName=nam}
-  | qn == eta = return $ DkQualified ["naiveAgda"] [] "etaExpand"
+  | qn == eta = return $ Right $ DkQualified ["Agda"] [] "etaExpand"
   | otherwise = do
       topMod <- topLevelModuleName mods
       def <- getConstInfo qn
-      let otherMods = stripPrefix (mnameToList topMod) (mnameToList mods)
-      return $
-        DkQualified (modName2DkModIdent topMod) (maybe [] (map name2DkIdent) otherMods) (name2DkIdent nam)
+      if defCopy def
+      then do
+        reportSDoc "bla" 2 $ pretty <$> reduce (Def qn [])
+        tRed <- reduce (Def qn [])
+        let ty = defType def
+        tChk <- checkInternal' (etaExpandAction eta) tRed ty
+        tRecons <- reconstructParameters' (etaExpandAction eta) ty tChk
+        reportSDoc "bla" 2 $ return $ pretty tRecons
+        return $ Left tRecons
+      else
+        let otherMods = stripPrefix (mnameToList topMod) (mnameToList mods) in
+        return $ Right $
+          DkQualified (modName2DkModIdent topMod) (maybe [] (map name2DkIdent) otherMods) (name2DkIdent nam)
 
 name2DkIdent :: Name -> DkIdent
 name2DkIdent (Name {nameConcrete=CN.Name {CN.nameNameParts=n}}) =
@@ -778,14 +792,16 @@ etaIsId eta n i j cons = do
   mapM oneCase cons
 
   where
-    hd = DkQualified ["naiveAgda"] [] "etaExpand"
+    hd = DkQualified ["Agda"] [] "etaExpand"
     oneCase f = do
       Defn{defType=tt} <- getConstInfo f
       TelV tele _ <- telView tt
       addContext tele $
         modifyContext separateVars $ do
-        cc <- qName2DkName eta f
-        nn <- qName2DkName eta n
+        -- We do have the information that n is not a copy,
+        -- otherwise it would not have gone through compileDef
+        Right cc <- qName2DkName eta f
+        Right nn <- qName2DkName eta n
         ctx <- getContext
         context <- extractContext ctx
         consArg <- pattCons cc ctx
@@ -816,13 +832,15 @@ etaIsId eta n i j cons = do
 etaExpansionDecl :: QName -> QName -> Int -> ConHead -> [Arg QName] -> TCM DkRule
 etaExpansionDecl eta n nbPars ConHead{conName = cons} l = do
   reportSDoc "toDk.eta" 10 $ (text "[Decl]Eta expansion of" <+>) <$> AP.prettyTCM n
-  let hd = DkQualified ["naiveAgda"] [] "etaExpand"
+  let hd = DkQualified ["Agda"] [] "etaExpand"
   Defn{defType=tt} <- getConstInfo n
   TelV tele _ <- telView tt
   addContext tele $
     modifyContext separateVars $ do
-    nn <- qName2DkName eta n
-    cc <- qName2DkName eta cons
+    -- We do have the information that n is not a copy,
+    -- otherwise it would not have gone through compileDef
+    Right nn <- qName2DkName eta n
+    Right cc <- qName2DkName eta cons
     y <- (\ctx -> freshStr ctx "y") <$> getContext
     let ty = apply (Def n []) (teleArgs tele)
     s <- checkType' $ El Inf ty
@@ -874,7 +892,7 @@ etaExpansionDecl eta n nbPars ConHead{conName = cons} l = do
       prEta <- checkInternal' (etaExpandAction eta) (Var 0 [Proj ProjSystem u]) tyRes
       reportSDoc "toDk.eta" 15 $ return $ text "Eta expansion done"
       reportSDoc "toDk.eta" 15 $ return $ pretty prEta
-      prDkName <- qName2DkName eta u
+      Right prDkName <- qName2DkName eta u
       prDk <- studyEtaExpansion prEta args prDkName 0 tyRes (\x -> x)
       constructRhsFields (DkApp t prDk) args tl
 
@@ -906,7 +924,7 @@ etaExpansionDecl eta n nbPars ConHead{conName = cons} l = do
             addContext (absName body,a) $
               modifyContext separateVars $ do
               x <- nameOfBV 0
-              let clo2 rest = DkApp rest (DkApp (DkApp (DkApp (DkConst (DkQualified ["naiveAgda"] [] "etaExpand")) (DkLevel dkL)) dkTDom)  (DkDB (name2DkIdent x) 0))
+              let clo2 rest = DkApp rest (DkApp (DkApp (DkApp (DkConst (DkQualified ["Agda"] [] "etaExpand")) (DkLevel dkL)) dkTDom)  (DkDB (name2DkIdent x) 0))
               DkLam (name2DkIdent x) (Just (dkTDom,dkS)) <$> studyEtaExpansion (absBody body) args prName (i+1) (absBody b) (clo2 . clo)
           otherwise -> __IMPOSSIBLE__
       otherwise -> __IMPOSSIBLE__
@@ -964,7 +982,7 @@ etaExpansion eta t u = do
     isLevel n = do
       nn <- qName2DkName eta n
       case nn of
-        DkQualified ["Agda", "Primitive"] [] "Level" ->
+        Right (DkQualified ["Agda", "Primitive"] [] "Level") ->
           return True
         otherwise ->
           return False

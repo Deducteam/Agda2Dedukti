@@ -55,6 +55,7 @@ def mapPlus : Nat -> LvlSet -> LvlSet.
 
 [i,j,k,l]    Max i   (Plus j (Max k l))            --> Max (max_N i (plus_N j k)) (mapPlus j l).
 [i,j,k,l,tl] Max i   (Union (Plus j (Max k l)) tl) --> Max (max_N i (plus_N j k)) (Union (mapPlus j l) tl).
+[x] Max 0_N (Plus 0_N x) --> x.
 
 (; The reflection of the syntax on Lvl. ;)
 []    0       --> Max 0_N Empty.

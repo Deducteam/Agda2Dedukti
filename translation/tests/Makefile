@@ -6,7 +6,7 @@ DKS=$(wildcard *.dk)
 # character.
 DKOS=$(shell cut -d ':' -f 1 .depend)
 
-BASE_LOC = -I ..
+BASE_LOC = -I ../../theory
 FLAGS = -e --snf
 
 DKDEP=dkdep $(BASE_LOC)
