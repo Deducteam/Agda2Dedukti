@@ -572,12 +572,16 @@ translateTerm' eta t mb = do
       nn <- qName2DkName eta n
       case nn of
         Right nam -> translateElim eta (DkConst nam) (Def n []) elims
-        Left tt -> translateTerm' eta (tt `applyE` elims) mb
+        Left tt -> do
+          reportSDoc "bla" 2 $ return (text "Def of" <+> pretty n)
+          translateTerm' eta (tt `applyE` elims) mb
     ((Con hh@(ConHead {conName=h}) i elims), Nothing) -> do
       nn <- qName2DkName eta h
       case nn of
         Right nam -> translateElim eta (DkConst nam) (Con hh i []) elims
-        Left tt -> translateTerm' eta (tt `applyE` elims) mb
+        Left tt -> do
+          reportSDoc "bla" 2 $ return (text "Con of" <+> pretty h)
+          translateTerm' eta (tt `applyE` elims) mb
     ((Pi d@(Dom {unDom=a}) bb),              mb_j)    -> do
         ctx <- getContext
         let nn = freshStr ctx (absName bb)
@@ -591,6 +595,7 @@ translateTerm' eta t mb = do
               nam <- nameOfBV 0
               case a of
                 El {unEl=Def h []} -> do
+                  reportSDoc "bla" 2 $ return $ text "test for Lvl"
                   hd <- qName2DkName eta h
                   if hd == Right (DkQualified ["Agda","Primitive"] [] "Level")
                   then return $ DkQuantifLevel kb (name2DkIdent nam) body
@@ -691,14 +696,21 @@ qName2DkName eta qn@QName{qnameModule=mods, qnameName=nam}
   | otherwise = do
       topMod <- topLevelModuleName mods
       def <- getConstInfo qn
+      reportSDoc "bla" 2 $ return (pretty def)
       if defCopy def
       then do
-        reportSDoc "bla" 2 $ pretty <$> reduce (Def qn [])
-        tRed <- reduce (Def qn [])
+        reportSDoc "bla" 2 $ return (text "qName bugged of" <+> pretty qn)
         let ty = defType def
-        tChk <- checkInternal' (etaExpandAction eta) tRed ty
-        tRecons <- reconstructParameters' (etaExpandAction eta) ty tChk
-        reportSDoc "bla" 2 $ return $ pretty tRecons
+        -- this first step is just to eta-expand, in order to trigger reduction
+        tChk <- checkInternal' (etaExpandAction eta) (Def qn []) ty
+        reportSDoc "bla" 2 $ return (text "tChk computed")
+        tRed <- normalise tChk
+        reportSDoc "bla" 2 $ return (text "tChk normalised")
+        -- We have to do it again to unspine projections
+        tChk2 <- checkInternal' (etaExpandAction eta) tRed ty
+        reportSDoc "bla" 2 $ return (text "tChk2 computed")
+        tRecons <- reconstructParameters' (etaExpandAction eta) ty tChk2
+        reportSDoc "bla" 2 $ return (text "tChk2 reconstructed" <+> text "res is" <+> pretty tRecons)
         return $ Left tRecons
       else
         let otherMods = stripPrefix (mnameToList topMod) (mnameToList mods) in
@@ -980,6 +992,7 @@ etaExpansion eta t u = do
 
     isLevel :: QName -> TCM Bool
     isLevel n = do
+      reportSDoc "bla" 2 $ return $ text "Testing for lvl"
       nn <- qName2DkName eta n
       case nn of
         Right (DkQualified ["Agda", "Primitive"] [] "Level") ->
