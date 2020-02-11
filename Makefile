@@ -25,7 +25,7 @@ NB ?= -1
 
 std-lib: compile
 	bash "./translation/generate_std-lib.sh" $(AGDA_DIR)std-lib/src $(EXEC) "--dk $(OPTS)" $(shell pwd)/$(STD_DIR) $(NB)
-	cd $(STD_DIR) && make
+	cd $(STD_DIR) && make FLAGS="-e --snf $(DK_FLAGS)"
 
 clean-std-lib:
 	rm translation/std-lib/*.dk* translation/std-lib/.depend

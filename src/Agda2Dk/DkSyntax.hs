@@ -232,6 +232,9 @@ printPattern pos mods (DkLambda n t) =
     printIdent n <+> text "=>" <+> printPattern Top mods t
 printPattern pos mods (DkBuiltin t) =
   printTerm pos mods t
+-- We do not guard variables, since non-linear rules are more efficient.
+printPattern pos mods (DkGuarded (DkDB n _)) =
+  printIdent n
 printPattern pos mods (DkGuarded t) =
   braces (printTerm Top mods t)
 printPattern pos mods DkJoker =
