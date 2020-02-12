@@ -320,10 +320,8 @@ clause2rule eta nam c = do
               reportSDoc "toDk.clause" 25 $ return $ text "    Clause without type !"
               return r
             Just t  -> do
-              reportSDoc "toDk.clause" 30 $ return $ (text "    Type is:") <+> pretty t
               r1 <- checkInternal' (etaExpandAction eta) r (unArg t)
-              t1 <- checkInternalType' (etaExpandAction eta) (unArg t)
-              reconstructParameters' (etaExpandAction eta) t1 r1
+              reconstructParameters' (etaExpandAction eta) (unArg t) r1
         reportSDoc "toDk.clause" 30 $ return $ text "    Parameters reconstructed"
         reportSDoc "toDk.clause" 40 $ return $ text "    The final body is" <+> pretty rr
         tyHd <- defType <$> getConstInfo nam
@@ -478,85 +476,79 @@ substiSort l (DkUniv s)    = DkUniv (substiSort l s)
 substiSort l (DkPi s1 s2)  = DkPi (substiSort l s1) (substiSort l s2)
 substiSort _ DkDefaultSort = DkDefaultSort
 
-translateElim :: DkModuleEnv -> DkTerm -> Term -> Elims -> TCM DkTerm
-translateElim eta t tAg []                  = return t
-translateElim eta t tAg (el@(Apply e):tl)      =
-  do arg <- translateTerm eta (unArg e)
-     translateElim eta (DkApp t arg) (addEl tAg el) tl
-translateElim eta t tAg (el@(Proj _ qn):tl)    = do
-  reportSDoc "toDk" 2 $ (text "    Pb with:"<+>)<$> AP.prettyTCM (applyE tAg [el])
+translateElim :: DkModuleEnv -> DkTerm -> Elims -> TCM DkTerm
+translateElim eta t []                  = return t
+translateElim eta t (el@(Apply e):tl)      = do
+  arg <- translateTerm eta (unArg e)
+  translateElim eta (DkApp t arg) tl
+translateElim eta t (el@(Proj _ qn):tl)    = do
+  reportSDoc "toDk" 2 $ ((text "    Pb with:" <+> printTerm Top [] t <+>)<$> AP.prettyTCM el)
   error "Unspining not performed!"
-translateElim eta t tAg ((IApply _ _ _):tl) = error "Unexpected IApply"
-
+translateElim eta t ((IApply _ _ _):tl) = error "Unexpected IApply"
 
 translateTerm' :: DkModuleEnv -> Term -> Maybe Nat -> TCM DkTerm
-translateTerm' eta t mb = do
-  reportSDoc "toDk.translate" 30 $ return $ text "    Translation of" <+> pretty t
-  case (t,mb) of
-    ((Var i elims),                          Nothing) -> do
-      nam <- nameOfBV i
-      translateElim eta (DkDB (name2DkIdent nam) i) (Var i []) elims
-    ((Lam _ ab),                             Nothing) -> do
-      ctx <- getContext
-      let n = freshStr ctx (absName ab)
-      addContext n $
-        do
-          body <- translateTerm eta (unAbs ab)
-          nam <- nameOfBV 0
-          return $ DkLam (name2DkIdent nam) Nothing body
-    ((Lit l),                                Nothing) ->
-      return $ translateLiteral l
-    ((Def n elims),                          Nothing) -> do
-      nn <- qName2DkName eta n
-      case nn of
-        Right nam -> translateElim eta (DkConst nam) (Def n []) elims
-        Left tt ->
-          translateTerm' eta (tt `applyE` elims) mb
-    ((Con hh@(ConHead {conName=h}) i elims), Nothing) -> do
-      nn <- qName2DkName eta h
-      case nn of
-        Right nam -> translateElim eta (DkConst nam) (Con hh i []) elims
-        Left tt ->
-          translateTerm' eta (tt `applyE` elims) mb
-    ((Pi d@(Dom {unDom=a}) bb),              mb_j)    -> do
-        ctx <- getContext
-        let nn = freshStr ctx (absName bb)
-        dom <- translateType eta a Nothing
-        ka <- getKind eta a
-        case bb of
-          Abs n b ->
-            addContext (nn,d) $ do
-              body <- translateType eta b (pred mb_j)
-              kb <- getKind eta b
-              nam <- nameOfBV 0
-              case a of
-                El {unEl=Def h []} -> do
-                  hd <- qName2DkName eta h
-                  if hd == Right (DkQualified ["Agda","Primitive"] [] "Level")
-                  then return $ DkQuantifLevel kb (name2DkIdent nam) body
-                  else return $ (sp_prod mb_j) ka kb (name2DkIdent nam) dom body
-                otherwise ->
-                  return $ (sp_prod mb_j) ka kb (name2DkIdent nam) dom body
-          NoAbs n b -> do
-            body <- translateType eta b (pred mb_j)
-            kb <- getKind eta b
-            nam <- addContext (nn,d) $ nameOfBV 0
+translateTerm' eta (Var i elims) Nothing = do
+  nam <- nameOfBV i
+  translateElim eta (DkDB (name2DkIdent nam) i) elims
+translateTerm' eta (Lam _ ab) Nothing = do
+  ctx <- getContext
+  let n = freshStr ctx (absName ab)
+  addContext n $
+    do
+      body <- translateTerm eta (unAbs ab)
+      nam <- nameOfBV 0
+      return $ DkLam (name2DkIdent nam) Nothing body
+translateTerm' eta (Lit l) Nothing =
+  return $ translateLiteral l
+translateTerm' eta (Def n elims) Nothing = do
+  nn <- qName2DkName eta n
+  case nn of
+    Right nam -> translateElim eta (DkConst nam) elims
+    Left tt -> translateTerm eta (tt `applyE` elims)
+translateTerm' eta (Con hh@(ConHead {conName=h}) i elims) Nothing = do
+  nn <- qName2DkName eta h
+  case nn of
+    Right nam -> translateElim eta (DkConst nam) elims
+    Left tt -> translateTerm eta (tt `applyE` elims)
+translateTerm' eta (Pi d@(Dom {unDom=a}) bb) mb_j = do
+  ctx <- getContext
+  let nn = freshStr ctx (absName bb)
+  dom <- translateType eta a Nothing
+  ka <- getKind eta a
+  case bb of
+    Abs n b ->
+      addContext (nn,d) $ do
+        body <- translateType eta b (pred mb_j)
+        kb <- getKind eta b
+        nam <- nameOfBV 0
+        case a of
+          El {unEl=Def h []} -> do
+            hd <- qName2DkName eta h
+            if hd == Right (DkQualified ["Agda","Primitive"] [] "Level")
+            then return $ DkQuantifLevel kb (name2DkIdent nam) body
+            else return $ (sp_prod mb_j) ka kb (name2DkIdent nam) dom body
+          otherwise ->
             return $ (sp_prod mb_j) ka kb (name2DkIdent nam) dom body
-    ((Sort s),                               Nothing) -> do
-        ss <- extractSort eta s
-        return $ DkSort ss
-    ((Level lev),                            Nothing) -> do
-        lv <- lvlFromLevel eta lev
-        return $ DkLevel lv
-    ((MetaV {}),                             Nothing) -> error "Not implemented yet : MetaV"
-    ((DontCare t),                           Nothing) -> translateTerm eta t
-    ((Dummy _ _),                            Nothing) -> error "Not implemented yet : Dummy"
+    NoAbs n b -> do
+      body <- translateType eta b (pred mb_j)
+      kb <- getKind eta b
+      nam <- addContext (nn,d) $ nameOfBV 0
+      return $ (sp_prod mb_j) ka kb (name2DkIdent nam) dom body
   where
     pred Nothing  = Nothing
     pred (Just 0) = Nothing
     pred (Just j) = Just (j-1)
     sp_prod (Just 0) = DkProjProd
     sp_prod _        = DkProd
+translateTerm' eta (Sort s) Nothing = do
+  ss <- extractSort eta s
+  return $ DkSort ss
+translateTerm' eta (Level lev) Nothing = do
+  lv <- lvlFromLevel eta lev
+  return $ DkLevel lv
+translateTerm' eta (MetaV {}) Nothing = error "Not implemented yet : MetaV"
+translateTerm' eta (DontCare t) Nothing = translateTerm eta t
+translateTerm' eta (Dummy _ _) Nothing = error "Not implemented yet : Dummy"
 
 translateTerm eta t = translateTerm' eta t Nothing
 
@@ -634,19 +626,10 @@ qName2DkName eta qn@QName{qnameModule=mods, qnameName=nam}
       if defCopy def
       then do
         let ty = defType def
-        -- red <- reduceDefCopy qn []
-        -- case red of
-        --   YesReduction _ t -> do
-        --     reportSDoc "bla" 2 $ return $ text "t vaut" <+> pretty t
-        --     let tComp = addMissingLam t ty
-        --     reportSDoc "bla" 2 $ return $ text "Avec les lambdas, ça donne" <+> pretty tComp
-        --     return $ Left tComp
-        --   NoReduction () -> do
-
         -- this first step is just to eta-expand, in order to trigger reduction
         tChk <- checkInternal' (etaExpandAction eta) (Def qn []) ty
         tRed <- normalise tChk
-        -- We have to do it again to unspine projections
+        -- We have to do it again since normalise eliminated it
         tChk2 <- checkInternal' (etaExpandAction eta) tRed ty
         tRecons <- reconstructParameters' (etaExpandAction eta) ty tChk2
         return $ Left tRecons
@@ -903,6 +886,7 @@ etaContractFun u = case u of
   otherwise -> return u
 
 etaExpansion :: DkModuleEnv -> Type -> Term -> TCM Term
+etaExpansion eta t u@(Lam _ _)  = return u -- No need to eta-expand a lambda
 etaExpansion eta t u = do
   reportSDoc "toDk.eta" 35 $ (text "    Eta expansion of" <+>) <$> AP.prettyTCM u
   reportSDoc "toDk.eta" 50 $ (text "      of type" <+>) <$> AP.prettyTCM t
