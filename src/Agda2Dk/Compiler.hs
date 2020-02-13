@@ -327,7 +327,8 @@ clause2rule eta nam c = do
         tyHd <- defType <$> getConstInfo nam
         rhs <- translateTerm eta rr
         let impArgs = implicitArgs implicits (reverse ctx)
-        (patts,_) <- extractPatterns eta (namedClausePats c) (drop implicits tyHd) (reverse impArgs)
+        let tyInst = piApply tyHd (map (defaultArg . patternToTerm . snd) impArgs)
+        (patts,_) <- extractPatterns eta (namedClausePats c) tyInst (reverse (map fst impArgs))
         Right headSymb <- qName2DkName eta nam -- nam is not a copy
         return $ Just DkRule
           { decoding  = False
@@ -342,9 +343,6 @@ clause2rule eta nam c = do
       implicitArgs n (h:tl) =
         (DkVar h (length tl) [], varP (DBPatVar h (length tl))):(implicitArgs (n-1) tl)
 
-      drop 0 t = t
-      drop i (El _ (Pi _ u)) = drop (i-1) (absBody u)
-
 extractContext :: Context -> TCM DkCtx
 extractContext = extractContextAux []
 
@@ -354,24 +352,24 @@ extractContextAux acc []                                    =
 extractContextAux acc (Dom {unDom=(n,t)}:r) =
   extractContextAux (name2DkIdent n:acc) r
 
-extractPatterns :: DkModuleEnv -> [NamedArg DeBruijnPattern] -> Type -> [(DkPattern, DeBruijnPattern)] -> TCM ([DkPattern],LastUsed)
+extractPatterns :: DkModuleEnv -> [NamedArg DeBruijnPattern] -> Type -> [DkPattern] -> TCM ([DkPattern],LastUsed)
 extractPatterns eta patts ty acc = do
   normTy <- normalise ty
   auxPatt (-1) eta patts normTy acc
 
-auxPatt ::  LastUsed -> DkModuleEnv -> [NamedArg DeBruijnPattern] -> Type -> [(DkPattern, DeBruijnPattern)] -> TCM ([DkPattern],LastUsed)
-auxPatt n eta []         _                           acc =
-  return (reverse (map fst acc),n)
-auxPatt n eta (p:patts) (El _ (Pi (Dom{unDom=t}) u)) acc = do
-  (t, nn) <- extractPattern eta acc n p t
-  normTy <- normalise (absBody u)
-  auxPatt (max n nn) eta patts normTy ((t,namedThing (unArg p)):acc)
+auxPatt ::  LastUsed -> DkModuleEnv -> [NamedArg DeBruijnPattern] -> Type -> [DkPattern] -> TCM ([DkPattern],LastUsed)
+auxPatt n eta []         _                              acc =
+  return (reverse acc,n)
+auxPatt n eta (p:patts) ty@(El _ (Pi (Dom{unDom=t}) u)) acc = do
+  (t, nn) <- extractPattern eta n p t
+  normTy <- normalise (piApply ty [defaultArg (patternToTerm (namedArg p))])
+  auxPatt (max n nn) eta patts normTy (t:acc)
 auxPatt  n eta (p:patts) ty                          acc = do
-  (t, nn) <- extractPattern eta acc n p __DUMMY_TYPE__
-  auxPatt (max n nn) eta patts __DUMMY_TYPE__ ((t,namedThing (unArg p)):acc)
+  (t, nn) <- extractPattern eta n p __DUMMY_TYPE__
+  auxPatt (max n nn) eta patts __DUMMY_TYPE__ (t:acc)
 
-extractPattern :: DkModuleEnv -> [(DkPattern, DeBruijnPattern)] -> LastUsed -> NamedArg DeBruijnPattern -> Type -> TCM (DkPattern,LastUsed)
-extractPattern eta ctx n x ty =
+extractPattern :: DkModuleEnv -> LastUsed -> NamedArg DeBruijnPattern -> Type -> TCM (DkPattern,LastUsed)
+extractPattern eta n x ty =
   let pat = namedThing (unArg x) in
   case pat of
     VarP _ (DBPatVar {dbPatVarIndex=i})  -> do
@@ -384,7 +382,6 @@ extractPattern eta ctx n x ty =
       tyLoc <- normalise =<< defType <$> getConstInfo h
       nbParams <- fromMaybe (error "Why no Parameters?") <$> getNumberOfParameters h
       reportSDoc "toDk.clause" 30 $ return $ text "    The type of this applied constructor is" <+> pretty ty
-      reportSDoc "toDk.clause" 30 $ return $ text "      in context" <+> hsep (punctuate (char ',') (map ((printPattern Top []) . fst) ctx))
       reportSDoc "toDk.clause" 50 $ return $ text "    Type of the constructor is" <+>  pretty tyLoc
       reportSDoc "toDk.clause" 30 $ return $ text "    We investigate for" <+>int nbParams<+>text "params"
       (tyArgs,argsParam) <-
@@ -392,6 +389,7 @@ extractPattern eta ctx n x ty =
               El _ (Def _ l) ->
                  caseParamFun tyLoc (take nbParams l)
               otherwise      ->  return $ (__DUMMY_TYPE__,replicate nbParams DkJoker)
+      reportSDoc "bla" 2 $ return $ text "tyArgs is" <+>  pretty tyArgs
       (patts, nn) <- auxPatt n eta tl tyArgs []
       let args = argsParam ++ patts
       Right nam <- qName2DkName eta h
@@ -422,28 +420,11 @@ extractPattern eta ctx n x ty =
 
     caseParamFun' tyCons [] acc = do
       return (tyCons, reverse acc)
-    caseParamFun' tyCons ((Apply (Arg _ (Var i []))):tl) acc =
-      case fst (ctx !! i) of
-        DkVar h j [] -> do
-          ctxGlob <- getContext
-          let (_,ty) = unDom (ctxGlob !! j)
-          tEta <- etaExpansion eta (raise (j+1) ty) (var j)
-          tPar <- reconstructParameters' (etaExpandAction eta) (raise (j+1) ty) tEta
-          tt <- translateTerm eta tPar
-          caseParamFun' (piApply tyCons [defaultArg (patternToTerm (snd (ctx !! i)))]) tl (DkGuarded tt:acc)
-        otherwise ->
-          caseParamFun'  (piApply tyCons [defaultArg (patternToTerm (snd (ctx !! i)))]) tl (DkJoker:acc)
     caseParamFun' tyCons@(El _ (Pi (Dom {unDom=tyArg}) _)) ((Apply (Arg _ t)):tl) acc = do
-      let tt = applySubst (parallelS (map (patternToTerm . snd) ctx)) t
-      tyNorm <- normalise tyArg
-      case unEl tyNorm of
-        Pi _ _    -> do
-          tEta <- checkInternal' (etaExpandAction eta) tt tyArg
-          tPar <- reconstructParameters' (etaExpandAction eta) tyArg tEta
-          tDk <- translateTerm eta tPar
-          caseParamFun' (piApply tyCons [defaultArg tt]) tl (DkGuarded tDk:acc)
-        otherwise ->
-          caseParamFun' (piApply tyCons [defaultArg tt]) tl (DkJoker:acc)
+      tEta <- checkInternal' (etaExpandAction eta) t tyArg
+      tPar <- reconstructParameters' (etaExpandAction eta) tyArg tEta
+      tDk <- translateTerm eta tPar
+      caseParamFun' (piApply tyCons [defaultArg t]) tl (DkGuarded tDk:acc)
 
 substi :: [DkPattern] -> DkTerm -> DkTerm
 substi l (DkSort s)               =
@@ -766,7 +747,7 @@ etaIsId eta n i j cons = do
       DkFun cc <$> nextIndex [] 0 args
     nextIndex acc j []     = return acc
     nextIndex acc j (_:tl) = do
-      (vj,_) <- extractPattern eta [] 0 (defaultArg $ unnamed $ varP (DBPatVar "_" j)) __DUMMY_TYPE__
+      (vj,_) <- extractPattern eta 0 (defaultArg $ unnamed $ varP (DBPatVar "_" j)) __DUMMY_TYPE__
       nextIndex (vj:acc) (j+1) tl
 
     constructRhsFields _ t [] = return t
@@ -811,7 +792,7 @@ etaExpansionDecl eta n nbPars ConHead{conName = cons} l = do
     nextIndex acc 0 (_:tl) = nextIndex acc 1 tl
     nextIndex acc j []     = return acc
     nextIndex acc j (_:tl) = do
-      (vj,_) <- extractPattern eta [] 0 (defaultArg $ unnamed $ varP (DBPatVar "_" j)) __DUMMY_TYPE__
+      (vj,_) <- extractPattern eta 0 (defaultArg $ unnamed $ varP (DBPatVar "_" j)) __DUMMY_TYPE__
       nextIndex (vj:acc) (j+1) tl
     constructRhs :: DkTerm -> [Dom (Name, Type)] -> DkIdent -> TCM DkTerm
     constructRhs t args y = do
