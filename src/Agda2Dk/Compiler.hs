@@ -103,36 +103,35 @@ type DkModuleEnv = QName
 
 dkPreModule :: DkOptions -> IsMain -> ModuleName -> FilePath -> TCM (Recompile DkModuleEnv ())
 dkPreModule opts _ mods _ =
-  let concMods = modName2DkModIdent mods in
-  -- If a directory is not given by the user, we just use the current one.
-  let dir = case optDkDir opts of Nothing -> ""
-                                  Just s  -> s
-  in
-  let mod = intercalate "__" concMods in
-  let filePath = dir++mod++".dk" in
+  let path = filePath opts mods in
   do
     name <- createEtaExpandSymbol ()
     liftIO $
-      ifM (((not (optDkRegen opts)) &&) <$> (doesFileExist filePath))
+      ifM (((not (optDkRegen opts)) &&) <$> (doesFileExist path))
       (return (Skip ()))
-      (do putStrLn $ "Generation of "++filePath
+      (do putStrLn $ "Generation of "++path
           return (Recompile name))
 
 dkPostModule :: DkOptions -> DkModuleEnv -> IsMain -> ModuleName -> [DkCompiled] -> TCM ()
 dkPostModule opts _ _ mods defs =
   let concMods = modName2DkModIdent mods in
-  let dir = case optDkDir opts of Nothing -> ""
-                                  Just s  -> s
-  in
-  let mod = intercalate "__" concMods in
-  let filePath = dir++mod++".dk" in
   do
     -- We sort the file, to make sure that declarations and rules do not refer to formerly declared symbols.
     output <- orderDeclRules (catMaybes defs) concMods
     liftIO $
       do
         ss <- return $ show output
-        writeFile filePath ss
+        writeFile (filePath opts mods) ss
+
+filePath :: DkOptions -> ModuleName -> String
+filePath opts mods =
+  let concMods = modName2DkModIdent mods in
+  -- If a directory is not given by the user, we just use the current one.
+  let dir = case optDkDir opts of Nothing -> ""
+                                  Just s  -> s
+  in
+  let mod = dropAll (intercalate "__" concMods) in
+  dir++mod++".dk"
 
 orderDeclRules :: [(Int32,DkDefinition)] -> DkModName -> TCM Doc
 orderDeclRules l = orderDeclRules' 0 empty empty [] (sortOn fst l)
@@ -144,7 +143,7 @@ orderDeclRules l = orderDeclRules' 0 empty empty [] (sortOn fst l)
 -- waitingRules contains rules.
 -- In this function, we can rely on the mutuality, because a type constructor is considered mutual with its constructors.
 orderDeclRules' :: Int32 -> Doc -> Doc -> [Doc] -> [(Int32,DkDefinition)] -> DkModName -> TCM Doc
-orderDeclRules' mut accTy accOther waitingRules []         mods =
+orderDeclRules' mut accTy accOther waitingRules []           mods =
   return $ accTy <> accOther <> (hcat waitingRules)
 orderDeclRules' mut accTy accOther waitingRules l@((m,d):tl) mods
   | m==mut =
@@ -174,6 +173,7 @@ dkCompileDef _ eta _ def@(Defn {defCopy=isCopy, defName=n, theDef=d, defType=t, 
   then return Nothing
   else do
     reportSDoc "toDk" 3 $ (text "  Compiling definition of" <+>) <$> AP.prettyTCM n
+    reportSDoc "toDk" 10 $ return $ text "    of type" <+> pretty t
     reportSDoc "toDk" 60 $ return $ text "    " <> pretty def
     (projPar,tParam) <-
       case d of

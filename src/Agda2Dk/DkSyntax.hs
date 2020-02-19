@@ -277,7 +277,7 @@ printIdent n=
 
 data IsStatic = Static | Defin | TypeConstr
 
-keywords = ["Type", "def", "thm"]
+keywords = ["Type", "def", "thm", "injective", "defac", "defacu"]
 
 encapsulate :: String -> String
 encapsulate l =
