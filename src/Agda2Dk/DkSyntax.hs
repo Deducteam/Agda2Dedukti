@@ -147,6 +147,7 @@ data DkTerm =
   | DkLam DkIdent (Maybe (DkTerm,DkSort)) DkTerm
   | DkDB DkIdent Int
   | DkLevel Lvl
+  | DkBuiltin DkBuiltin
 
 printTerm :: Position -> DkModName -> DkTerm -> Doc
 printTerm pos mods (DkSort s)               =
@@ -201,6 +202,48 @@ printTerm pos mods (DkDB n _)               =
   printIdent n
 printTerm pos mods (DkLevel l)              =
   printPreLvlList mods l
+printTerm pos mods (DkBuiltin b)            =
+  printBuiltin pos mods b
+
+data DkBuiltin =
+    DkNat    Int
+  | DkChar   Char
+  | DkString String
+
+printBuiltin :: Position -> DkModName -> DkBuiltin -> Doc
+printBuiltin pos mods (DkNat i) =
+  printTerm pos mods (fromBuiltinNat i)
+printBuiltin pos mods (DkChar c) =
+  printTerm pos mods (fromBuiltinChar c)
+printBuiltin pos mods (DkString s) =
+  printTerm pos mods (fromBuiltinString s)
+
+fromBuiltinNat :: Int -> DkTerm
+fromBuiltinNat i =
+  let zero = DkConst $ DkQualified ["Agda", "Builtin", "Nat"] ["Nat"] "zero" in
+  let suc = DkConst $ DkQualified ["Agda", "Builtin", "Nat"] ["Nat"] "suc" in
+  iterate (\x -> DkApp suc x) zero !! i
+
+fromBuiltinChar :: Char -> DkTerm
+fromBuiltinChar c =
+  let converter = DkConst $ DkQualified ["Agda", "Builtin", "Char"] [] "primNatToChar" in
+  DkApp converter (fromBuiltinNat (fromEnum c))
+
+fromBuiltinString :: String -> DkTerm
+fromBuiltinString s =
+  let converter = DkConst $ DkQualified ["Agda", "Builtin", "String"] [] "primStringFromList" in
+  DkApp converter (fromBuiltinListOfChar s)
+
+fromBuiltinListOfChar []     =
+  let nil = DkConst $ DkQualified ["Agda", "Builtin", "List"] ["List"] "[]" in
+  let lvl0 = DkConst $ DkQualified ["univ"] [] "0" in
+  let char_type = DkConst $ DkQualified ["Agda", "Builtin", "Char"] [] "Char" in
+  DkApp (DkApp nil lvl0) char_type
+fromBuiltinListOfChar (c:tl) =
+  let cons = DkConst $ DkQualified ["Agda", "Builtin", "List"] ["List"] "_∷_" in
+  let lvl0 = DkConst $ DkQualified ["univ"] [] "0" in
+  let char_type = DkConst $ DkQualified ["Agda", "Builtin", "Char"] [] "Char" in
+  DkApp (DkApp (DkApp (DkApp cons lvl0) char_type) (fromBuiltinChar c)) (fromBuiltinListOfChar tl)
 
 paren :: Position -> Doc -> Doc
 paren pos =
@@ -212,7 +255,7 @@ data DkPattern =
     DkVar DkIdent Int [DkPattern]
   | DkFun DkName [DkPattern]
   | DkLambda DkIdent DkPattern
-  | DkBuiltin DkTerm
+  | DkPattBuiltin DkTerm
   | DkGuarded DkTerm
   | DkJoker
 
@@ -230,7 +273,7 @@ printPattern pos mods (DkFun n l)    =
 printPattern pos mods (DkLambda n t) =
   paren pos $
     printIdent n <+> text "=>" <+> printPattern Top mods t
-printPattern pos mods (DkBuiltin t) =
+printPattern pos mods (DkPattBuiltin t) =
   printTerm pos mods t
 -- We do not guard variables, since non-linear rules are more efficient.
 printPattern pos mods (DkGuarded (DkDB n _)) =
@@ -298,7 +341,7 @@ termOfPattern :: DkPattern -> DkTerm
 termOfPattern (DkVar x i l)  = multiApp (DkDB x i) (map termOfPattern l)
 termOfPattern (DkFun f l)    = multiApp (DkConst f) (map termOfPattern l)
 termOfPattern (DkLambda x p) = DkLam x Nothing (termOfPattern p)
-termOfPattern (DkBuiltin t)  = t
+termOfPattern (DkPattBuiltin t)  = t
 termOfPattern (DkGuarded t)  = t
 
 multiApp :: DkTerm -> [DkTerm] -> DkTerm

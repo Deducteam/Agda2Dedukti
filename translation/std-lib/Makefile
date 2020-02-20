@@ -12,10 +12,12 @@ FLAGS = -e --snf
 DKDEP=dkdep $(BASE_LOC)
 DKCHECK=dkcheck $(BASE_LOC) $(FLAGS)
 
+TIMEOUT = 0
+
 all: $(DKOS)
 
 %.dko:
-	$(DKCHECK) $< || echo "Pb with" $<
+	timeout $(TIMEOUT) $(DKCHECK) $< || echo "Pb with" $<
 
 clean:
 	rm -f *.dko .depend
@@ -24,4 +26,4 @@ depend: .depend
 .depend:
 	$(DKDEP) *.dk > ./.depend
 
--include .depend
+include .depend

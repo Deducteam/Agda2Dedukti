@@ -304,6 +304,7 @@ clause2rule eta nam c = do
       addContext (clauseTel c) $
       modifyContext separateVars $
       do
+        reportSDoc "bla" 3 $ return $ text "On a changé le contexte"
         imp <- isProjection nam
         implicits <-
           case imp of
@@ -311,8 +312,10 @@ clause2rule eta nam c = do
             Just Projection{projProper=Nothing} -> return 0
             Just Projection{projProper=Just n}  ->
               (fromMaybe __IMPOSSIBLE__) <$> getNumberOfParameters n
+        reportSDoc "bla" 3 $ return $ text "On a les implicites"
         tele <- getContext
         ctx <- extractContext tele
+        reportSDoc "bla" 3 $ return $ text "On a extrait le contexte"
         let preLhs = Def nam (patternsToElims (namedClausePats c))
         rr <-
           case clauseType c of
@@ -320,16 +323,24 @@ clause2rule eta nam c = do
               reportSDoc "toDk.clause" 25 $ return $ text "    Clause without type !"
               return r
             Just t  -> do
+              reportSDoc "bla" 3 $ return $ text "On a bien un type"
               r1 <- checkInternal' (etaExpandAction eta) r (unArg t)
+              reportSDoc "bla" 3 $ return $ text "On a fait le premier chkIn"
+              reportSDoc "bla" 3 $ return $ pretty r1
               reconstructParameters' (etaExpandAction eta) (unArg t) r1
         reportSDoc "toDk.clause" 30 $ return $ text "    Parameters reconstructed"
         reportSDoc "toDk.clause" 40 $ return $ text "    The final body is" <+> pretty rr
+        reportSDoc "bla" 3 $ return $ text "On a reconstruit les paramètres"
         tyHd <- defType <$> getConstInfo nam
         rhs <- translateTerm eta rr
+        reportSDoc "bla" 3 $ return $ text "On a traduit à droite"
         let impArgs = implicitArgs implicits (reverse ctx)
         let tyInst = piApply tyHd (map (defaultArg . patternToTerm . snd) impArgs)
+        reportSDoc "bla" 3 $ return $ text "On extrait les patterns"
         (patts,_) <- extractPatterns eta (namedClausePats c) tyInst (reverse (map fst impArgs))
+        reportSDoc "bla" 3 $ return $ text "On a extrait les patterns"
         Right headSymb <- qName2DkName eta nam -- nam is not a copy
+        reportSDoc "bla" 3 $ return $ text "Tout est fait"
         return $ Just DkRule
           { decoding  = False
           , context   = ctx
@@ -369,61 +380,79 @@ auxPatt  n eta (p:patts) ty                          acc = do
   auxPatt (max n nn) eta patts __DUMMY_TYPE__ (t:acc)
 
 extractPattern :: DkModuleEnv -> LastUsed -> NamedArg DeBruijnPattern -> Type -> TCM (DkPattern,LastUsed)
-extractPattern eta n x ty =
-  let pat = namedThing (unArg x) in
+extractPattern eta n x ty = do
+  reportSDoc "toDk.pattern" 15 $ return $ text "    Extraction of the pattern" <+> pretty x
+  let pat = namedThing (unArg x)
   case pat of
     VarP _ (DBPatVar {dbPatVarIndex=i})  -> do
+      reportSDoc "bla" 3 $ return $ text "VarP"
       nam <- nameOfBV i
       return (DkVar (name2DkIdent nam) i [], max i n)
     DotP _ t                             -> do
-      term <- translateTerm eta t
+      reportSDoc "bla" 3 $ return $ text "DotP"
+      tChk <- checkInternal' (etaExpandAction eta) t ty
+      tRecons <- reconstructParameters' (etaExpandAction eta) ty tChk
+      term <- translateTerm eta tRecons
       return (DkGuarded term, n)
     ConP (ConHead {conName=h}) ci tl     -> do
+      reportSDoc "bla" 3 $ return $ text "ConP" <+> pretty h
       tyLoc <- normalise =<< defType <$> getConstInfo h
       nbParams <- fromMaybe (error "Why no Parameters?") <$> getNumberOfParameters h
       reportSDoc "toDk.clause" 30 $ return $ text "    The type of this applied constructor is" <+> pretty ty
       reportSDoc "toDk.clause" 50 $ return $ text "    Type of the constructor is" <+>  pretty tyLoc
       reportSDoc "toDk.clause" 30 $ return $ text "    We investigate for" <+>int nbParams<+>text "params"
+      tyNorm <- normalise ty
       (tyArgs,argsParam) <-
-            case ty of
-              El _ (Def _ l) ->
-                 caseParamFun tyLoc (take nbParams l)
+            case tyNorm of
+              El _ (Def _ l) -> do
+                reportSDoc "bla" 3 $ return $ text "The type is" <+> pretty tyNorm
+                caseParamFun tyLoc (take nbParams l)
               otherwise      ->  return $ (__DUMMY_TYPE__,replicate nbParams DkJoker)
       reportSDoc "bla" 2 $ return $ text "tyArgs is" <+>  pretty tyArgs
       (patts, nn) <- auxPatt n eta tl tyArgs []
       let args = argsParam ++ patts
       Right nam <- qName2DkName eta h
       return (DkFun nam args, max n nn)
-    LitP l                              ->
-      return (DkBuiltin (translateLiteral l),n)
-    ProjP _ nam                         ->
-      do
-        imp <- isProjection nam
-        mbNbParams <-
-          case imp of
-            Nothing                             -> error "What is this projection !?"
-            Just Projection{projProper=Nothing} -> error "What is this projection !?"
-            Just Projection{projProper=Just n}  -> getNumberOfParameters n
-        nbParams <-
-          case mbNbParams of
-            Nothing -> error "Why no Parameters?"
-            Just n  -> return n
-        Right dkNam <- qName2DkName eta nam
-        let args = (replicate nbParams DkJoker)
-        return (DkFun dkNam args, n)
+    LitP l                              -> do
+      reportSDoc "bla" 3 $ return $ text "LitP"
+      return (DkPattBuiltin (translateLiteral l),n)
+    ProjP _ nam                         -> do
+      reportSDoc "bla" 3 $ return $ text "ProjP"
+      imp <- isProjection nam
+      mbNbParams <-
+        case imp of
+          Nothing                             -> error "What is this projection !?"
+          Just Projection{projProper=Nothing} -> error "What is this projection !?"
+          Just Projection{projProper=Just n}  -> getNumberOfParameters n
+      nbParams <-
+        case mbNbParams of
+          Nothing -> error "Why no Parameters?"
+          Just n  -> return n
+      Right dkNam <- qName2DkName eta nam
+      let args = (replicate nbParams DkJoker)
+      return (DkFun dkNam args, n)
     otherwise                           ->
       error "Unexpected pattern of HoTT"
   where
 
     caseParamFun :: Type -> Elims -> TCM (Type,[DkPattern])
-    caseParamFun tyCons els = caseParamFun' tyCons els []
+    caseParamFun tyCons els = do
+      reportSDoc "bla" 3 $ return $ text "ELIMS ARE" <+> pretty els
+      caseParamFun' tyCons els []
 
     caseParamFun' tyCons [] acc = do
       return (tyCons, reverse acc)
     caseParamFun' tyCons@(El _ (Pi (Dom {unDom=tyArg}) _)) ((Apply (Arg _ t)):tl) acc = do
+      reportSDoc "bla" 3 $ return $ text "We start caseParamFun' with" <+> pretty t
+      reportSDoc "bla" 3 $ return $ text "The type is" <+> pretty tyCons
+      ctxHere <- getContext
+      reportSDoc "bla" 3 $ (text "The context is" <+>) <$> AP.prettyTCM ctxHere
       tEta <- checkInternal' (etaExpandAction eta) t tyArg
+      reportSDoc "bla" 3 $ return $ text "Eta-expansion done"
       tPar <- reconstructParameters' (etaExpandAction eta) tyArg tEta
+      reportSDoc "bla" 3 $ return $ text "params reconstructed"
       tDk <- translateTerm eta tPar
+      reportSDoc "bla" 3 $ return $ text "term translated"
       caseParamFun' (piApply tyCons [defaultArg t]) tl (DkGuarded tDk:acc)
 
 substi :: [DkPattern] -> DkTerm -> DkTerm
@@ -572,20 +601,13 @@ preLvlFromPlusLevel eta lv@(Plus i (UnreducedLevel t)) =
   preLvlFromPlusLevel eta =<< reduce lv
 
 translateLiteral :: Literal -> DkTerm
-translateLiteral (LitNat    _ i)   = toBuiltinNat i
+translateLiteral (LitNat    _ i)   = DkBuiltin (DkNat (fromInteger i))
 translateLiteral (LitWord64 _ _)   = error "Unexpected literal Word64"
 translateLiteral (LitFloat  _ _)   = error "Unexpected literal Float"
-translateLiteral (LitString _ _)   = error "Unexpected literal String"
-translateLiteral (LitChar   _ _)   = error "Unexpected literal Char"
+translateLiteral (LitString _ s)   = DkBuiltin (DkString s)
+translateLiteral (LitChar   _ c)   = DkBuiltin (DkChar c)
 translateLiteral (LitQName  _ _)   = error "Unexpected literal QName"
 translateLiteral (LitMeta   _ _ _) = error "Unexpected literal Meta"
-
-toBuiltinNat :: Integer -> DkTerm
-toBuiltinNat i =
-  let zero = DkConst $ DkQualified ["Agda", "Builtin", "Nat"] ["Nat"] "zero" in
-  let suc = DkConst $ DkQualified ["Agda", "Builtin", "Nat"] ["Nat"] "suc" in
-  iterate (\x -> DkApp suc x) zero !! (fromInteger i)
-
 
 addEl :: Term -> Elim -> Term
 addEl (Var i elims) e = Var i (elims++[e])
@@ -619,24 +641,12 @@ qName2DkName eta qn@QName{qnameModule=mods, qnameName=nam}
         return $ Right $
           DkQualified (modName2DkModIdent topMod) (maybe [] (map name2DkIdent) otherMods) (name2DkIdent nam)
 
-  -- where
-  --   addMissingLam = addMissingLam' []
-
-  --   addMissingLam' iList l@(Lam ArgInfo{argInfoHiding=NotHidden} _) (El _ (Pi Dom{domInfo=infPi@ArgInfo{argInfoHiding=Hidden}} b)) =
-  --     Lam infPi (Abs (absName b) (addMissingLam' (iList++[infPi]) (raise 1 l) (unAbs b)))
-  --   addMissingLam' iList t _ = addApp iList t
-
-  --   addApp iList l@(Lam infLam t) = Lam infLam (Abs (absName t) (addApp iList (absBody t)))
-  --   addApp iList (Def qn es) = Def qn $ (mapi (\i -> \inf -> Apply (Arg inf (Var i []))) iList) ++ (raise (length iList) es)
-
-  --   mapi :: (Nat -> a -> b) -> [a] -> [b]
-  --   mapi = mapi' 0
-  --   mapi' i f [] = []
-  --   mapi' i f (x:tl) = (f i x):(mapi' (i+1) f tl)
-
 name2DkIdent :: Name -> DkIdent
-name2DkIdent (Name {nameConcrete=CN.Name {CN.nameNameParts=n}}) =
-  concat (map namePart2String n)
+name2DkIdent (Name {nameId=NameId id _, nameConcrete=CN.Name {CN.nameNameParts=n}}) =
+  let s = concat (map namePart2String n) in
+  if s == ".absurdlambda"
+  then s ++ ('-' : show id) -- .absurdlambda is not a user written name, it happens to be not unique in some files.
+  else s
 name2DkIdent (Name {nameConcrete=CN.NoName {}}) =
   "DEFAULT"
 
