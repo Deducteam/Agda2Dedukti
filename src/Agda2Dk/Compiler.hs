@@ -3,6 +3,7 @@
 module Agda2Dk.Compiler where
 
 import Control.Monad.State
+import Control.Exception
 import Data.Maybe
 import System.Directory (doesFileExist)
 import Data.Int
@@ -170,7 +171,9 @@ orderDeclRules' mut accTy accOther waitingRules l@((m,d):tl) mods
 dkCompileDef :: DkOptions -> DkModuleEnv -> IsMain -> Definition -> TCM DkCompiled
 dkCompileDef _ eta _ def@(Defn {defCopy=isCopy, defName=n, theDef=d, defType=t, defMutual=MutId m}) =
   if isCopy
-  then return Nothing
+  then do
+    reportSDoc "toDk" 8 $ (\x -> text "  We do not compile"<+>x<+>text "which is a copy") <$> AP.prettyTCM n
+    return Nothing
   else do
     reportSDoc "toDk" 3 $ (text "  Compiling definition of" <+>) <$> AP.prettyTCM n
     reportSDoc "toDk" 10 $ return $ text "    of type" <+> pretty t
@@ -326,7 +329,6 @@ clause2rule eta nam c = do
               reportSDoc "bla" 3 $ return $ text "On a bien un type"
               r1 <- checkInternal' (etaExpandAction eta) r (unArg t)
               reportSDoc "bla" 3 $ return $ text "On a fait le premier chkIn"
-              reportSDoc "bla" 3 $ return $ pretty r1
               reconstructParameters' (etaExpandAction eta) (unArg t) r1
         reportSDoc "toDk.clause" 30 $ return $ text "    Parameters reconstructed"
         reportSDoc "toDk.clause" 40 $ return $ text "    The final body is" <+> pretty rr
@@ -405,10 +407,10 @@ extractPattern eta n x ty = do
       (tyArgs,argsParam) <-
             case tyNorm of
               El _ (Def _ l) -> do
-                reportSDoc "bla" 3 $ return $ text "The type is" <+> pretty tyNorm
+                reportSDoc "bla" 3 $ return $ text "The type is ..."
                 caseParamFun tyLoc (take nbParams l)
               otherwise      ->  return $ (__DUMMY_TYPE__,replicate nbParams DkJoker)
-      reportSDoc "bla" 2 $ return $ text "tyArgs is" <+>  pretty tyArgs
+      reportSDoc "bla" 2 $ return $ text "tyArgs is ..."
       (patts, nn) <- auxPatt n eta tl tyArgs []
       let args = argsParam ++ patts
       Right nam <- qName2DkName eta h
@@ -419,17 +421,31 @@ extractPattern eta n x ty = do
     ProjP _ nam                         -> do
       reportSDoc "bla" 3 $ return $ text "ProjP"
       imp <- isProjection nam
+      reportSDoc "bla" 3 $ return $ text "Is proj done"
       mbNbParams <-
         case imp of
-          Nothing                             -> error "What is this projection !?"
-          Just Projection{projProper=Nothing} -> error "What is this projection !?"
-          Just Projection{projProper=Just n}  -> getNumberOfParameters n
+          Nothing                                                        ->
+            error "What is this projection !?"
+          Just Projection{projProper = Nothing}                          ->
+            error "What is this projection !?"
+          Just Projection{projProper = Just n, projFromType = Arg _ nn}  -> do
+            d <- getConstInfo' n
+            case d of
+              Right def ->
+                case theDef def of
+                  Record{ recPars = n } -> return $ Just n
+              Left _ ->
+                getNumberOfParameters nn
+      reportSDoc "bla" 3 $ return $ text "Nb Pars"
       nbParams <-
         case mbNbParams of
           Nothing -> error "Why no Parameters?"
           Just n  -> return n
+      reportSDoc "bla" 3 $ return $ text "Computed"
       Right dkNam <- qName2DkName eta nam
-      let args = (replicate nbParams DkJoker)
+      reportSDoc "bla" 3 $ return $ text "Name OK"
+      let args = replicate nbParams DkJoker
+      reportSDoc "bla" 3 $ return $ text "Finished"
       return (DkFun dkNam args, n)
     otherwise                           ->
       error "Unexpected pattern of HoTT"
@@ -437,16 +453,16 @@ extractPattern eta n x ty = do
 
     caseParamFun :: Type -> Elims -> TCM (Type,[DkPattern])
     caseParamFun tyCons els = do
-      reportSDoc "bla" 3 $ return $ text "ELIMS ARE" <+> pretty els
+      reportSDoc "bla" 3 $ return $ text "ELIMS ARE ..."
       caseParamFun' tyCons els []
 
     caseParamFun' tyCons [] acc = do
       return (tyCons, reverse acc)
     caseParamFun' tyCons@(El _ (Pi (Dom {unDom=tyArg}) _)) ((Apply (Arg _ t)):tl) acc = do
-      reportSDoc "bla" 3 $ return $ text "We start caseParamFun' with" <+> pretty t
-      reportSDoc "bla" 3 $ return $ text "The type is" <+> pretty tyCons
+      reportSDoc "bla" 3 $ return $ text "We start caseParamFun' with ..."
+      reportSDoc "bla" 3 $ return $ text "The type is ..."
       ctxHere <- getContext
-      reportSDoc "bla" 3 $ (text "The context is" <+>) <$> AP.prettyTCM ctxHere
+      reportSDoc "bla" 3 $ return $ text "The context is ..."
       tEta <- checkInternal' (etaExpandAction eta) t tyArg
       reportSDoc "bla" 3 $ return $ text "Eta-expansion done"
       tPar <- reconstructParameters' (etaExpandAction eta) tyArg tEta
@@ -629,12 +645,17 @@ qName2DkName eta qn@QName{qnameModule=mods, qnameName=nam}
       if defCopy def
       then do
         let ty = defType def
+        reportSDoc "bla" 3 $ return $ text "ty Here" <+> pretty ty
         -- this first step is just to eta-expand, in order to trigger reduction
         tChk <- checkInternal' (etaExpandAction eta) (Def qn []) ty
+        reportSDoc "bla" 3 $ return $ text "tChk OK"
         tRed <- normalise tChk
+        reportSDoc "bla" 3 $ return $ text "tRed OK"
         -- We have to do it again since normalise eliminated it
         tChk2 <- checkInternal' (etaExpandAction eta) tRed ty
+        reportSDoc "bla" 3 $ return $ text "tChk2 OK"
         tRecons <- reconstructParameters' (etaExpandAction eta) ty tChk2
+        reportSDoc "bla" 3 $ return $ text "tRecons OK"
         return $ Left tRecons
       else
         let otherMods = stripPrefix (mnameToList topMod) (mnameToList mods) in
