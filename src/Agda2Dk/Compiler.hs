@@ -172,7 +172,7 @@ dkCompileDef :: DkOptions -> DkModuleEnv -> IsMain -> Definition -> TCM DkCompil
 dkCompileDef _ eta _ def@(Defn {defCopy=isCopy, defName=n, theDef=d, defType=t, defMutual=MutId m}) =
   if isCopy
   then do
-    reportSDoc "toDk" 8 $ (\x -> text "  We do not compile"<+>x<+>text "which is a copy") <$> AP.prettyTCM n
+    reportSDoc "toDk" 8 $ (\x -> text "  No compilation of"<+>x<+>text "which is a copy") <$> AP.prettyTCM n
     return Nothing
   else do
     reportSDoc "toDk" 3 $ (text "  Compiling definition of" <+>) <$> AP.prettyTCM n
