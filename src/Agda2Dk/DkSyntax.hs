@@ -347,3 +347,17 @@ termOfPattern (DkGuarded t)  = t
 multiApp :: DkTerm -> [DkTerm] -> DkTerm
 multiApp t []     = t
 multiApp t (x:tl) = multiApp (DkApp t x) tl
+
+type DkDocs = (Doc, Doc, Doc)
+
+toDkDocs ::  DkModName -> DkDefinition -> DkDocs
+toDkDocs mods d =
+  case staticity d of
+    TypeConstr ->
+      ( (printDecl mods d)<>hcat (printRules mods d decoding)
+      , empty
+      , hcat $ printRules mods d (not . decoding))
+    _ ->
+      ( empty
+      , printDecl mods d
+      , hcat $ printRules mods d (\x -> True))
