@@ -868,7 +868,7 @@ etaExpansionDecl env@(_,eta) n nbPars ConHead{conName = cons} l = do
         case unEl tyRes of
           Pi a b -> do
             reportSDoc "toDk.eta" 40 $ return $ text "    We study a Lambda" <+> pretty (unAbs body)
-            El s tDom <- reconstructParametersInType' (etaExpandAction eta) (unDom a)
+            El s tDom <- reconstructParametersInType' (etaExpandAction eta) =<< etaExpandType eta (unDom a)
             dkTDom <- translateTerm env tDom
             dkL <- lvlOf env s
             dkS <- extractSort env s

@@ -19,7 +19,7 @@ test: compile $(DKS)
 	cd $(TEST_DIR) && make
 
 clean-tests:
-	rm $(TEST_DIR)/*.dk* translation/tests/.depend
+	rm $(TEST_DIR)/*.dk* $(TEST_DIR)/.depend
 
 NB ?= -1
 TIMEOUT ?=0
@@ -29,4 +29,4 @@ std-lib: compile
 	cd $(STD_DIR) && make FLAGS="-e --snf $(DK_FLAGS)" TIMEOUT=$(TIMEOUT);
 
 clean-std-lib:
-	rm translation/std-lib/*.dk* translation/std-lib/.depend
+	rm $(STD_DIR)/*.dk* $(STD_DIR)/.depend
