@@ -2,9 +2,6 @@
 
 module Agda2Dk.Compiler where
 
--- hides (<>), as there was a conflit with the (<>) defined here
-import Prelude hiding ((<>))
-
 import Control.Monad.State
 import Control.Exception
 import Data.Maybe

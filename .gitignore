@@ -6,11 +6,12 @@
 .#*
 *.dko
 
-src/Main
-
 translation/*/
 !translation/tests/
 !translation/std-lib/
 
 translation/*/*
 !translation/*/Makefile
+
+# normally very big file
+src/Main

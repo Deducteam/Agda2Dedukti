@@ -1,15 +1,10 @@
 module Agda2Dk.DkSyntax where
 
 import Data.Word
-import Data.List (sort)
-import Data.List.Extra (nubOrd)
--- This next line needs the package Unique, install it from Cabal
+import Data.List
 import Data.List.Unique
 import Data.Int
 import Data.Char
-
--- hides (<>), as there was a conflit with the (<>) defined here
-import Prelude hiding ((<>))
 
 import Text.PrettyPrint
 
@@ -28,7 +23,6 @@ data DkDefinition =
     , kind      :: DkSort
     , rules     :: [DkRule]
     }
-
 
 etaExpandSymb :: DkName
 etaExpandSymb = DkQualified ["Agda"] [] "etaExpand"

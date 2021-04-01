@@ -1,4 +1,4 @@
-AGDA_DIR = ~/agda/
+AGDA_STD_DIR = /home/thiago/Documents/Programacao/agda_guillaume/agda-stdlib/agda-stdlib/src
 EXEC = $(shell pwd)/src/Main
 
 TEST_DIR = translation/tests/
@@ -25,7 +25,7 @@ NB ?= -1
 TIMEOUT ?=0
 
 std-lib: compile
-	bash "./translation/generate_std-lib.sh" $(AGDA_DIR)std-lib/src $(EXEC) "--dk $(OPTS)" $(shell pwd)/$(STD_DIR) $(NB)
+	bash "./translation/generate_std-lib.sh" $(AGDA_STD_DIR) $(EXEC) "--dk $(OPTS)" $(shell pwd)/$(STD_DIR) $(NB)
 	cd $(STD_DIR) && make FLAGS="-e --snf $(DK_FLAGS)" TIMEOUT=$(TIMEOUT);
 
 clean-std-lib:

@@ -24,7 +24,7 @@ Lvl : Type.
 LvlSet : Type.
 
 (; The grammar we are interested in is
-t,u ::= x | 0 | s t | max t u
+   t,u ::= x | 0 | s t | max t u
 with x a variable. ;)
 
 (; Nothing is definable, since it is purely syntax. ;)
