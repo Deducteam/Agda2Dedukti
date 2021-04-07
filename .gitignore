@@ -5,6 +5,7 @@
 #*
 .#*
 *.dko
+!theory/*.dko
 
 translation/*/
 !translation/tests/
