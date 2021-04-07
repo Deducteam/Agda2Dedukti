@@ -17,6 +17,10 @@ import Agda.Syntax.Internal
 import qualified Agda.Syntax.Concrete.Name as CN
 import Agda.Utils.Impossible
 
+type DkModName = [String]
+
+type DkIdent = String
+
 class PrettyDk a where
   prettyDk :: DkModName -> a -> Doc
 
@@ -317,9 +321,6 @@ instance PrettyDk DkName where
     let symName = printIdent $ (concat (map (++ "__") pseudo)) ++ n in
     modName <> symName
 
-type DkModName = [String]
-
-type DkIdent = String
 
 printIdent n=
     text $ encapsulate n

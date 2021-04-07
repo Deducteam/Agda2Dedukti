@@ -57,28 +57,13 @@ dkBackend' = Backend'
   , options               = defaultDkOptions
   , commandLineFlags      = dkCommandLineFlags
   , isEnabled             = optDkCompile
-      -- ^ Flag which enables the Dedukti Backend
   , preCompile            = \opts -> return opts
-      -- ^ Called after type checking completes, but before compilation starts.  
   , postCompile           = \_ _ _ -> return ()
-      -- ^ Called after module compilation has completed. The @IsMain@ argument
-      --   is @NotMain@ if the @--no-main@ flag is present.  
   , preModule             = dkPreModule
-      -- ^ Called before compilation of each module. Gets the path to the
-      --   @.agdai@ file to allow up-to-date checking of previously written
-      --   compilation results. Should return @Skip m@ if compilation is not
-      --   required.  
   , postModule            = dkPostModule
-      -- ^ Called after all definitions of a module have been compiled.  
   , compileDef            = dkCompileDef
-      -- ^ Compile a single definition.  
   , scopeCheckingSuffices = False
-      -- ^ True if the backend works if @--only-scope-checking@ is used.  
   , mayEraseType          = \_ -> return True
-      -- ^ The treeless compiler may ask the Backend if elements
-      --   of the given type maybe possibly erased.
-      --   The answer should be 'False' if the compilation of the type
-      --   is used by a third party, e.g. in a FFI binding.  
   }
 
 ------------------------------------------------------------------------------
@@ -102,14 +87,6 @@ defaultDkOptions = DkOptions
   , optDkRegen   = False
   }
 
-
--- Each OptDescr describes an option of flag. Its constructor is Option
--- The arguments to Option are:
---    - list of short option characters
---    - list of long option strings (without "--")
---    - argument descriptor, of type Flag DkOptions (Flag x = x -> OptM x, where OptM is a monad transformation,
--- so it is basically a function to change the default options)
---    - explanation of option for user 
 dkCommandLineFlags :: [OptDescr (Flag DkOptions)]
 dkCommandLineFlags =
     [ Option [] ["dk"]     (NoArg compileDkFlag) "compile program using the Dk backend"
