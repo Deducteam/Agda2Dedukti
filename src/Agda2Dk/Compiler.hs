@@ -349,7 +349,7 @@ clause2rule env@(_,eta) nam c = do
               return r
             Just t  -> do
               reportSDoc "bla" 3 $ return $ text "On a bien un type"
-              r1 <- checkInternal' (etaExpandAction eta) r (unArg t)
+              r1 <- checkInternal' (etaExpandAction eta) r CmpLeq (unArg t)
               reportSDoc "bla" 3 $ return $ text "On a fait le premier chkIn"
               reconstructParameters' (etaExpandAction eta) (unArg t) r1
         reportSDoc "toDk.clause" 30 $ return $ text "    Parameters reconstructed"
@@ -455,7 +455,7 @@ extractPattern env@(_,eta) x ty = do
       return $ DkVar (name2DkIdent nam) i []
     DotP _ t                             -> do
       reportSDoc "bla" 3 $ return $ text "DotP"
-      tChk <- checkInternal' (etaExpandAction eta) t ty
+      tChk <- checkInternal' (etaExpandAction eta) t CmpLeq ty
       tRecons <- reconstructParameters' (etaExpandAction eta) ty tChk
       term <- translateTerm env tRecons
       return $ DkGuarded term
@@ -529,7 +529,7 @@ extractPattern env@(_,eta) x ty = do
       reportSDoc "bla" 3 $ return $ text "The type is ..."
       ctxHere <- getContext
       reportSDoc "bla" 3 $ return $ text "The context is ..."
-      tEta <- checkInternal' (etaExpandAction eta) t tyArg
+      tEta <- checkInternal' (etaExpandAction eta) t CmpLeq tyArg
       reportSDoc "bla" 3 $ return $ text "Eta-expansion done"
       tPar <- reconstructParameters' (etaExpandAction eta) tyArg tEta
       reportSDoc "bla" 3 $ return $ text "params reconstructed"
@@ -732,12 +732,12 @@ qName2DkName env@(_,eta) qn@QName{qnameModule=mods, qnameName=nam}
         let ty = defType def
         reportSDoc "bla" 3 $ return $ text "ty Here" <+> pretty ty
         -- this first step is just to eta-expand, in order to trigger reduction
-        tChk <- checkInternal' (etaExpandAction eta) (Def qn []) ty
+        tChk <- checkInternal' (etaExpandAction eta) (Def qn []) CmpLeq ty
         reportSDoc "bla" 3 $ return $ text "tChk OK"
         tRed <- normalise tChk
         reportSDoc "bla" 3 $ return $ text "tRed OK"
         -- We have to do it again since normalise eliminated it
-        tChk2 <- checkInternal' (etaExpandAction eta) tRed ty
+        tChk2 <- checkInternal' (etaExpandAction eta) tRed CmpLeq ty
         reportSDoc "bla" 3 $ return $ text "tChk2 OK"
         tRecons <- reconstructParameters' (etaExpandAction eta) ty tChk2
         reportSDoc "bla" 3 $ return $ text "tRecons OK"
@@ -823,13 +823,13 @@ createEtaExpandSymbol () =
 
 etaExpandType :: QName -> Type -> TCM Type
 etaExpandType eta (El s (Pi a@Dom{unDom=El sa u} b)) = do
-  uu <- checkInternal' (etaExpandAction eta) u (sort sa)
+  uu <- checkInternal' (etaExpandAction eta) u CmpLeq (sort sa)
   let dom = El sa uu
   addContext (absName b,a) $ do
     codom <- etaExpandType eta (absBody b)
     escapeContext 1 $ return $ El s (Pi a{unDom=dom} (Abs (absName b) codom))
 etaExpandType eta (El s u) = do
-  uu <- checkInternal' (etaExpandAction eta) u (sort s)
+  uu <- checkInternal' (etaExpandAction eta) u CmpLeq (sort s)
   return $ El s uu
 
 etaIsId :: DkModuleEnv -> QName -> Nat -> Nat -> [QName] -> TCM [DkRule]
@@ -870,7 +870,7 @@ etaIsId env@(_,eta) n i j cons = do
     constructRhsFields _ t [] = return t
     constructRhsFields j t (Dom{unDom=(_,tt)}:tl) = do
       let ttGoodDB = raise (j+1) tt
-      vEta <- checkInternal' (etaExpandAction eta) (Var j []) ttGoodDB
+      vEta <- checkInternal' (etaExpandAction eta) (Var j []) CmpLeq ttGoodDB
       vParam <- reconstructParameters' (etaExpandAction eta) ttGoodDB vEta
       dkArg <- translateTerm env vParam
       (`DkApp` dkArg) <$> constructRhsFields (j+1) t tl
@@ -935,7 +935,7 @@ etaExpansionDecl env@(_,eta) n nbPars ConHead{conName = cons} l = do
       reportSDoc "toDk.eta" 35 $ (text "  tyProj" <+>) <$> AP.prettyTCM tyProj
       let tyRes = rightType (nbPars+1) tyProj
       reportSDoc "toDk.eta" 35 $ (text "  tyRes" <+>) <$> AP.prettyTCM tyRes
-      prEta <- checkInternal' (etaExpandAction eta) (Var 0 [Proj ProjSystem u]) tyRes
+      prEta <- checkInternal' (etaExpandAction eta) (Var 0 [Proj ProjSystem u]) CmpLeq tyRes
       reportSDoc "toDk.eta" 35 $ return $ text "  Eta expansion done"
       reportSDoc "toDk.eta" 35 $ return $ text "    " <> pretty prEta
       Right prDkName <- qName2DkName env u
