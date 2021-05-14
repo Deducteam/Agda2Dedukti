@@ -13,6 +13,8 @@ import Data.Int
 import Data.List (sortOn, stripPrefix, intercalate, (++))
 import Text.PrettyPrint
 import Debug.Trace
+import Data.List.NonEmpty (toList, NonEmpty( (:|) ))
+
 
 import Agda.Compiler.Backend
 import Agda.Compiler.Common
@@ -131,36 +133,33 @@ type DkModuleEnv = (ModuleName, QName)
 dkPreModule :: DkOptions -> IsMain -> ModuleName -> FilePath -> TCM (Recompile DkModuleEnv ())
 dkPreModule opts _ mods _ =
   let path = filePath opts mods in
+  let doNotRecompileFile = not (optDkRegen opts) in
   do
     name <- createEtaExpandSymbol ()
-    liftIO $
-      ifM (((not (optDkRegen opts)) &&) <$> (doesFileExist path))
-      (return (Skip ()))
-      (do putStrLn $ "Generation of "++path
-          return (Recompile (mods, name)))
+    fileAlreadyCompiled <- liftIO $ doesFileExist path
+    if fileAlreadyCompiled && doNotRecompileFile
+    then return $ Skip ()
+    else do liftIO $ putStrLn $ "Generation of " ++ path
+            return $ Recompile (mods, name)
 
 dkPostModule :: DkOptions -> DkModuleEnv -> IsMain -> ModuleName -> [DkCompiled] -> TCM ()
 dkPostModule opts _ _ mods defs =
   let concMods = modName2DkModIdent mods in
-  do
-    -- We sort the file, to make sure that declarations and rules do not refer to formerly declared symbols.
-    output <- orderDeclRules (catMaybes defs) concMods
-    liftIO $
-      do
-        ss <- return $ show output
-        writeFile (filePath opts mods) ss
+-- We sort the file, to make sure that declarations and rules
+-- do not refer to formerly declared symbols.    
+  let output = show $ orderDeclRules (catMaybes defs) concMods in
+  liftIO $ writeFile (filePath opts mods) output
 
 filePath :: DkOptions -> ModuleName -> String
 filePath opts mods =
   let concMods = modName2DkModIdent mods in
   -- If a directory is not given by the user, we just use the current one.
   let dir = case optDkDir opts of Nothing -> ""
-                                  Just s  -> s
-  in
+                                  Just s  -> s  in
   let mod = dropAll (intercalate "__" concMods) in
   dir++mod++".dk"
 
-orderDeclRules :: [(Int32,DkDocs)] -> DkModName -> TCM Doc
+orderDeclRules :: [(Int32,DkDocs)] -> DkModName -> Doc
 orderDeclRules l mods = orderDeclRules' 0 mods empty empty empty (sortOn fst l)
 
 -- mut is an integer to detect if two declarations are mutual.
@@ -169,9 +168,9 @@ orderDeclRules l mods = orderDeclRules' 0 mods empty empty empty (sortOn fst l)
 -- accOther contains constructors declarations.
 -- accRules contains rules.
 -- In this function, we can rely on the mutuality, because a type constructor is considered mutual with its constructors.
-orderDeclRules' :: Int32 -> DkModName -> Doc -> Doc -> Doc -> [(Int32,DkDocs)] -> TCM Doc
+orderDeclRules' :: Int32 -> DkModName -> Doc -> Doc -> Doc -> [(Int32,DkDocs)] -> Doc
 orderDeclRules' mut mods accTy accOther accRules []                 =
-  return $ accTy <> accOther <> accRules
+  accTy <> accOther <> accRules
 orderDeclRules' mut mods accTy accOther accRules l@((m,(a,b,c)):tl)
   | m==mut =
       orderDeclRules' mut mods
@@ -234,10 +233,12 @@ dkCompileDef _ env@(mod,eta) _ def@(Defn {defCopy=isCopy, defName=n, theDef=d, d
       return (Nothing, tPar)
 
 translateType :: DkModuleEnv -> Type -> Maybe Nat -> TCM DkTerm
+-- a type is a term with a sort annotation (as in nat : Set0)
+-- to translate it, we extract the term and ignore the sort
 translateType env (El {unEl=ty}) i = translateTerm' env ty i
 
 extractStaticity :: QName -> Defn -> TCM IsStatic
-extractStaticity _ Axiom             = return Static
+extractStaticity _ (Axiom _)         = return Static
 extractStaticity _ (DataOrRecSig {}) = return Static
 extractStaticity _ GeneralizableVar  = return Static
 extractStaticity n (Function {})     = do
@@ -290,7 +291,7 @@ decodedVersion env@(_,eta) nam i = do
   addContext tele $
     modifyContext separateVars $ do
     tel <- getContext
-    ctx <- extractContext tel
+    ctx <- extractContextNames tel
     patVars <- sequence (genVars ctx)
     rhs <- constructRhs tel 0 return (DkConst decodedName)
     return $ DkRule
@@ -321,8 +322,10 @@ clause2rule env@(_,eta) nam c = do
   reportSDoc "toDk.clause" 20 $ return $ (text "  The body is:") <+> (pretty (clauseBody c))
   reportSDoc "toDk.clause" 50 $ return $ text $ "    More precisely:" ++ show (clauseBody c)
   case (clauseBody c) of
+    -- Nothing means this is an absurd clause, with () at the end, so it has no body
     Nothing  -> return Nothing
     Just r   ->
+      -- adds to the context the bound variables of the clause
       addContext (clauseTel c) $
       modifyContext separateVars $
       do
@@ -336,7 +339,7 @@ clause2rule env@(_,eta) nam c = do
               (fromMaybe __IMPOSSIBLE__) <$> getNumberOfParameters n
         reportSDoc "bla" 3 $ return $ text "On a les implicites"
         tele <- getContext
-        ctx <- extractContext tele
+        ctx <- extractContextNames tele
         reportSDoc "bla" 3 $ return $ text "On a extrait le contexte"
         let preLhs = Def nam (patternsToElims (namedClausePats c))
         rr <-
@@ -352,6 +355,8 @@ clause2rule env@(_,eta) nam c = do
         reportSDoc "toDk.clause" 30 $ return $ text "    Parameters reconstructed"
         reportSDoc "toDk.clause" 40 $ return $ text "    The final body is" <+> pretty rr
         reportSDoc "bla" 3 $ return $ text "On a reconstruit les paramètres"
+
+        -- gets the type of the name nam
         tyHd <- defType <$> getConstInfo nam
         rhs <- translateTerm env rr
         reportSDoc "bla" 3 $ return $ text "On a traduit à droite"
@@ -360,8 +365,46 @@ clause2rule env@(_,eta) nam c = do
         reportSDoc "bla" 3 $ return $ text "On extrait les patterns"
         patts <- extractPatterns env (namedClausePats c) tyInst (reverse (map fst impArgs))
         reportSDoc "bla" 3 $ return $ text "On a extrait les patterns"
+        reportSDoc "bla" 3 $ return $ text "On a extrait les p " <+> pretty (namedClausePats c)
+        reportSDoc "bla" 3 $ return $ text "On a extrait les p " <+> pretty nam
+
         Right headSymb <- qName2DkName env nam -- nam is not a copy
-        reportSDoc "bla" 3 $ return $ text "Tout est fait"
+
+        -- temp fix for copatterns
+{-        isCopattern <- defCopatternLHS <$> getConstInfo nam
+        if isCopattern
+          then do
+          reportSDoc "bla" 3 $ return $ text $ show $ namedClausePats c          
+          reportSDoc "bla" 3 $ return $ text "is a copattern"
+          
+          let pat = namedClausePats c
+          let isCopat x = case namedThing (unArg x) of
+                            ProjP _ _ -> True
+                            _     -> False
+          let (l1, l2) = break isCopat pat
+          let patFun = take (length l1) patts
+          let patCop = drop (1 + (length l1)) patts
+          let funPat = DkFun headSymb patFun
+          let (name, args) = case (patts !! (length l1)) of DkFun name args -> (name,args)          
+          return $ Just DkRule
+            { decoding  = False
+            , context   = ctx
+            , headsymb  = name
+            , patts     = args ++ [funPat] ++ patCop
+            , rhs       = rhs
+            }
+
+          else do
+          reportSDoc "bla" 3 $ return $ text "not a cop"        
+          reportSDoc "bla" 3 $ return $ text "Tout est fait"
+          return $ Just DkRule
+            { decoding  = False
+            , context   = ctx
+            , headsymb  = headSymb
+            , patts     = patts
+            , rhs       = rhs
+            }
+-}
         return $ Just DkRule
           { decoding  = False
           , context   = ctx
@@ -375,8 +418,9 @@ clause2rule env@(_,eta) nam c = do
       implicitArgs n (h:tl) =
         (DkVar h (length tl) [], varP (DBPatVar h (length tl))):(implicitArgs (n-1) tl)
 
-extractContext :: Context -> TCM DkCtx
-extractContext = extractContextAux []
+-- gets the names of the types in the context
+extractContextNames :: Context -> TCM DkCtx
+extractContextNames = extractContextAux []
 
 extractContextAux :: DkCtx -> Context -> TCM DkCtx
 extractContextAux acc []                                    =
@@ -434,7 +478,7 @@ extractPattern env@(_,eta) x ty = do
       let args = argsParam ++ patts
       Right nam <- qName2DkName env h
       return $ DkFun nam args
-    LitP l                              -> do
+    LitP _ l                            -> do
       reportSDoc "bla" 3 $ return $ text "LitP"
       return $ DkPattBuiltin (translateLiteral l)
     ProjP _ nam                         -> do
@@ -448,6 +492,7 @@ extractPattern env@(_,eta) x ty = do
           Just Projection{projProper = Nothing}                          ->
             error "What is this projection !?"
           Just Projection{projProper = Just n, projFromType = Arg _ nn}  -> do
+            -- takes the definition of the name n
             d <- getConstInfo' n
             case d of
               Right def ->
@@ -461,8 +506,10 @@ extractPattern env@(_,eta) x ty = do
           Nothing -> error "Why no Parameters?"
           Just n  -> return n
       reportSDoc "bla" 3 $ return $ text "Computed"
+
       Right dkNam <- qName2DkName env nam
       reportSDoc "bla" 3 $ return $ text "Name OK"
+      reportSDoc "bla" 3 $ return $ text "Name OK " <+> pretty nam
       let args = replicate nbParams DkJoker
       reportSDoc "bla" 3 $ return $ text "Finished"
       return $ DkFun dkNam args
@@ -602,14 +649,24 @@ extractSort env (Type i)                  =
   DkSet <$> lvlFromLevel env i
 extractSort env (Prop i)                  =
   DkProp <$> lvlFromLevel env i
-extractSort env Inf                       =
+-- for the time beeing we translate all the SetOmegai to the same sort
+-- this clearly makes the theory inconsistent, but it should work for now
+extractSort env (Inf _ _)                 =
   return DkSetOmega
 extractSort env SizeUniv                  =
   return $ DkSet [LvlInt 0]
-extractSort env (PiSort (Dom{unDom=s}) t) = do
-  dom <- extractSort env (_getSort s)
+
+-- not sure about the following change
+
+extractSort env (PiSort _ s t) = do
+  dom <- extractSort env s
   codom <- extractSort env (unAbs t)
   return $ DkPi dom codom
+
+--extractSort env (PiSort (Dom{unDom=s}) t) = do
+--  dom <- extractSort env (_getSort s)
+--  codom <- extractSort env (unAbs t)
+--  return $ DkPi dom codom
 extractSort env (UnivSort s)              =
   DkUniv <$> extractSort env s
 extractSort _   _                         =
@@ -622,27 +679,36 @@ lvlOf env (Prop i)                  = lvlFromLevel env i
 getKind :: DkModuleEnv -> Type -> TCM DkSort
 getKind env (El {_getSort=s}) = extractSort env s
 
+-- the two functions were modified to account for the new representation of
+-- levels in agda
 lvlFromLevel :: DkModuleEnv -> Level -> TCM Lvl
-lvlFromLevel env (Max l) = mapM (preLvlFromPlusLevel env) l
+lvlFromLevel env (Max i l) =
+  do
+    tail <- mapM (preLvlFromPlusLevel env) l
+    return $ [fromInteger i] ++ tail
 
 preLvlFromPlusLevel :: DkModuleEnv -> PlusLevel -> TCM PreLvl
-preLvlFromPlusLevel env (ClosedLevel i)                =
-  return $ LvlInt (fromInteger i)
-preLvlFromPlusLevel env (Plus i (BlockedLevel _ t))    =
-  LvlPlus (fromInteger i) <$> translateTerm env t
-preLvlFromPlusLevel env (Plus i (NeutralLevel a t))    =
-  LvlPlus (fromInteger i) <$> translateTerm env t
-preLvlFromPlusLevel env lv@(Plus i (UnreducedLevel t)) =
-  preLvlFromPlusLevel env =<< reduce lv
+preLvlFromPlusLevel env (Plus i t) = LvlPlus (fromInteger i) <$> translateTerm env t
+
+
+--preLvlFromPlusLevel :: DkModuleEnv -> PlusLevel -> TCM PreLvl
+--preLvlFromPlusLevel env (ClosedLevel i)                =
+--  return $ LvlInt (fromInteger i)
+--preLvlFromPlusLevel env (Plus i (BlockedLevel _ t))    =
+--  LvlPlus (fromInteger i) <$> translateTerm env t
+--preLvlFromPlusLevel env (Plus i (NeutralLevel a t))    =
+--  LvlPlus (fromInteger i) <$> translateTerm env t
+--preLvlFromPlusLevel env lv@(Plus i (UnreducedLevel t)) =
+--  preLvlFromPlusLevel env =<< reduce lv
 
 translateLiteral :: Literal -> DkTerm
-translateLiteral (LitNat    _ i)   = DkBuiltin (DkNat (fromInteger i))
-translateLiteral (LitWord64 _ _)   = error "Unexpected literal Word64"
-translateLiteral (LitFloat  _ _)   = error "Unexpected literal Float"
-translateLiteral (LitString _ s)   = DkBuiltin (DkString s)
-translateLiteral (LitChar   _ c)   = DkBuiltin (DkChar c)
-translateLiteral (LitQName  _ _)   = error "Unexpected literal QName"
-translateLiteral (LitMeta   _ _ _) = error "Unexpected literal Meta"
+translateLiteral (LitNat    i)   = DkBuiltin (DkNat (fromInteger i))
+translateLiteral (LitWord64 _)   = error "Unexpected literal Word64"
+translateLiteral (LitFloat  _)   = error "Unexpected literal Float"
+translateLiteral (LitString s)   = DkBuiltin (DkString s)
+translateLiteral (LitChar   c)   = DkBuiltin (DkChar c)
+translateLiteral (LitQName  _)   = error "Unexpected literal QName"
+translateLiteral (LitMeta   _ _) = error "Unexpected literal Meta"
 
 addEl :: Term -> Elim -> Term
 addEl (Var i elims) e = Var i (elims++[e])
@@ -683,7 +749,8 @@ qName2DkName env@(_,eta) qn@QName{qnameModule=mods, qnameName=nam}
 
 name2DkIdent :: Name -> DkIdent
 name2DkIdent (Name {nameId=NameId id _, nameConcrete=CN.Name {CN.nameNameParts=n}}) =
-  let s = concat (map namePart2String n) in
+  let list = toList n in
+  let s = concat (map namePart2String list) in
   if s == ".absurdlambda"
   then s ++ ('-' : show id) -- .absurdlambda is not a user written name, it happens to be not unique in some files.
   else s
@@ -701,10 +768,12 @@ separateVars :: Context -> Context
 separateVars = separateAux ["_"]
 
 separateAux used [] = []
-separateAux used ((d@Dom{unDom=(n@Name{nameConcrete=cn@CN.Name{CN.nameNameParts=l}},ty)}):tl) =
+--separateAux used ((d@Dom{unDom=(n@Name{nameConcrete=cn@CN.Name{CN.nameNameParts=l}},ty)}):tl) =
+separateAux used ((d@Dom{unDom=(n@Name{nameConcrete=cn},ty)}):tl) =
   let s= name2DkIdent n in
   let ss = computeUnused used (-1) s in
-  d {unDom=(n {nameConcrete= cn {CN.nameNameParts=[CN.Id ss]}},ty)}:(separateAux (ss:used) tl)
+  let ns = (CN.Id ss) :| [] in
+  d {unDom=(n {nameConcrete= cn {CN.nameNameParts=ns}},ty)}:(separateAux (ss:used) tl)
 
 usedVars :: Context -> [String]
 usedVars = map (name2DkIdent . fst . unDom)
@@ -780,7 +849,7 @@ etaIsId env@(_,eta) n i j cons = do
         Right cc <- qName2DkName env f
         Right nn <- qName2DkName env n
         ctx <- getContext
-        context <- extractContext ctx
+        context <- extractContextNames ctx
         consArg <- pattCons cc ctx
         rhs <- constructRhsFields 0 (DkConst cc) ctx
         return $ DkRule
@@ -823,7 +892,7 @@ etaExpansionDecl env@(_,eta) n nbPars ConHead{conName = cons} l = do
     s <- checkType' $ El Inf ty
     addContext (y,defaultDom $ El s ty) $ do
       ctx <- getContext
-      context <- extractContext ctx
+      context <- extractContextNames ctx
       tyArg <- pattTy nn ctx
       rhs <- constructRhs (DkConst cc) ctx y
       return $ DkRule
@@ -940,7 +1009,11 @@ etaExpansion eta t u = do
         body <- etaExpansion eta (absBody b) appli
         return $ Lam info (Abs n body)
     Sort _ -> return u
-    otherwise -> __IMPOSSIBLE__
+    otherwise ->
+      do
+        reportSDoc "toDk.eta" 3 $ (text "    Eta expansion of" <+>) <$> AP.prettyTCM u
+        reportSDoc "toDk.eta" 3 $ (text "      of type" <+>) <$> AP.prettyTCM t
+        __IMPOSSIBLE__
 
   where
 

@@ -1,4 +1,4 @@
 open import Agda.Primitive
-open import Relation.Binary.PropositionalEquality using (_≡_; refl; cong; trans)
+open import Agda.Builtin.Equality
 tet : (i j : Level) → i ⊔ j ≡ j ⊔ i
 tet i j = refl
