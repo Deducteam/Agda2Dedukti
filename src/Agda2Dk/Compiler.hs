@@ -289,7 +289,7 @@ decodedVersion env@(_,eta) nam i = do
   tele <- theTel <$> (telView ty)
   reportSDoc "toDk" 15 $ ((text "    In the context:") <+> ) <$> (AP.prettyTCM tele)
   addContext tele $
-    modifyContext separateVars $ do
+    unsafeModifyContext separateVars $ do
     tel <- getContext
     ctx <- extractContextNames tel
     patVars <- sequence (genVars ctx)
@@ -327,7 +327,7 @@ clause2rule env@(_,eta) nam c = do
     Just r   ->
       -- adds to the context the bound variables of the clause
       addContext (clauseTel c) $
-      modifyContext separateVars $
+      unsafeModifyContext separateVars $
       do
         reportSDoc "bla" 3 $ return $ text "On a changé le contexte"
         imp <- isProjection nam
@@ -843,7 +843,7 @@ etaIsId env@(_,eta) n i j cons = do
       Defn{defType=tt} <- getConstInfo f
       TelV tele _ <- telView tt
       addContext tele $
-        modifyContext separateVars $ do
+        unsafeModifyContext separateVars $ do
         -- We do have the information that n is not a copy,
         -- otherwise it would not have gone through compileDef
         Right cc <- qName2DkName env f
@@ -882,7 +882,7 @@ etaExpansionDecl env@(_,eta) n nbPars ConHead{conName = cons} l = do
   Defn{defType=tt} <- getConstInfo n
   TelV tele _ <- telView tt
   addContext tele $
-    modifyContext separateVars $ do
+    unsafeModifyContext separateVars $ do
     -- We do have the information that n is not a copy,
     -- otherwise it would not have gone through compileDef
     Right nn <- qName2DkName env n
@@ -968,7 +968,7 @@ etaExpansionDecl env@(_,eta) n nbPars ConHead{conName = cons} l = do
             dkL <- lvlOf env s
             dkS <- extractSort env s
             addContext (absName body,a) $
-              modifyContext separateVars $ do
+              unsafeModifyContext separateVars $ do
               x <- nameOfBV 0
               let clo2 rest = DkApp rest (DkApp (DkApp (DkApp (DkConst (DkQualified ["Agda"] [] "etaExpand")) (DkLevel dkL)) dkTDom)  (DkDB (name2DkIdent x) 0))
               DkLam (name2DkIdent x) (Just (dkTDom,dkS)) <$> studyEtaExpansion (absBody body) args prName (i+1) (absBody b) (clo2 . clo)
