@@ -26,6 +26,8 @@ library
                      , pretty >=1.1 && <1.2
                      , mtl >=2.2 && <2.3
                      , directory >=1.3 && <1.4
+                     , text
+                     , deepseq
   hs-source-dirs:      src
   default-language:    Haskell2010
 
@@ -40,5 +42,7 @@ executable Agda2Dedukti
                      , pretty >=1.1 && <1.2
                      , mtl >=2.2 && <2.3
                      , directory >=1.3 && <1.4
+                     , text
+                     , deepseq
   hs-source-dirs:      src
   default-language:    Haskell2010

@@ -1,4 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE DeriveGeneric #-}
+
 
 module Agda2Dk.Compiler where
 
@@ -13,8 +15,10 @@ import Data.Int
 import Data.List (sortOn, stripPrefix, intercalate, (++))
 import Text.PrettyPrint
 import Debug.Trace
-import Data.List.NonEmpty (toList, NonEmpty( (:|) ))
-
+import Data.List.NonEmpty (fromList, toList, NonEmpty( (:|) ))
+import Data.Text (unpack)
+import Control.DeepSeq (NFData)
+import GHC.Generics (Generic)
 
 import Agda.Compiler.Backend
 import Agda.Compiler.Common
@@ -89,12 +93,16 @@ dkBackend' = Backend'
 
 type DkCompiled = Maybe (Int32,DkDocs)
 
+
 data DkOptions = DkOptions
   { optDkCompile :: Bool
   , optDkFlags   :: [String]
   , optDkDir     :: Maybe String
   , optDkRegen   :: Bool
-  }
+  } deriving Generic
+
+instance NFData DkOptions
+
 
 defaultDkOptions :: DkOptions
 defaultDkOptions = DkOptions
@@ -130,7 +138,7 @@ dkCommandLineFlags =
 -- This is the name of the module and the one of "etaExpand" function --
 type DkModuleEnv = (ModuleName, QName)
 
-dkPreModule :: DkOptions -> IsMain -> ModuleName -> FilePath -> TCM (Recompile DkModuleEnv ())
+dkPreModule :: DkOptions -> IsMain -> ModuleName -> Maybe FilePath -> TCM (Recompile DkModuleEnv ())
 dkPreModule opts _ mods _ =
   let path = filePath opts mods in
   let doNotRecompileFile = not (optDkRegen opts) in
@@ -685,7 +693,7 @@ lvlFromLevel :: DkModuleEnv -> Level -> TCM Lvl
 lvlFromLevel env (Max i l) =
   do
     tail <- mapM (preLvlFromPlusLevel env) l
-    return $ [fromInteger i] ++ tail
+    return $ [LvlInt (fromInteger i)] ++ tail
 
 preLvlFromPlusLevel :: DkModuleEnv -> PlusLevel -> TCM PreLvl
 preLvlFromPlusLevel env (Plus i t) = LvlPlus (fromInteger i) <$> translateTerm env t
@@ -705,7 +713,7 @@ translateLiteral :: Literal -> DkTerm
 translateLiteral (LitNat    i)   = DkBuiltin (DkNat (fromInteger i))
 translateLiteral (LitWord64 _)   = error "Unexpected literal Word64"
 translateLiteral (LitFloat  _)   = error "Unexpected literal Float"
-translateLiteral (LitString s)   = DkBuiltin (DkString s)
+translateLiteral (LitString s)   = DkBuiltin (DkString (unpack s))
 translateLiteral (LitChar   c)   = DkBuiltin (DkChar c)
 translateLiteral (LitQName  _)   = error "Unexpected literal QName"
 translateLiteral (LitMeta   _ _) = error "Unexpected literal Meta"
@@ -799,7 +807,8 @@ createEtaExpandSymbol () =
               (return $ El (varSort 1) (var 0)) -->
               (return $ El (varSort 1) (var 0))
   -- A new symbol etaExpand in the module etaExpand.
-    name <- qnameFromList <$> sequence [freshName_ "etaExpand", freshName_ "etaExpand"]
+    list <- sequence [freshName_ "etaExpand", freshName_ "etaExpand"]
+    let name = qnameFromList $ fromList list
     tele <- theTel <$> telView typeId
     let args = [
           defaultArg (namedDBVarP 2 "a"),
@@ -827,7 +836,7 @@ etaExpandType eta (El s (Pi a@Dom{unDom=El sa u} b)) = do
   let dom = El sa uu
   addContext (absName b,a) $ do
     codom <- etaExpandType eta (absBody b)
-    escapeContext 1 $ return $ El s (Pi a{unDom=dom} (Abs (absName b) codom))
+    unsafeEscapeContext 1 $ return $ El s (Pi a{unDom=dom} (Abs (absName b) codom))
 etaExpandType eta (El s u) = do
   uu <- checkInternal' (etaExpandAction eta) u CmpLeq (sort s)
   return $ El s uu
@@ -875,7 +884,7 @@ etaIsId env@(_,eta) n i j cons = do
       dkArg <- translateTerm env vParam
       (`DkApp` dkArg) <$> constructRhsFields (j+1) t tl
 
-etaExpansionDecl :: DkModuleEnv -> QName -> Int -> ConHead -> [Arg QName] -> TCM DkRule
+etaExpansionDecl :: DkModuleEnv -> QName -> Int -> ConHead -> [Dom QName] -> TCM DkRule
 etaExpansionDecl env@(_,eta) n nbPars ConHead{conName = cons} l = do
   reportSDoc "toDk.eta" 5 $ (text "  Declaration of eta-expansion of" <+>) <$> AP.prettyTCM n
   let hd = DkQualified ["Agda"] [] "etaExpand"
@@ -889,7 +898,7 @@ etaExpansionDecl env@(_,eta) n nbPars ConHead{conName = cons} l = do
     Right cc <- qName2DkName env cons
     y <- (\ctx -> freshStr ctx "y") <$> getContext
     let ty = apply (Def n []) (teleArgs tele)
-    s <- checkType' $ El Inf ty
+    s <- checkType' $ El (Inf IsFibrant 0) ty
     addContext (y,defaultDom $ El s ty) $ do
       ctx <- getContext
       context <- extractContextNames ctx
@@ -914,7 +923,7 @@ etaExpansionDecl env@(_,eta) n nbPars ConHead{conName = cons} l = do
     constructRhs :: DkTerm -> [Dom (Name, Type)] -> DkIdent -> TCM DkTerm
     constructRhs t args y = do
       tParam <- constructRhsParams t args
-      constructRhsFields tParam args (map unArg l)
+      constructRhsFields tParam args (map unDom l)
 
     constructRhsParams t (_:tl) = constructRhsParams' 1 t tl return
     constructRhsParams t []     = return t
@@ -950,14 +959,14 @@ etaExpansionDecl env@(_,eta) n nbPars ConHead{conName = cons} l = do
             Level ss -> do
               tyRecons <- reconstructParameters' (etaExpandAction eta) (sort (Type ss)) (unArg tyBis)
               etaCtx <- translateTerm env (Def nam [Apply s,Apply tyBis{unArg=tyRecons}])
-              escapeContext i $ do
+              unsafeEscapeContext i $ do
                 v <- translateTerm env (Var 0 [])
                 DkApp etaCtx <$> clo <$> (`DkApp` v) <$> constructRhsParams (DkConst prName) args
             otherwise -> __IMPOSSIBLE__
         else __IMPOSSIBLE__
       Var i _ -> do
         v <- translateTerm env (Var i [])
-        escapeContext i $
+        unsafeEscapeContext i $
           clo <$> (`DkApp` v) <$> constructRhsParams (DkConst prName) args
       Lam _ body -> do
         case unEl tyRes of
