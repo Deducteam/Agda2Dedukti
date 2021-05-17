@@ -258,6 +258,10 @@ extractStaticity _ (Datatype {})     = return TypeConstr
 extractStaticity _ (Record {})       = return TypeConstr
 extractStaticity _ (Constructor {})  = return Static
 extractStaticity _ (Primitive {})    = return Defin
+-- trying to guess the following ones, not sure
+extractStaticity _ (PrimitiveSort {})    = return Defin
+extractStaticity _ (AbstractDefn {})    = return Static
+
 
 extractRules :: DkModuleEnv -> QName -> Defn -> Type -> TCM [DkRule]
 extractRules env n (Function {funCovering=f}) ty =
@@ -828,6 +832,10 @@ createEtaExpandSymbol () =
       , clauseType        = Nothing
       , clauseCatchall    = False
       , clauseUnreachable = Nothing
+      -- guessing the following parammeters
+      , clauseEllipsis    = NoEllipsis
+      , clauseExact       = Nothing
+      , clauseRecursive   = Nothing
     }
 
 etaExpandType :: QName -> Type -> TCM Type

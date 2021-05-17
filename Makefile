@@ -1,5 +1,5 @@
 AGDA_STD_DIR = /home/thiago/Documents/Programacao/agda_guillaume/agda-stdlib/agda-stdlib/src
-EXEC = $(shell pwd)/src/Main
+EXEC = $(shell pwd)/dist/build/Agda2Dedukti/Agda2Dedukti
 
 TEST_DIR = translation/tests/
 STD_DIR = translation/std-lib/
@@ -10,7 +10,7 @@ DKS = $(patsubst tests/%.agda, translation/tests/%.dk, $(AGDAS))
 all: compile
 
 compile:
-	cd src/ && ghc Main
+	cabal build
 
 translation/tests/%.dk: tests/%.agda
 	cd tests && $(EXEC) --dk $(OPTS) --outDir=../$(TEST_DIR) $(<F)
