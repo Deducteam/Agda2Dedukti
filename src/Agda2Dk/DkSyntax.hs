@@ -76,43 +76,41 @@ decodedType mods (DkQuantifLevel _ id t) =
 printRules :: DkModName -> DkDefinition -> (DkRule -> Bool) -> [Doc]
 printRules mods (DkDefinition {rules=l}) f = map (prettyDk mods) (filter f l)
 
-type Lvl = [PreLvl]
+-- a level is a max of a closed level and various pre-levels
+data Lvl = LvlMax Int [PreLvl]
 
 printLvl :: DkModName -> Lvl -> Doc
-printLvl mods l =
-  printPreLvlList mods l
+printLvl mods (LvlMax n []) = unary n
+printLvl mods (LvlMax n l) =
+  parens $ text "univ.max" <+> unary n <+> printPreLvlList mods l
 
+printPreLvlList :: DkModName -> [PreLvl] -> Doc
 printPreLvlList mods []     = text "univ.0"
 printPreLvlList mods (a:[]) = prettyDk mods a
 printPreLvlList mods (a:tl) =
   parens $ text "univ.max" <+> prettyDk mods a <+> printPreLvlList mods tl
 
--- A Pre Level is either ...
-data PreLvl =
-    -- A concrete level (integer)
-    LvlInt Int
-    -- or a concrete level plus a level expression
-  | LvlPlus Int DkTerm
+-- a pre-level is an integer and a level expression
+data PreLvl = LvlPlus Int DkTerm
 
 instance PrettyDk PreLvl where
- prettyDk mods (LvlInt i)    =
-   unary i
- prettyDk mods (LvlPlus i t) =
-   applyN i (parens . (text "univ.s" <+>)) (printTerm Nested mods t)
-  where applyN i f x = iterate f x !! i
+  prettyDk mods (LvlPlus i t) = iterateSuc i $ printTerm Nested mods t
+
+iterateSuc :: Int -> Doc -> Doc
+iterateSuc x s
+  | x == 0 = s
+  | x >  0 = parens $ (text "univ.s") <+> (iterateSuc (x - 1) s)
 
 unary :: Int -> Doc
-unary x
-  | x==0 = text "univ.0"
-  | x>0  = parens $ (text "univ.s")<+> (unary (x-1))
+unary x = iterateSuc x $ text "univ.0"
 
 data DkSort =
     DkSet Lvl
   | DkProp Lvl
   | DkSetOmega
-  -- uncomputed successor sort
+  -- uncomputed successor sort (Axiom)
   | DkUniv DkSort
-  -- uncomputed product sort
+  -- uncomputed product sort (Rule)
   | DkPi DkSort DkSort
   | DkDefaultSort
 
@@ -226,7 +224,7 @@ printTerm pos mods (DkLam n (Just (a,s)) t) =
 printTerm pos mods (DkDB n _)               =
   printIdent n
 printTerm pos mods (DkLevel l)              =
-  printPreLvlList mods l
+  printLvl mods l
 printTerm pos mods (DkBuiltin b)            =
   printBuiltin pos mods b
 

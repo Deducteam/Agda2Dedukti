@@ -580,9 +580,8 @@ substi l (DkDB _ i)               =
 substi l (DkLevel lv)             =
   DkLevel (substiLvl l lv)
 
-substiLvl l lv = map (substiPreLvl l) lv
+substiLvl l (LvlMax n preLvls) = LvlMax n $ map (substiPreLvl l) preLvls
 
-substiPreLvl _ lv@(LvlInt _) = lv
 substiPreLvl l (LvlPlus i t) = LvlPlus i (substi l t)
 
 substiSort l (DkSet lv)    = DkSet (substiLvl l lv)
@@ -722,7 +721,7 @@ extractSort env (Prop i)                  =
 extractSort env (Inf _ _)                 =
   return DkSetOmega
 extractSort env SizeUniv                  =
-  return $ DkSet [LvlInt 0]
+  return $ DkSet (LvlMax 0 [])
 
 -- not sure about the following change
 
@@ -752,22 +751,11 @@ getKind env (El {_getSort=s}) = extractSort env s
 lvlFromLevel :: DkModuleEnv -> Level -> TCM Lvl
 lvlFromLevel env (Max i l) =
   do
-    tail <- mapM (preLvlFromPlusLevel env) l
-    return $ [LvlInt (fromInteger i)] ++ tail
+    preLvls <- mapM (preLvlFromPlusLevel env) l
+    return $ LvlMax (fromInteger i) preLvls
 
 preLvlFromPlusLevel :: DkModuleEnv -> PlusLevel -> TCM PreLvl
 preLvlFromPlusLevel env (Plus i t) = LvlPlus (fromInteger i) <$> translateTerm env t
-
-
---preLvlFromPlusLevel :: DkModuleEnv -> PlusLevel -> TCM PreLvl
---preLvlFromPlusLevel env (ClosedLevel i)                =
---  return $ LvlInt (fromInteger i)
---preLvlFromPlusLevel env (Plus i (BlockedLevel _ t))    =
---  LvlPlus (fromInteger i) <$> translateTerm env t
---preLvlFromPlusLevel env (Plus i (NeutralLevel a t))    =
---  LvlPlus (fromInteger i) <$> translateTerm env t
---preLvlFromPlusLevel env lv@(Plus i (UnreducedLevel t)) =
---  preLvlFromPlusLevel env =<< reduce lv
 
 translateLiteral :: Literal -> DkTerm
 translateLiteral (LitNat    i)   = DkBuiltin (DkNat (fromInteger i))
