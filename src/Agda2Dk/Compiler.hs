@@ -274,8 +274,9 @@ extractStaticity _ (AbstractDefn {})    = return Static
 
   
 extractRules :: DkModuleEnv -> QName -> Defn -> Type -> TCM [DkRule]
-extractRules env n (Function {funClauses=f}) ty =
+extractRules env n (t@Function {funClauses=f}) ty =
   do
+    reportSDoc "toDk" 50 $ (text " Recomputing coverage of " <+>) <$> (return $ pretty t)
     f' <- getFunCovering n ty f
     l  <- mapM (clause2rule env n) f'
     return $ catMaybes l
@@ -592,61 +593,102 @@ substiSort l (DkPi s1 s2)  = DkPi (substiSort l s1) (substiSort l s2)
 substiSort _ DkDefaultSort = DkDefaultSort
 
 translateElim :: DkModuleEnv -> DkTerm -> Elims -> TCM DkTerm
+-- empty elimination, return the applying term
 translateElim env t []                  = return t
+-- we have t applied to el = (e tl). the translation is given by translating
+-- e, applying it to t and the callind translateElim env (t e) tl
 translateElim env t (el@(Apply e):tl)      = do
   arg <- translateTerm env (unArg e)
   translateElim env (DkApp t arg) tl
+-- elimination have gone through unspining, so we cannot have proj eliminations
 translateElim env t (el@(Proj _ qn):tl)    = do
   reportSDoc "toDk" 2 $ ((text "    Pb with:" <+> printTerm Top [] t <+>)<$> AP.prettyTCM el)
   error "Unspining not performed!"
 translateElim env t ((IApply _ _ _):tl) = error "Unexpected IApply"
 
 translateTerm' :: DkModuleEnv -> Term -> Maybe Nat -> TCM DkTerm
+-- Var is a variable possibly applied to a sequence of eliminations (x es)
 translateTerm' env (Var i elims) Nothing = do
+  -- gets name of bound variable
   nam <- nameOfBV i
+  -- the result is the name of the variable applied to the translation
+  -- of the elimination
   translateElim env (DkDB (name2DkIdent nam) i) elims
+
 translateTerm' env (Lam _ ab) Nothing = do
   ctx <- getContext
+  -- n will be name of the abstracting variable
   let n = freshStr ctx (absName ab)
+  -- (adds the name n to the context permanently or just does an action
+  -- with n in the context?)
   addContext n $
     do
+      -- translates the term inside the abstraction, on this new context
       body <- translateTerm env (unAbs ab)
+      -- gets name of debrunji index 0 (why isn't this always n?)
       nam <- nameOfBV 0
       return $ DkLam (name2DkIdent nam) Nothing body
+
+-- builtin things, like strings, integers, etc
 translateTerm' env (Lit l) Nothing =
   return $ translateLiteral l
+
+-- a function symbol n applied to a list of eliminations
 translateTerm' env (Def n elims) Nothing = do
+  -- translate the function symbol
   nn <- qName2DkName env n
   case nn of
+    -- if we get a constant name, we return it applied to the translation of the elim
     Right nam -> translateElim env (DkConst nam) elims
+    -- if we get a term (why?) we translate it applied to the elim
     Left tt -> translateTerm env (tt `applyE` elims)
+
 translateTerm' env (Con hh@(ConHead {conName=h}) i elims) Nothing = do
   nn <- qName2DkName env h
   case nn of
     Right nam -> translateElim env (DkConst nam) elims
     Left tt -> translateTerm env (tt `applyE` elims)
+
 translateTerm' env (Pi d@(Dom {unDom=a}) bb) mb_j = do
   ctx <- getContext
+  -- nn is the name of the abstracting variable (Pi nn : a. bb)
   let nn = freshStr ctx (absName bb)
+  -- translates the domain type
   dom <- translateType env a Nothing
+  -- gets kind s_a of the domain type
   ka <- getKind env a
   case bb of
+    -- this is a real dependent product, we need to add nn : d to the context
+    -- before calculating the domain type
     Abs n b ->
       addContext (nn,d) $ do
+        -- translates codomain type
         body <- translateType env b (pred mb_j)
+        -- gets codomain sort
         kb <- getKind env b
+        -- gets name of type parameter (is it different from nn?)
         nam <- nameOfBV 0
+        -- analyse the codomain type
         case a of
+          -- is it a constant type?
           El {unEl=Def h []} -> do
             hd <- qName2DkName env h
+            -- is it Level?
             if hd == Right (DkQualified ["Agda","Primitive"] [] "Level")
+              -- yes! this is a a level quantification
             then return $ DkQuantifLevel kb (name2DkIdent nam) body
+              -- no! this is a normal product
             else return $ (sp_prod mb_j) ka kb (name2DkIdent nam) dom body
+          -- also a normal product
           otherwise ->
             return $ (sp_prod mb_j) ka kb (name2DkIdent nam) dom body
+    -- not a real dependent product, just a regular function arrow a -> bb
     NoAbs n b -> do
+      -- translate the codomain type
       body <- translateType env b (pred mb_j)
+      -- gets codomain sort
       kb <- getKind env b
+      -- gets name of type parameter (is it different from nn?)
       nam <- addContext (nn,d) $ nameOfBV 0
       return $ (sp_prod mb_j) ka kb (name2DkIdent nam) dom body
   where
@@ -655,12 +697,15 @@ translateTerm' env (Pi d@(Dom {unDom=a}) bb) mb_j = do
     pred (Just j) = Just (j-1)
     sp_prod (Just 0) = DkProjProd
     sp_prod _        = DkProd
+
 translateTerm' env (Sort s) Nothing = do
   ss <- extractSort env s
   return $ DkSort ss
+  
 translateTerm' env (Level lev) Nothing = do
   lv <- lvlFromLevel env lev
   return $ DkLevel lv
+  
 translateTerm' env (MetaV {}) Nothing = error "Not implemented yet : MetaV"
 translateTerm' env (DontCare t) Nothing = translateTerm env t
 translateTerm' env (Dummy _ _) Nothing = error "Not implemented yet : Dummy"
@@ -753,6 +798,8 @@ qName2DkName env@(_,eta) qn@QName{qnameModule=mods, qnameName=nam}
       if defCopy def
       then do
         let ty = defType def
+        -- why do we need to do etaExpansion here? why do we need to do this
+        -- only to get the name?
         reportSDoc "bla" 3 $ return $ text "ty Here" <+> pretty ty
         -- this first step is just to eta-expand, in order to trigger reduction
         tChk <- checkInternal' (etaExpandAction eta) (Def qn []) CmpLeq ty
@@ -798,15 +845,19 @@ separateAux used ((d@Dom{unDom=(n@Name{nameConcrete=cn},ty)}):tl) =
   let ns = (CN.Id ss) :| [] in
   d {unDom=(n {nameConcrete= cn {CN.nameNameParts=ns}},ty)}:(separateAux (ss:used) tl)
 
+-- gets the list of names used in the context
 usedVars :: Context -> [String]
 usedVars = map (name2DkIdent . fst . unDom)
 
+-- used by freshStr
 computeUnused used i s =
   let ss = if i==(-1) then s else s++(show i) in
   if elem ss used
   then computeUnused used (i+1) s
   else ss
 
+-- freshStr ctx name returns either name or nameX for some integer X,
+-- such that the returned string is not used in the context
 freshStr ctx = computeUnused ("_":(usedVars ctx)) (-1)
 
 ------------------------------------------------------------------------------

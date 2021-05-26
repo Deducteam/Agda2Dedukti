@@ -87,8 +87,11 @@ printPreLvlList mods (a:[]) = prettyDk mods a
 printPreLvlList mods (a:tl) =
   parens $ text "univ.max" <+> prettyDk mods a <+> printPreLvlList mods tl
 
+-- A Pre Level is either ...
 data PreLvl =
+    -- A concrete level (integer)
     LvlInt Int
+    -- or a concrete level plus a level expression
   | LvlPlus Int DkTerm
 
 instance PrettyDk PreLvl where
@@ -107,7 +110,9 @@ data DkSort =
     DkSet Lvl
   | DkProp Lvl
   | DkSetOmega
+  -- uncomputed successor sort
   | DkUniv DkSort
+  -- uncomputed product sort
   | DkPi DkSort DkSort
   | DkDefaultSort
 
@@ -148,15 +153,25 @@ usedIndex (DkLambda _ p) = map (\n -> n-1) (usedIndex p)
 usedIndex _              = []
 
 data DkTerm =
+  -- name of sort
     DkSort DkSort
+  -- Product: Pi @3 : El @1 @4. El @2 @5
   | DkProd DkSort DkSort DkIdent DkTerm DkTerm
+  -- Product: Pi @3 : El @1 @4. El @2 @5
   | DkProjProd DkSort DkSort DkIdent DkTerm DkTerm
+  -- Lvl quantification: Forall (\@2. @1) (\@2. @3)
   | DkQuantifLevel DkSort DkIdent DkTerm
+  -- name of constant
   | DkConst DkName
+  -- Application: @1 @2
   | DkApp DkTerm DkTerm
+  -- Abstraction: \ @1 : @2 . @3
   | DkLam DkIdent (Maybe (DkTerm,DkSort)) DkTerm
+  -- Variable: @1
   | DkDB DkIdent Int
+  -- Level expression
   | DkLevel Lvl
+  -- Builtin
   | DkBuiltin DkBuiltin
 
 printTerm :: Position -> DkModName -> DkTerm -> Doc
@@ -306,7 +321,9 @@ printContext used l =
       | otherwise = extractIndex (a+1) (b:tl) vars
 
 data DkName =
+    -- local identifier
     DkLocal DkIdent
+    -- qualified identifier
   | DkQualified DkModName DkModName DkIdent
   deriving (Eq, Show)
 
