@@ -1,6 +1,6 @@
 #!/bin/bash
 
-AGDA_DIR=$1
+AGDA_DIR=$1/src
 EXEC="$2"
 flags="$3 --outDir=$4"
 declare -i NB=$5

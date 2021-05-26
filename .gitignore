@@ -18,6 +18,7 @@ translation/*/*
 src/Main
 
 agda/
+agda-stdlib-1.6/
 dist/
 .cabal-sandbox/
 

@@ -42,6 +42,7 @@ import Agda.TypeChecking.Reduce
 import Agda.TypeChecking.Substitute
 import Agda.TypeChecking.Substitute.Class
 import Agda.TypeChecking.Telescope
+import Agda.TypeChecking.Coverage (getFunCovering)
 import qualified Agda.TypeChecking.Pretty as AP
 import Agda.Utils.Monad
 import Agda.Utils.Pretty (pretty)
@@ -220,10 +221,15 @@ dkCompileDef _ env@(mod,eta) _ def@(Defn {defCopy=isCopy, defName=n, theDef=d, d
         _ -> defaultCase
     reportSDoc "toDk.eta" 35 $ (text "    tParam is" <+>) <$> AP.pretty tParam
     inTopContext $ do
+      reportSDoc "toDk" 15 $ return $ text "Getting type"
       typ        <- translateType env tParam projPar
+      reportSDoc "toDk" 15 $ return $ text "Getting name"      
       Right name <- qName2DkName env n -- n is not a copy
+      reportSDoc "toDk" 15 $ return $ text "Getting kind"
       kind       <- getKind env t
+      reportSDoc "toDk" 15 $ return $ text "Getting staticity"
       stat       <- extractStaticity n d
+      reportSDoc "toDk" 15 $ return $ text "Getting rules"
       rules      <- extractRules env n d t
       let dkDef = DkDefinition
             { name      = name
@@ -236,8 +242,11 @@ dkCompileDef _ env@(mod,eta) _ def@(Defn {defCopy=isCopy, defName=n, theDef=d, d
   where
     defaultCase = do
       tExpand <- checkInternalType' (etaExpandAction eta) t
+
+      reportSDoc "toDk.eta" 35 $ return (text " t1")
       tPar <- inTopContext $ do
         reconstructParametersInType' (etaExpandAction eta) tExpand
+      reportSDoc "toDk.eta" 35 $ return (text " t2")
       return (Nothing, tPar)
 
 translateType :: DkModuleEnv -> Type -> Maybe Nat -> TCM DkTerm
@@ -263,10 +272,12 @@ extractStaticity _ (PrimitiveSort {})    = return Defin
 extractStaticity _ (AbstractDefn {})    = return Static
 
 
+  
 extractRules :: DkModuleEnv -> QName -> Defn -> Type -> TCM [DkRule]
-extractRules env n (Function {funCovering=f}) ty =
+extractRules env n (Function {funClauses=f}) ty =
   do
-    l <- mapM (clause2rule env n) f
+    f' <- getFunCovering n ty f
+    l  <- mapM (clause2rule env n) f'
     return $ catMaybes l
 extractRules env n (Datatype {dataCons=cons, dataClause=Just c, dataPars=i, dataIxs=j}) ty=
   do

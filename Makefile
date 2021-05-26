@@ -1,4 +1,4 @@
-AGDA_STD_DIR = /home/thiago/Documents/Programacao/agda_guillaume/agda-stdlib/agda-stdlib/src
+AGDA_STD_DIR = /home/thiago/Documents/Programacao/agda_guillaume/Agda2Dedukti_sandbox/agda-stdlib-1.6
 EXEC = $(shell pwd)/dist/build/Agda2Dedukti/Agda2Dedukti
 
 TEST_DIR = translation/tests/
