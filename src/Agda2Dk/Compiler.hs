@@ -229,7 +229,7 @@ dkCompileDef _ env@(mod,eta) _ def@(Defn {defCopy=isCopy, defName=n, theDef=d, d
       kind       <- getKind env t
       reportSDoc "toDk" 15 $ return $ text "Getting staticity"
       stat       <- extractStaticity n d
-      reportSDoc "toDk" 15 $ return $ text "Getting rules"
+      reportSDoc "toDk" 15 $ return $ text "Getting rules of " <+> pretty d
       rules      <- extractRules env n d t
       let dkDef = DkDefinition
             { name      = name
@@ -278,6 +278,7 @@ extractRules env n (t@Function {funClauses=f}) ty =
   do
     reportSDoc "toDk" 50 $ (text " Recomputing coverage of " <+>) <$> (return $ pretty t)
     f' <- getFunCovering n ty f
+    reportSDoc "toDk" 50 $ return $ text " Done, converting clauses "
     l  <- mapM (clause2rule env n) f'
     return $ catMaybes l
 extractRules env n (Datatype {dataCons=cons, dataClause=Just c, dataPars=i, dataIxs=j}) ty=
