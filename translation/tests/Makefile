@@ -11,6 +11,7 @@ FLAGS = -e --snf
 
 DKDEP=dkdep $(BASE_LOC)
 DKCHECK=dkcheck $(BASE_LOC) $(FLAGS)
+DKMETA=mv "$(basename $(<F)).dk" "$(basename $(<F))_.dk" && dkmeta "$(basename $(<F))_.dk" > "$(basename $(<F)).dk" ; rm "$(basename $(<F))_.dk" &&
 
 all: $(DKOS)
 

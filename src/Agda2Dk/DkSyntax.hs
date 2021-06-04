@@ -81,11 +81,11 @@ data Lvl = LvlMax Int [PreLvl]
 
 printLvl :: DkModName -> Lvl -> Doc
 printLvl mods (LvlMax n []) = unary n
+printLvl mods (LvlMax 0 [a]) = prettyDk mods a
 printLvl mods (LvlMax n l) =
   parens $ text "univ.max" <+> unary n <+> printPreLvlList mods l
 
 printPreLvlList :: DkModName -> [PreLvl] -> Doc
-printPreLvlList mods []     = text "univ.0"
 printPreLvlList mods (a:[]) = prettyDk mods a
 printPreLvlList mods (a:tl) =
   parens $ text "univ.max" <+> prettyDk mods a <+> printPreLvlList mods tl
