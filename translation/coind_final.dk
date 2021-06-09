@@ -1,0 +1,206 @@
+[t] Agda.etaExpand _ _ t --> t.
+
+(; Equality ;)
+{|TYPE___≡_|} : (a : univ.Lvl) -> (A : Agda.Term (Agda.set (univ.s a)) (Agda.code (Agda.set a))) -> (x : Agda.Term (Agda.set a) A) -> (_0 : Agda.Term (Agda.set a) A) -> Type.
+{|_≡_|} : Agda.Term Agda.sortOmega (Agda.qLevel (a => Agda.set (univ.s a)) (a => Agda.prod (Agda.set (univ.s a)) (Agda.set (univ.s a)) (Agda.code (Agda.set a)) (A => Agda.prod (Agda.set a) (Agda.set (univ.s a)) A (x => Agda.prod (Agda.set a) (Agda.set (univ.s a)) A (_0 => Agda.code (Agda.set a)))))).
+[a, A, x0, x] Agda.Term _ ({|_≡_|} a A x0 x) --> {|TYPE___≡_|} a A x0 x.
+{|_≡___refl|} : Agda.Term Agda.sortOmega (Agda.qLevel (a => Agda.set (univ.s a)) (a => Agda.prod (Agda.set (univ.s a)) (Agda.set a) (Agda.code (Agda.set a)) (A => Agda.prod (Agda.set a) (Agda.set a) A (x => {|_≡_|} a A x x)))).
+(;[t] Agda.etaExpand _ ({|_≡_|} _ _ _ _) t --> t.;)
+
+(; Nat ;)
+TYPE__Nat : Type.
+Nat : Agda.Term (Agda.set (univ.s univ.0)) (Agda.code (Agda.set univ.0)).
+[] Agda.Term _ Nat --> TYPE__Nat.
+Nat__zero : Agda.Term (Agda.set univ.0) Nat.
+Nat__suc : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Nat (n => Nat)).
+(;[] Agda.etaExpand _ Nat Nat__zero --> Nat__zero.
+[n] Agda.etaExpand _ Nat (Nat__suc n) --> Nat__suc (Agda.etaExpand univ.0 Nat n).;)
+def {|_+_|} : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Nat (_0 => Agda.prod (Agda.set univ.0) (Agda.set univ.0) Nat (_0 => Nat))).
+[m] {|_+_|} Nat__zero m --> m.
+[n, m] {|_+_|} (Nat__suc n) m --> Nat__suc ({|_+_|} n m).
+
+(; Properties ;)
+def trans : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set univ.0) (Agda.code (Agda.set univ.0)) (A => Agda.prod (Agda.set univ.0) (Agda.set univ.0) A (x => Agda.prod (Agda.set univ.0) (Agda.set univ.0) A (y => Agda.prod (Agda.set univ.0) (Agda.set univ.0) A (z => Agda.prod (Agda.set univ.0) (Agda.set univ.0) ({|_≡_|} univ.0 A x y) (_0 => Agda.prod (Agda.set univ.0) (Agda.set univ.0) ({|_≡_|} univ.0 A y z) (_0 => {|_≡_|} univ.0 A x z))))))).
+
+def cong : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set (univ.s univ.0)) (Agda.code (Agda.set univ.0)) (A => Agda.prod (Agda.set (univ.s univ.0)) (Agda.set univ.0) (Agda.code (Agda.set univ.0)) (B => Agda.prod (Agda.set univ.0) (Agda.set univ.0) A (x => Agda.prod (Agda.set univ.0) (Agda.set univ.0) A (y => Agda.prod (Agda.set univ.0) (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) A (_0 => B)) (f => Agda.prod (Agda.set univ.0) (Agda.set univ.0) ({|_≡_|} univ.0 A x y) (_0 => {|_≡_|} univ.0 B (f x) (f y)))))))).
+
+def sum0 : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Nat (x => {|_≡_|} univ.0 Nat ({|_+_|} x Nat__zero) x)).
+
+def {|+-assoc|} : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Nat (x => Agda.prod (Agda.set univ.0) (Agda.set univ.0) Nat (y => Agda.prod (Agda.set univ.0) (Agda.set univ.0) Nat (z => {|_≡_|} univ.0 Nat ({|_+_|} ({|_+_|} x y) z) ({|_+_|} x ({|_+_|} y z)))))).
+
+
+(; main definitions ;)
+TYPE__Stream : (A : Agda.Term (Agda.set (univ.s univ.0)) (Agda.code (Agda.set univ.0))) -> Type.
+
+Stream : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set (univ.s univ.0))
+                                                         (Agda.set (univ.s univ.0))
+                                                         (Agda.code (Agda.set univ.0))
+                                                         (A => Agda.code (Agda.set univ.0))).
+
+def Stream__hd : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set (univ.s univ.0))
+                                                                 (Agda.set univ.0)
+                                                                 (Agda.code (Agda.set univ.0))
+                                                                 (A => Agda.proj_prod (Agda.set univ.0)
+                                                                                      (Agda.set univ.0)
+                                                                                      (Stream A)
+                                                                                      (r => A))).
+def Stream__tl : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set (univ.s univ.0))
+                                                                 (Agda.set univ.0)
+                                                                 (Agda.code (Agda.set univ.0))
+                                                                 (A => Agda.proj_prod (Agda.set univ.0)
+                                                                                      (Agda.set univ.0)
+                                                                                      (Stream A)
+                                                                                      (r => Stream A))).
+
+[A] Agda.Term _ (Stream A) --> TYPE__Stream A.
+
+{|TYPE___≈_|} : (A : Agda.Term (Agda.set (univ.s univ.0)) (Agda.code (Agda.set univ.0))) -> (xs : Agda.Term (Agda.set univ.0) (Stream A)) -> (ys : Agda.Term (Agda.set univ.0) (Stream A)) -> Type.
+
+{|_≈_|} : Agda.Term
+          (Agda.set (univ.s univ.0))
+          (Agda.prod (Agda.set (univ.s univ.0))
+                     (Agda.set (univ.s univ.0))
+                     (Agda.code (Agda.set univ.0))
+                     (A => Agda.prod (Agda.set univ.0)
+                                     (Agda.set (univ.s univ.0))
+                                     (Stream A)
+                                     (xs => Agda.prod (Agda.set univ.0)
+                                                      (Agda.set (univ.s univ.0))
+                                                      (Stream A)
+                                                      (ys => Agda.code (Agda.set univ.0))))).
+
+
+def {|_≈___hd-≡|} : Agda.Term
+                    (Agda.set (univ.s univ.0))
+                    (Agda.prod (Agda.set (univ.s univ.0))
+                    (Agda.set univ.0)
+                    (Agda.code (Agda.set univ.0))
+                    (A => Agda.prod (Agda.set univ.0)
+                                    (Agda.set univ.0)
+                                    (Stream A)
+                                    (xs => Agda.prod (Agda.set univ.0)
+                                                     (Agda.set univ.0)
+                                                     (Stream A)
+                                                     (ys => Agda.proj_prod (Agda.set univ.0)
+                                                                           (Agda.set univ.0)
+                                                                           ({|_≈_|} A xs ys)
+                                                                           (r => {|_≡_|} univ.0 A (Stream__hd A xs) (Stream__hd A ys)))))).
+
+def {|_≈___tl-≈|} : Agda.Term
+                    (Agda.set (univ.s univ.0))
+                    (Agda.prod (Agda.set (univ.s univ.0))
+                               (Agda.set univ.0)
+                               (Agda.code (Agda.set univ.0))
+                               (A => Agda.prod (Agda.set univ.0)
+                                               (Agda.set univ.0)
+                                               (Stream A)
+                                               (xs => Agda.prod (Agda.set univ.0)
+                                                                (Agda.set univ.0)
+                                                                (Stream A)
+                                                                (ys => Agda.proj_prod (Agda.set univ.0)
+                                                                                      (Agda.set univ.0)
+                                                                                      ({|_≈_|} A xs ys)
+                                                                                      (r => {|_≈_|} A (Stream__tl A xs) (Stream__tl A ys)))))).
+
+[A, xs, ys] Agda.Term _ ({|_≈_|} A xs ys) --> {|TYPE___≈_|} A xs ys.
+
+{|_≈_.constructor|} : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set univ.0) (Agda.code (Agda.set univ.0)) (A => Agda.prod (Agda.set univ.0) (Agda.set univ.0) (Stream A) (xs => Agda.prod (Agda.set univ.0) (Agda.set univ.0) (Stream A) (ys => Agda.prod (Agda.set univ.0) (Agda.set univ.0) ({|_≡_|} univ.0 A (Stream__hd A xs) (Stream__hd A ys)) ({|hd-≡|} => Agda.prod (Agda.set univ.0) (Agda.set univ.0) ({|_≈_|} A (Stream__tl A xs) (Stream__tl A ys)) ({|tl-≈|} => {|_≈_|} A xs ys)))))).
+[A, xs, ys, {|hd-≡|}, {|tl-≈|}] {|_≈___hd-≡|} A xs ys ({|_≈_.constructor|} _ _ _ {|hd-≡|} {|tl-≈|}) --> {|hd-≡|}.
+[A, xs, ys, {|hd-≡|}, {|tl-≈|}] {|_≈___tl-≈|} A xs ys ({|_≈_.constructor|} _ _ _ {|hd-≡|} {|tl-≈|}) --> {|tl-≈|}.
+
+(;[t] Agda.etaExpand _ ({|_≈_|} _ _ _) t --> t.
+[t] Agda.etaExpand _ (Stream _) t --> t.;)
+
+
+def zeros : Agda.Term (Agda.set univ.0) (Stream Nat).
+[] Stream__hd _ zeros --> Nat__zero.
+[] Stream__tl _ zeros --> zeros.
+
+
+def {|refl-≈|} : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set (univ.s univ.0))
+                                                                 (Agda.set univ.0)
+                                                                 (Agda.code (Agda.set univ.0))
+                                                                 (A => Agda.prod (Agda.set univ.0)
+                                                                                 (Agda.set univ.0)
+                                                                                 (Stream A)
+                                                                                 (s => {|_≈_|} A s s))).
+
+[A, s] {|_≈___hd-≡|} _ _ _ ({|refl-≈|} A s) --> {|_≡___refl|} univ.0 A (Stream__hd A s).
+
+[A, s] {|_≈___tl-≈|} _ _ _ ({|refl-≈|} A s) --> {|refl-≈|} A (Stream__tl A s).
+
+
+def {|trans-≈|} : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set univ.0) (Agda.code (Agda.set univ.0)) (A => Agda.prod (Agda.set univ.0) (Agda.set univ.0) (Stream A) (x => Agda.prod (Agda.set univ.0) (Agda.set univ.0) (Stream A) (y => Agda.prod (Agda.set univ.0) (Agda.set univ.0) (Stream A) (z => Agda.prod (Agda.set univ.0) (Agda.set univ.0) ({|_≈_|} A x y) (_0 => Agda.prod (Agda.set univ.0) (Agda.set univ.0) ({|_≈_|} A y z) (_0 => {|_≈_|} A x z))))))).
+
+[A, x, y, z, p, q] {|_≈___hd-≡|} _ _ _ ({|trans-≈|} A x y z p q) --> trans A (Stream__hd A x) (Stream__hd A y) (Stream__hd A z) ({|_≈___hd-≡|} A x y p) ({|_≈___hd-≡|} A y z q).
+
+[A, x, y, z, p, q] {|_≈___tl-≈|} _ _ _ ({|trans-≈|} A x y z p q) --> {|trans-≈|} A (Stream__tl A x) (Stream__tl A y) (Stream__tl A z) ({|_≈___tl-≈|} A x y p) ({|_≈___tl-≈|} A y z q).
+
+
+def {|≡to≈|} : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set univ.0) (Agda.code (Agda.set univ.0)) (A => Agda.prod (Agda.set univ.0) (Agda.set univ.0) (Stream A) (x => Agda.prod (Agda.set univ.0) (Agda.set univ.0) (Stream A) (y => Agda.prod (Agda.set univ.0) (Agda.set univ.0) ({|_≡_|} univ.0 (Stream A) x y) (_0 => {|_≈_|} A x y))))).
+
+[A, x] {|≡to≈|} A x x _ --> {|refl-≈|} A x.
+
+def {|cong-≈|} : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set (univ.s univ.0)) (Agda.code (Agda.set univ.0)) (A => Agda.prod (Agda.set (univ.s univ.0)) (Agda.set univ.0) (Agda.code (Agda.set univ.0)) (B => Agda.prod (Agda.set univ.0) (Agda.set univ.0) A (x => Agda.prod (Agda.set univ.0) (Agda.set univ.0) A (y => Agda.prod (Agda.set univ.0) (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) A (_0 => Stream B)) (f => Agda.prod (Agda.set univ.0) (Agda.set univ.0) ({|_≡_|} univ.0 A x y) (_0 => {|_≈_|} B (f x) (f y)))))))).
+
+[A, B, x, y, f, p] {|_≈___hd-≡|} _ _ _ ({|cong-≈|} A B x y f p) --> cong A B x y (x0 => (Stream__hd B (f x0))) p.
+
+[A, B, x, y, f, p] {|_≈___tl-≈|} _ _ _ ({|cong-≈|} A B x y f p) --> {|cong-≈|} (Stream B) B (f x) (f y) (r => Stream__tl B r) (cong A (Stream B) x y f p).
+
+
+def pos : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set univ.0) (Agda.code (Agda.set univ.0)) (A => Agda.prod (Agda.set univ.0) (Agda.set univ.0) Nat (_0 => Agda.prod (Agda.set univ.0) (Agda.set univ.0) (Stream A) (_0 => A)))).
+
+[A, x] pos A Nat__zero x --> Stream__hd A x.
+
+[A, n, x] pos A (Nat__suc n) x --> pos A n (Stream__tl A x).
+
+
+def natS : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Nat (_0 => Stream Nat)).
+
+[n] Stream__hd _ (natS n) --> n.
+
+[n] Stream__tl _ (natS n) --> natS (Nat__suc n).
+
+
+def tailn : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set univ.0) (Agda.code (Agda.set univ.0)) (A => Agda.prod (Agda.set univ.0) (Agda.set univ.0) Nat (n => Agda.prod (Agda.set univ.0) (Agda.set univ.0) (Stream A) (_0 => Stream A)))).
+
+[x] tailn _ Nat__zero x --> x.
+[A, n, x] tailn A (Nat__suc n) x --> Stream__tl A (tailn A n x).
+
+
+def tailNatS : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Nat (n => {|_≈_|} Nat (tailn Nat n (natS Nat__zero)) (natS n))).
+
+[] tailNatS Nat__zero --> {|refl-≈|} Nat (tailn Nat Nat__zero (natS Nat__zero)).
+
+[n] {|_≈___hd-≡|} _ _ _ (tailNatS (Nat__suc n)) --> {|_≈___hd-≡|} Nat (Stream__tl Nat (tailn Nat n (natS Nat__zero))) (Stream__tl Nat (natS n)) ({|_≈___tl-≈|} Nat (tailn Nat n (natS Nat__zero)) (natS n) (tailNatS n)).
+
+[n] {|_≈___tl-≈|} _ _ _ (tailNatS (Nat__suc n)) --> {|_≈___tl-≈|} Nat (Stream__tl Nat (tailn Nat n (natS Nat__zero))) (Stream__tl Nat (natS n)) ({|_≈___tl-≈|} Nat (tailn Nat n (natS Nat__zero)) (natS n) (tailNatS n)).
+
+def plusS : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Nat (n => Agda.prod (Agda.set univ.0) (Agda.set univ.0) (Stream Nat) (_0 => Stream Nat))).
+[n, x] Stream__hd _ (plusS n x) --> {|_+_|} n (Stream__hd Nat x).
+[n, x] Stream__tl _ (plusS n x) --> plusS n (Stream__tl Nat x).
+
+def etaPlusS : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) (Stream Nat) (x => {|_≈_|} Nat x (plusS Nat__zero x))).
+[x] {|_≈___hd-≡|} _ _ _ (etaPlusS x) --> {|_≡___refl|} univ.0 Nat (Stream__hd Nat x).
+[x] {|_≈___tl-≈|} _ _ _ (etaPlusS x) --> etaPlusS (Stream__tl Nat x).
+
+def {|plusS+|} : Agda.Term (Agda.set univ.0) (Agda.prod
+                                             (Agda.set univ.0)
+                                             (Agda.set univ.0)
+                                             Nat
+                                             (n => Agda.prod
+                                                   (Agda.set univ.0)
+                                                   (Agda.set univ.0)
+                                                   Nat
+                                                   (m => Agda.prod
+                                                         (Agda.set univ.0)
+                                                         (Agda.set univ.0)
+                                                         (Stream Nat)
+                                                         (x => {|_≈_|}
+                                                               Nat
+                                                               (plusS ({|_+_|} n m) x)
+                                                               (plusS n (plusS m x)))))).
+
+[n, m, x] {|_≈___hd-≡|} _ _ _ ({|plusS+|} n m x) --> {|+-assoc|} n m (Stream__hd Nat x).
+[n, m, x] {|_≈___tl-≈|} _ _ _ ({|plusS+|} n m x) --> {|plusS+|} n m (Stream__tl Nat x).
+
