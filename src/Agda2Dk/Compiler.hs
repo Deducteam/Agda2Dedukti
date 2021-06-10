@@ -289,14 +289,19 @@ extractRules env n (Datatype {dataCons=cons, dataClause=Nothing, dataPars=i, dat
   do
     l <- sequence [Just <$> decodedVersion env n (i+j)]
     (catMaybes l ++) <$> (etaIsId env n i j cons)
-extractRules env n (Record {recClause=Just c, recPars=i, recConHead=hd, recFields=f}) ty =
+extractRules env n (t@Record {recClause=clauses, recPars=i, recConHead=hd, recFields=f}) ty =
+  let hasEta =  case (theEtaEquality $ recEtaEquality' t) of
+        YesEta  -> True
+        NoEta _ -> False
+        in
   do
-    l <- sequence [clause2rule env n c, Just <$> decodedVersion env n i, Just <$> etaExpansionDecl env n i hd f]
-    return $ catMaybes l
-extractRules env n (Record {recClause=Nothing, recPars=i, recConHead=hd, recFields=f}) ty =
-  do
-    l <- sequence [Just <$> decodedVersion env n i, Just <$> etaExpansionDecl env n i hd f]
-    return $ catMaybes l
+    translatedClauses <- maybe (return []) (\c -> sequence [clause2rule env n c]) clauses
+    decodedVers <- sequence [Just <$> decodedVersion env n i]
+    etaExpDecl <- if hasEta
+                  then sequence [Just <$> etaExpansionDecl env n i hd f]
+                  else sequence [Just <$> doesNotEtaExpand env n i hd f]
+    return $ catMaybes $ translatedClauses ++ decodedVers ++ etaExpDecl
+
 extractRules env n (Primitive {primClauses=p}) ty =
   do
     recordCleaned <- mapM translateRecordPatterns p
@@ -1043,6 +1048,43 @@ etaExpansionDecl env@(_,eta) n nbPars ConHead{conName = cons} l = do
           otherwise -> __IMPOSSIBLE__
       otherwise -> __IMPOSSIBLE__
 
+doesNotEtaExpand :: DkModuleEnv -> QName -> Int -> ConHead -> [Dom QName] -> TCM DkRule
+doesNotEtaExpand env@(_,eta) n nbPars ConHead{conName = cons} l = do
+  reportSDoc "toDk.eta" 5 $ (text "  Declaration of non eta-expansion of" <+>) <$> AP.prettyTCM n
+  let hd = DkQualified ["Agda"] [] "etaExpand"
+  Defn{defType=tt} <- getConstInfo n
+  TelV tele _ <- telView tt
+  addContext tele $
+    unsafeModifyContext separateVars $ do
+    -- We do have the information that n is not a copy,
+    -- otherwise it would not have gone through compileDef
+    Right nn <- qName2DkName env n
+    Right cc <- qName2DkName env cons
+    y <- (\ctx -> freshStr ctx "y") <$> getContext
+    let ty = apply (Def n []) (teleArgs tele)
+    s <- checkType' $ El (Inf IsFibrant 0) ty
+    addContext (y,defaultDom $ El s ty) $ do
+      ctx <- getContext
+      context <- extractContextNames ctx
+      tyArg <- pattTy nn ctx
+      return $ DkRule
+        { decoding  = False
+        , context   = context
+        , headsymb  = hd
+        , patts     = [DkJoker, tyArg, DkVar y 0 []]
+        , rhs       = DkDB y 0
+        }
+
+  where
+    pattTy cc args =
+      DkFun cc <$> nextIndex [] 0 args
+    nextIndex acc 0 (_:tl) = nextIndex acc 1 tl
+    nextIndex acc j []     = return acc
+    nextIndex acc j (_:tl) = do
+      vj <- extractPattern env (defaultArg $ unnamed $ varP (DBPatVar "_" j)) __DUMMY_TYPE__
+      nextIndex (vj:acc) (j+1) tl
+
+
 etaExpandAction :: QName -> Action TCM
 etaExpandAction eta = defaultAction { preAction = \y -> etaContractFun , postAction = etaExpansion eta}
 
@@ -1058,8 +1100,16 @@ etaExpansion eta t u = do
   reportSDoc "toDk.eta" 50 $ (text "      of type" <+>) <$> AP.prettyTCM t
   case unEl t of
     Var _ _   -> etaExp t u
-    Def n _   -> do
-      ifM (isLevel n) (return u) (etaExp t u)
+    Def n _ -> do
+      defin <- getConstInfo n
+      reportSDoc "toDk.eta" 70 $ (text "     theDef" <+>) <$> (return $ text $ show $ theDef defin)
+      case (theDef $ defin) of
+        Record {recEtaEquality' = withEta} ->
+          case theEtaEquality withEta of
+            YesEta  -> ifM (isLevel n) (return u) (etaExp t u)
+            NoEta _ -> return u
+        _  -> ifM (isLevel n) (return u) (etaExp t u)
+
     Pi (a@Dom{domInfo=info}) b -> do
       reportSDoc "toDk.eta" 40 $ (text "    In the product" <+>) <$> AP.prettyTCM t
       ctx <- getContext
