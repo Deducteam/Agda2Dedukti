@@ -16,6 +16,7 @@ zeros : Stream Nat
 hd zeros = 0
 tl zeros = zeros
 
+
 record _≈_ {A} (xs : Stream A) (ys : Stream A) : Set where
   coinductive
   field

@@ -361,6 +361,8 @@ clause2rule env@(_,eta) nam c = do
       do
         reportSDoc "bla" 3 $ return $ text "On a changé le contexte"
         imp <- isProjection nam
+
+        -- gets the number of implicit arguments
         implicits <-
           case imp of
             Nothing                             -> return 0
@@ -368,27 +370,36 @@ clause2rule env@(_,eta) nam c = do
             Just Projection{projProper=Just n}  ->
               (fromMaybe __IMPOSSIBLE__) <$> getNumberOfParameters n
         reportSDoc "bla" 3 $ return $ text "On a les implicites"
+
         tele <- getContext
         ctx <- extractContextNames tele
         reportSDoc "bla" 3 $ return $ text "On a extrait le contexte"
-        let preLhs = Def nam (patternsToElims (namedClausePats c))
-        rr <-
+
+--        let preLhs = Def nam (patternsToElims (namedClausePats c))
+        -- eta expands the rhs and reconstructs the parameters
+        rhsExpanded <-
           case clauseType c of
             Nothing -> do
+              -- No type stored in this clause (why?), so we don't eta expand
               reportSDoc "toDk.clause" 25 $ return $ text "    Clause without type !"
               return r
             Just t  -> do
+              -- We use the type to eta expand
               reportSDoc "bla" 3 $ return $ text "On a bien un type"
               r1 <- checkInternal' (etaExpandAction eta) r CmpLeq (unArg t)
               reportSDoc "bla" 3 $ return $ text "On a fait le premier chkIn"
               reconstructParameters' (etaExpandAction eta) (unArg t) r1
         reportSDoc "toDk.clause" 30 $ return $ text "    Parameters reconstructed"
-        reportSDoc "toDk.clause" 40 $ return $ text "    The final body is" <+> pretty rr
+        reportSDoc "toDk.clause" 40 $ return $ text "    The final body is" <+> pretty rhsExpanded
         reportSDoc "bla" 3 $ return $ text "On a reconstruit les paramètres"
+
+        -- translates rhs
+        rhsDk <- translateTerm env rhsExpanded
 
         -- gets the type of the name nam
         tyHd <- defType <$> getConstInfo nam
-        rhs <- translateTerm env rr
+
+        
         reportSDoc "bla" 3 $ return $ text "On a traduit à droite"
         let impArgs = implicitArgs implicits (reverse ctx)
         let tyInst = piApply tyHd (map (defaultArg . patternToTerm . snd) impArgs)
@@ -421,7 +432,7 @@ clause2rule env@(_,eta) nam c = do
             , context   = ctx
             , headsymb  = name
             , patts     = args ++ [funPat] ++ patCop
-            , rhs       = rhs
+            , rhs       = rhsDk
             }
 
           else do
@@ -432,7 +443,7 @@ clause2rule env@(_,eta) nam c = do
             , context   = ctx
             , headsymb  = headSymb
             , patts     = patts
-            , rhs       = rhs
+            , rhs       = rhsDk
             }
 -}
         return $ Just DkRule
@@ -440,7 +451,7 @@ clause2rule env@(_,eta) nam c = do
           , context   = ctx
           , headsymb  = headSymb
           , patts     = patts
-          , rhs       = rhs
+          , rhs       = rhsDk
           }
 
     where
@@ -453,11 +464,10 @@ extractContextNames :: Context -> TCM DkCtx
 extractContextNames = extractContextAux []
 
 extractContextAux :: DkCtx -> Context -> TCM DkCtx
-extractContextAux acc []                                    =
-  return $ reverse acc
-extractContextAux acc (Dom {unDom=(n,t)}:r) =
-  extractContextAux (name2DkIdent n:acc) r
+extractContextAux acc [] = return $ reverse acc
+extractContextAux acc (Dom {unDom=(n,t)}:r) = extractContextAux (name2DkIdent n:acc) r
 
+--extractPatterns :: DkModuleEnv -> [NamedArg DeBruijnPattern] -> Type -> [DkPattern] -> DkName -> TCM ([DkPattern], DkName)
 extractPatterns :: DkModuleEnv -> [NamedArg DeBruijnPattern] -> Type -> [DkPattern] -> TCM [DkPattern]
 extractPatterns env patts ty acc = do
   normTy <- normalise ty
@@ -467,12 +477,41 @@ auxPatt ::  DkModuleEnv -> [NamedArg DeBruijnPattern] -> Type -> [DkPattern] -> 
 auxPatt env []         _                              acc =
   return $ reverse acc
 auxPatt env (p:patts) ty@(El _ (Pi (Dom{unDom=t}) u)) acc = do
+  reportSDoc "toDk.clause" 30 $ return $ text "    auxPatt type is" <+> pretty ty
   t      <- extractPattern env p t
   normTy <- normalise (piApply ty [defaultArg (patternToTerm (namedArg p))])
   auxPatt env patts normTy (t:acc)
 auxPatt env (p:patts) ty                              acc = do
-  t <- extractPattern env p __DUMMY_TYPE__
-  auxPatt env patts __DUMMY_TYPE__ (t:acc)
+  -- if the type to which we are applying the clause is not a product type, then
+  -- this must be a projection clause
+
+  -- gets the pattern
+  let pat = namedArg p
+
+  -- takes the name
+  name <- case pat of
+    ProjP _ qname -> return qname
+    otherwise     -> do
+      reportSDoc "toDk.clause" 15 $ return $ text "    Extraction of the pattern" <+> pretty pat
+      __IMPOSSIBLE__
+  
+  pattType <- defType <$> getConstInfo name
+  reportSDoc "toDk.clause" 30 $ return $ text "    pattType is" <+> pretty pattType
+
+-- DOESNT WORK needs to consider implicit arguments
+--  appType <- case pattType of El _ (Pi _ u) -> normalise $ unAbs u
+ 
+  reportSDoc "toDk.clause" 30 $ return $ text "    normalized is" <+> pretty appType
+  t <- extractPattern env p appType
+  auxPatt env patts appType (t:acc)
+
+  
+--  appType <- normalise (piApply pattType [defaultArg ty])
+
+--  reportSDoc "toDk.clause" 30 $ return $ text "    auxPatt applied type is" <+> pretty ty
+
+--  t <- extractPattern env p __DUMMY_TYPE__
+--  auxPatt env patts __DUMMY_TYPE__ (t:acc)
 
 extractPattern :: DkModuleEnv -> NamedArg DeBruijnPattern -> Type -> TCM DkPattern
 extractPattern env@(_,eta) x ty = do
@@ -484,6 +523,7 @@ extractPattern env@(_,eta) x ty = do
       nam <- nameOfBV i
       return $ DkVar (name2DkIdent nam) i []
     DotP _ t                             -> do
+      -- we could also just translated this as a joker
       reportSDoc "bla" 3 $ return $ text "DotP"
       tChk <- checkInternal' (etaExpandAction eta) t CmpLeq ty
       tRecons <- reconstructParameters' (etaExpandAction eta) ty tChk
