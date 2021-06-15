@@ -31,7 +31,7 @@ data DkDefinition =
     , typ       :: DkTerm
     , kind      :: DkSort
     , rules     :: [DkRule]
-    }
+    } deriving (Show)
 
 
 etaExpandSymb :: DkName
@@ -77,7 +77,7 @@ printRules :: DkModName -> DkDefinition -> (DkRule -> Bool) -> [Doc]
 printRules mods (DkDefinition {rules=l}) f = map (prettyDk mods) (filter f l)
 
 -- a level is a max of a closed level and various pre-levels
-data Lvl = LvlMax Int [PreLvl]
+data Lvl = LvlMax Int [PreLvl]  deriving (Show)
 
 printLvl :: DkModName -> Lvl -> Doc
 printLvl mods (LvlMax n []) = unary n
@@ -91,7 +91,7 @@ printPreLvlList mods (a:tl) =
   parens $ text "univ.max" <+> prettyDk mods a <+> printPreLvlList mods tl
 
 -- a pre-level is an integer and a level expression
-data PreLvl = LvlPlus Int DkTerm
+data PreLvl = LvlPlus Int DkTerm  deriving (Show)
 
 instance PrettyDk PreLvl where
   prettyDk mods (LvlPlus i t) = iterateSuc i $ printTerm Nested mods t
@@ -113,6 +113,7 @@ data DkSort =
   -- uncomputed product sort (Rule)
   | DkPi DkSort DkSort
   | DkDefaultSort
+  deriving (Show)
 
 printSort :: Position -> DkModName -> DkSort -> Doc
 printSort pos mods (DkSet i)     =
@@ -136,7 +137,7 @@ data DkRule =
     , headsymb :: DkName
     , patts    :: [DkPattern]
     , rhs      :: DkTerm
-    }
+    }  deriving (Show)
 
 instance PrettyDk DkRule where
   prettyDk mods (DkRule {context=c, headsymb=hd, patts=patts, rhs=rhs}) =
@@ -171,6 +172,7 @@ data DkTerm =
   | DkLevel Lvl
   -- Builtin
   | DkBuiltin DkBuiltin
+   deriving (Show)
 
 printTerm :: Position -> DkModName -> DkTerm -> Doc
 printTerm pos mods (DkSort s)               =
@@ -232,6 +234,7 @@ data DkBuiltin =
     DkNat    Int
   | DkChar   Char
   | DkString String
+   deriving (Show)
 
 printBuiltin :: Position -> DkModName -> DkBuiltin -> Doc
 printBuiltin pos mods (DkNat i) =
@@ -281,6 +284,7 @@ data DkPattern =
   | DkPattBuiltin DkTerm
   | DkGuarded DkTerm
   | DkJoker
+   deriving (Show)
 
 printPattern ::   Position -> DkModName -> DkPattern -> Doc
 printPattern pos mods (DkVar n _ [])  =
@@ -340,7 +344,7 @@ instance PrettyDk DkName where
 printIdent n=
     text $ encapsulate n
 
-data IsStatic = Static | Defin | TypeConstr
+data IsStatic = Static | Defin | TypeConstr deriving (Show)
 
 keywords = ["Type", "def", "thm", "injective", "defac", "defacu"]
 
@@ -357,7 +361,7 @@ dropAll (h:t) =
   then h:(dropAll t)
   else dropAll t
 
-data Position = Nested | Top
+data Position = Nested | Top  deriving (Show)
 
 termOfPattern :: DkPattern -> DkTerm
 termOfPattern (DkVar x i l)  = multiApp (DkDB x i) (map termOfPattern l)

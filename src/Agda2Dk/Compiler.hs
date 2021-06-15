@@ -402,50 +402,18 @@ clause2rule env@(_,eta) nam c = do
         
         reportSDoc "bla" 3 $ return $ text "On a traduit à droite"
         let impArgs = implicitArgs implicits (reverse ctx)
-        let tyInst = piApply tyHd (map (defaultArg . patternToTerm . snd) impArgs)
+--        let tyInst = piApply tyHd (map (defaultArg . patternToTerm . snd) impArgs)
         reportSDoc "bla" 3 $ return $ text "On extrait les patterns"
-        patts <- extractPatterns env (namedClausePats c) tyInst (reverse (map fst impArgs))
+
+
+        Right headSymb <- qName2DkName env nam -- nam is not a copy
+
+        (headSymb, patts) <- extractPatterns env (namedClausePats c) (map fst impArgs) headSymb
+
         reportSDoc "bla" 3 $ return $ text "On a extrait les patterns"
         reportSDoc "bla" 3 $ return $ text "On a extrait les p " <+> pretty (namedClausePats c)
         reportSDoc "bla" 3 $ return $ text "On a extrait les p " <+> pretty nam
 
-        Right headSymb <- qName2DkName env nam -- nam is not a copy
-
-        -- temp fix for copatterns
-{-        isCopattern <- defCopatternLHS <$> getConstInfo nam
-        if isCopattern
-          then do
-          reportSDoc "bla" 3 $ return $ text $ show $ namedClausePats c          
-          reportSDoc "bla" 3 $ return $ text "is a copattern"
-          
-          let pat = namedClausePats c
-          let isCopat x = case namedThing (unArg x) of
-                            ProjP _ _ -> True
-                            _     -> False
-          let (l1, l2) = break isCopat pat
-          let patFun = take (length l1) patts
-          let patCop = drop (1 + (length l1)) patts
-          let funPat = DkFun headSymb patFun
-          let (name, args) = case (patts !! (length l1)) of DkFun name args -> (name,args)          
-          return $ Just DkRule
-            { decoding  = False
-            , context   = ctx
-            , headsymb  = name
-            , patts     = args ++ [funPat] ++ patCop
-            , rhs       = rhsDk
-            }
-
-          else do
-          reportSDoc "bla" 3 $ return $ text "not a cop"        
-          reportSDoc "bla" 3 $ return $ text "Tout est fait"
-          return $ Just DkRule
-            { decoding  = False
-            , context   = ctx
-            , headsymb  = headSymb
-            , patts     = patts
-            , rhs       = rhsDk
-            }
--}
         return $ Just DkRule
           { decoding  = False
           , context   = ctx
@@ -467,87 +435,81 @@ extractContextAux :: DkCtx -> Context -> TCM DkCtx
 extractContextAux acc [] = return $ reverse acc
 extractContextAux acc (Dom {unDom=(n,t)}:r) = extractContextAux (name2DkIdent n:acc) r
 
---extractPatterns :: DkModuleEnv -> [NamedArg DeBruijnPattern] -> Type -> [DkPattern] -> DkName -> TCM ([DkPattern], DkName)
-extractPatterns :: DkModuleEnv -> [NamedArg DeBruijnPattern] -> Type -> [DkPattern] -> TCM [DkPattern]
-extractPatterns env patts ty acc = do
-  normTy <- normalise ty
-  auxPatt env patts normTy acc
 
-auxPatt ::  DkModuleEnv -> [NamedArg DeBruijnPattern] -> Type -> [DkPattern] -> TCM [DkPattern]
-auxPatt env []         _                              acc =
-  return $ reverse acc
-auxPatt env (p:patts) ty@(El _ (Pi (Dom{unDom=t}) u)) acc = do
-  reportSDoc "toDk.clause" 30 $ return $ text "    auxPatt type is" <+> pretty ty
-  t      <- extractPattern env p t
-  normTy <- normalise (piApply ty [defaultArg (patternToTerm (namedArg p))])
-  auxPatt env patts normTy (t:acc)
-auxPatt env (p:patts) ty                              acc = do
-  -- if the type to which we are applying the clause is not a product type, then
-  -- this must be a projection clause
+extractPatterns ::  DkModuleEnv -> [NamedArg DeBruijnPattern] -> [DkPattern]
+  -> DkName -> TCM (DkName, [DkPattern])
+extractPatterns env [] dkPatts dkHead = do
+  reportSDoc "toDk.pattern" 15 $ return $ text $ "    Finished extraction, the result is " ++ show (dkHead, dkPatts)
+  return (dkHead, dkPatts)
 
-  -- gets the pattern
-  let pat = namedArg p
-
-  -- takes the name
-  name <- case pat of
-    ProjP _ qname -> return qname
-    otherwise     -> do
-      reportSDoc "toDk.clause" 15 $ return $ text "    Extraction of the pattern" <+> pretty pat
-      __IMPOSSIBLE__
+extractPatterns env (p:patts) dkPatts dkHead = do
+  reportSDoc "toDk.pattern" 15 $ return $ text $ "    The current state is  " ++ show (dkHead, dkPatts)
+  reportSDoc "toDk.pattern" 15 $ return $ text "    Now we begin translating  " <+> pretty p
   
-  pattType <- defType <$> getConstInfo name
-  reportSDoc "toDk.clause" 30 $ return $ text "    pattType is" <+> pretty pattType
-
--- DOESNT WORK needs to consider implicit arguments
---  appType <- case pattType of El _ (Pi _ u) -> normalise $ unAbs u
- 
-  reportSDoc "toDk.clause" 30 $ return $ text "    normalized is" <+> pretty appType
-  t <- extractPattern env p appType
-  auxPatt env patts appType (t:acc)
-
+  t <- extractPattern env p
   
---  appType <- normalise (piApply pattType [defaultArg ty])
+  case namedArg p of
+    ProjP _ qname -> do
+      -- the application of f e1 ... en to the projection p should be translated as
+      -- p _ ... _ (f e1 ... en), where we put as many jokers as params
+      -- of the projected record
+      -- Thus, if p is a projection, then we need to treat it differently
 
---  reportSDoc "toDk.clause" 30 $ return $ text "    auxPatt applied type is" <+> pretty ty
+      -- gets the head symbol and the arguments
+      DkFun head args <- return t
 
---  t <- extractPattern env p __DUMMY_TYPE__
---  auxPatt env patts __DUMMY_TYPE__ (t:acc)
+      -- gets number of parameters
+      imp <- isProjection qname
 
-extractPattern :: DkModuleEnv -> NamedArg DeBruijnPattern -> Type -> TCM DkPattern
-extractPattern env@(_,eta) x ty = do
-  reportSDoc "toDk.pattern" 15 $ return $ text "    Extraction of the pattern" <+> pretty x
-  let pat = namedThing (unArg x)
-  case pat of
+      numOfParams <- case imp of
+        Just Projection{projFromType = Arg _ nn} -> do
+          maybeNumPars <- getNumberOfParameters nn
+          case maybeNumPars of
+            Just num -> return num
+            Nothing  -> __IMPOSSIBLE__
+        _ -> __IMPOSSIBLE__
+
+      let projParams = replicate numOfParams DkJoker    
+      extractPatterns env patts (projParams ++ [DkFun dkHead dkPatts]) head
+
+    _ -> extractPatterns env patts (dkPatts ++ [t]) dkHead
+      
+
+extractPattern :: DkModuleEnv -> NamedArg DeBruijnPattern -> TCM DkPattern
+extractPattern env@(_,eta) bruijnPatts = do
+  reportSDoc "toDk.pattern" 15 $ return $ text "    Extraction of the pattern" <+> pretty bruijnPatts
+
+  let patterns = namedThing (unArg bruijnPatts)
+  case patterns of
     VarP _ (DBPatVar {dbPatVarIndex=i})  -> do
       reportSDoc "bla" 3 $ return $ text "VarP"
       nam <- nameOfBV i
       return $ DkVar (name2DkIdent nam) i []
     DotP _ t                             -> do
-      -- we could also just translated this as a joker
+      -- TODO i had to simpify this part but unfortunatly some files do not typecheck anymore, so i need to find a way to store the typing info
+      
+      return $ DkJoker
+{-      
       reportSDoc "bla" 3 $ return $ text "DotP"
       tChk <- checkInternal' (etaExpandAction eta) t CmpLeq ty
       tRecons <- reconstructParameters' (etaExpandAction eta) ty tChk
       term <- translateTerm env tRecons
       return $ DkGuarded term
+-}
     ConP (ConHead {conName=h}) ci tl     -> do
       reportSDoc "bla" 3 $ return $ text "ConP" <+> pretty h
-      tyLoc <- normalise =<< defType <$> getConstInfo h
+      
+      -- translates head symbol of this pattern
+      Right head <- qName2DkName env h
+
+      -- parameter arguments for the constructor
       nbParams <- fromMaybe (error "Why no Parameters?") <$> getNumberOfParameters h
-      reportSDoc "toDk.clause" 30 $ return $ text "    The type of this applied constructor is" <+> pretty ty
-      reportSDoc "toDk.clause" 50 $ return $ text "    Type of the constructor is" <+>  pretty tyLoc
-      reportSDoc "toDk.clause" 30 $ return $ text "    We investigate for" <+>int nbParams<+>text "params"
-      tyNorm <- normalise ty
-      (tyArgs,argsParam) <-
-            case tyNorm of
-              El _ (Def _ l) -> do
-                reportSDoc "bla" 3 $ return $ text "The type is ..."
-                caseParamFun tyLoc (take nbParams l)
-              otherwise      ->  return $ (__DUMMY_TYPE__,replicate nbParams DkJoker)
-      reportSDoc "bla" 2 $ return $ text "tyArgs is ..."
-      patts <- auxPatt env tl tyArgs []
-      let args = argsParam ++ patts
-      Right nam <- qName2DkName env h
-      return $ DkFun nam args
+      let params = replicate nbParams DkJoker
+
+      -- real arguments
+      (head, args) <- extractPatterns env tl params head
+      
+      return $ DkFun head args
     LitP _ l                            -> do
       reportSDoc "bla" 3 $ return $ text "LitP"
       return $ DkPattBuiltin (translateLiteral l)
@@ -977,7 +939,7 @@ etaIsId env@(_,eta) n i j cons = do
       DkFun cc <$> nextIndex [] 0 args
     nextIndex acc j []     = return acc
     nextIndex acc j (_:tl) = do
-      vj <- extractPattern env (defaultArg $ unnamed $ varP (DBPatVar "_" j)) __DUMMY_TYPE__
+      vj <- extractPattern env (defaultArg $ unnamed $ varP (DBPatVar "_" j))      
       nextIndex (vj:acc) (j+1) tl
 
     constructRhsFields _ t [] = return t
@@ -1022,7 +984,7 @@ etaExpansionDecl env@(_,eta) n nbPars ConHead{conName = cons} l = do
     nextIndex acc 0 (_:tl) = nextIndex acc 1 tl
     nextIndex acc j []     = return acc
     nextIndex acc j (_:tl) = do
-      vj <- extractPattern env (defaultArg $ unnamed $ varP (DBPatVar "_" j)) __DUMMY_TYPE__
+      vj <- extractPattern env (defaultArg $ unnamed $ varP (DBPatVar "_" j))
       nextIndex (vj:acc) (j+1) tl
     constructRhs :: DkTerm -> [Dom (Name, Type)] -> DkIdent -> TCM DkTerm
     constructRhs t args y = do
@@ -1121,7 +1083,7 @@ doesNotEtaExpand env@(_,eta) n nbPars ConHead{conName = cons} l = do
     nextIndex acc 0 (_:tl) = nextIndex acc 1 tl
     nextIndex acc j []     = return acc
     nextIndex acc j (_:tl) = do
-      vj <- extractPattern env (defaultArg $ unnamed $ varP (DBPatVar "_" j)) __DUMMY_TYPE__
+      vj <- extractPattern env (defaultArg $ unnamed $ varP (DBPatVar "_" j))
       nextIndex (vj:acc) (j+1) tl
 
 
