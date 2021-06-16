@@ -42,7 +42,7 @@ import Agda.TypeChecking.Reduce
 import Agda.TypeChecking.Substitute
 import Agda.TypeChecking.Substitute.Class
 import Agda.TypeChecking.Telescope
-import Agda.TypeChecking.Coverage (getFunCovering)
+--import Agda.TypeChecking.Coverage (getFunCovering)
 import qualified Agda.TypeChecking.Pretty as AP
 import Agda.Utils.Monad
 import Agda.Utils.Pretty (pretty)
@@ -956,7 +956,8 @@ createEtaExpandSymbol () =
           defaultArg (namedDBVarP 1 "A"),
           defaultArg (namedDBVarP 0 "x")
           ]
-    addConstant name $ defaultDefn defaultArgInfo name typeId emptyFunction{funClauses=[defaultClause{clauseTel=tele, namedClausePats=args, clauseBody=Just $ var 0, clauseType = Just $ defaultArg $ El (varSort 2) (var 1)}]}
+    -- currently we consider we don't need K for this def, may be changed on the future?
+    addConstant name $ defaultDefn defaultArgInfo name typeId WithoutK emptyFunction{funClauses=[defaultClause{clauseTel=tele, namedClausePats=args, clauseBody=Just $ var 0, clauseType = Just $ defaultArg $ El (varSort 2) (var 1)}]}
     return name
   where
     defaultClause =

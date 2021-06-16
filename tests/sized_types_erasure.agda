@@ -1,3 +1,5 @@
+{-# OPTIONS --guardedness #-}
+
 open import Agda.Builtin.Bool
 open import Agda.Builtin.List
 
