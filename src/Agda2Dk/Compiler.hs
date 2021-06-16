@@ -274,7 +274,7 @@ extractStaticity _ (AbstractDefn {})    = return Static
 
   
 extractRules :: DkModuleEnv -> QName -> Defn -> Type -> TCM [DkRule]
-extractRules env n (t@Function {funClauses=f}) ty =
+extractRules env n (t@Function {funCovering=f}) ty =
   do
     reportSDoc "toDk" 50 $ (text " Recomputing coverage of " <+>) <$> (return $ pretty t)
 --    f' <- getFunCovering n ty f
