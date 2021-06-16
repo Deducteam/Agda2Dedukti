@@ -402,13 +402,13 @@ clause2rule env@(_,eta) nam c = do
         
         reportSDoc "bla" 3 $ return $ text "On a traduit à droite"
         let impArgs = implicitArgs implicits (reverse ctx)
---        let tyInst = piApply tyHd (map (defaultArg . patternToTerm . snd) impArgs)
+        let tyInst = piApply tyHd (map (defaultArg . patternToTerm . snd) impArgs)
         reportSDoc "bla" 3 $ return $ text "On extrait les patterns"
 
 
         Right headSymb <- qName2DkName env nam -- nam is not a copy
 
-        (headSymb, patts) <- extractPatterns env (namedClausePats c) (map fst impArgs) headSymb
+        (headSymb, patts) <- extractPatterns env (namedClausePats c) tyInst (map fst impArgs) headSymb
 
         reportSDoc "bla" 3 $ return $ text "On a extrait les patterns"
         reportSDoc "bla" 3 $ return $ text "On a extrait les p " <+> pretty (namedClausePats c)
@@ -436,115 +436,194 @@ extractContextAux acc [] = return $ reverse acc
 extractContextAux acc (Dom {unDom=(n,t)}:r) = extractContextAux (name2DkIdent n:acc) r
 
 
-extractPatterns ::  DkModuleEnv -> [NamedArg DeBruijnPattern] -> [DkPattern]
-  -> DkName -> TCM (DkName, [DkPattern])
-extractPatterns env [] dkPatts dkHead = do
+extractPatterns ::  DkModuleEnv ->
+                    [NamedArg DeBruijnPattern] -> --patterns p1 .. pk to be translated
+                    Type -> -- type of already translated part
+                    [DkPattern] -> -- already translated part
+                    DkName -> -- head of the already translated part
+                    TCM (DkName, [DkPattern])
+extractPatterns env [] typ dkPatts dkHead = do
   reportSDoc "toDk.pattern" 15 $ return $ text $ "    Finished extraction, the result is " ++ show (dkHead, dkPatts)
   return (dkHead, dkPatts)
 
-extractPatterns env (p:patts) dkPatts dkHead = do
+extractPatterns env (p:patts) typ dkPatts dkHead = do
   reportSDoc "toDk.pattern" 15 $ return $ text $ "    The current state is  " ++ show (dkHead, dkPatts)
   reportSDoc "toDk.pattern" 15 $ return $ text "    Now we begin translating  " <+> pretty p
   
-  t <- extractPattern env p
+  typ <- normalise typ
+  (translatedPattern, newType) <- extractPattern env p typ
   
   case namedArg p of
-    ProjP _ qname -> do
+    ProjP _ _ -> do
       -- the application of f e1 ... en to the projection p should be translated as
-      -- p _ ... _ (f e1 ... en), where we put as many jokers as params
-      -- of the projected record
-      -- Thus, if p is a projection, then we need to treat it differently
+      -- p a1 .. ak (f e1 .. en), where the a1 .. ak are the parameters of the record
 
       -- gets the head symbol and the arguments
-      DkFun head args <- return t
+      DkFun head args <- return translatedPattern
 
-      -- gets number of parameters
-      imp <- isProjection qname
+      extractPatterns env patts newType (args ++ [DkFun dkHead dkPatts]) head
 
-      numOfParams <- case imp of
-        Just Projection{projFromType = Arg _ nn} -> do
-          maybeNumPars <- getNumberOfParameters nn
-          case maybeNumPars of
-            Just num -> return num
-            Nothing  -> __IMPOSSIBLE__
-        _ -> __IMPOSSIBLE__
+    _ -> do
+      extractPatterns env patts newType (dkPatts ++ [translatedPattern]) dkHead
 
-      let projParams = replicate numOfParams DkJoker    
-      extractPatterns env patts (projParams ++ [DkFun dkHead dkPatts]) head
 
-    _ -> extractPatterns env patts (dkPatts ++ [t]) dkHead
-      
+-- if we are translating a pattern p which is applied to f e1 .. ek, then we need
+-- the type of f e1 .. ek. we return the translation of p and the type
+-- of f e1 .. ek p
+extractPattern :: DkModuleEnv -> NamedArg DeBruijnPattern -> Type ->
+                  TCM (DkPattern, Type)
+extractPattern env@(_,eta) p applyingType = do
+  reportSDoc "toDk.pattern" 15 $ return $ text "    Extraction of the pattern" <+> pretty p
 
-extractPattern :: DkModuleEnv -> NamedArg DeBruijnPattern -> TCM DkPattern
-extractPattern env@(_,eta) bruijnPatts = do
-  reportSDoc "toDk.pattern" 15 $ return $ text "    Extraction of the pattern" <+> pretty bruijnPatts
-
-  let patterns = namedThing (unArg bruijnPatts)
-  case patterns of
+  let patt = namedThing (unArg p)
+  case patt of
     VarP _ (DBPatVar {dbPatVarIndex=i})  -> do
       reportSDoc "bla" 3 $ return $ text "VarP"
       nam <- nameOfBV i
-      return $ DkVar (name2DkIdent nam) i []
+
+      -- gets type of f e1 ... ek p
+      let finalTy = piApply applyingType [defaultArg (patternToTerm (namedArg p))]
+
+      return $ (DkVar (name2DkIdent nam) i [], finalTy)
+
     DotP _ t                             -> do
-      -- TODO i had to simpify this part but unfortunatly some files do not typecheck anymore, so i need to find a way to store the typing info
-      
-      return $ DkJoker
-{-      
       reportSDoc "bla" 3 $ return $ text "DotP"
-      tChk <- checkInternal' (etaExpandAction eta) t CmpLeq ty
-      tRecons <- reconstructParameters' (etaExpandAction eta) ty tChk
+      
+      let patternType = case applyingType of
+                          El _ (Pi (Dom{unDom=domainType}) _) -> domainType
+                          _ -> __DUMMY_TYPE__
+ 
+      tChk <- checkInternal' (etaExpandAction eta) t CmpLeq patternType
+      tRecons <- reconstructParameters' (etaExpandAction eta) patternType tChk
       term <- translateTerm env tRecons
-      return $ DkGuarded term
--}
+
+      -- gets type of f e1 ... ek p
+      let finalTy = piApply applyingType [defaultArg (patternToTerm (namedArg p))]
+      
+      return $ (DkGuarded term, finalTy)
+
     ConP (ConHead {conName=h}) ci tl     -> do
       reportSDoc "bla" 3 $ return $ text "ConP" <+> pretty h
-      
-      -- translates head symbol of this pattern
+
+      -- let f e1 ... ek the part of the patterns already translated and applyingType
+      -- its type. the pattern p we are translating applies to the right of it
+      -- so applyingType must be a product (x:domainType) -> coDomainType.
+      -- therefore, domainType gives the type of the pattern p we are translating.
+
+      let patternType = case applyingType of
+                          El _ (Pi (Dom{unDom=domainType}) _) -> domainType
+                          _ -> __DUMMY_TYPE__
+
+      -- let p = g a1 ... ak be the pattern we are translating. As g is a
+      -- constructor of an inductive type, its type is of the form
+      -- g : {x1 : X1} -> ... -> {xl : Xl} ->
+      --     (a1 : A1) -> ... -> (ak : Ak) -> T x1 ... xl i1 ... ij
+      -- where the x are the params and i the indices of the inductive type. The
+      -- parameters are implicit in agda, and thus we need to recover them to
+      -- translate p correctly. To do this, we look at the domainType, which will be
+      -- T x1 ... xl i1 ... ij and we extract the parameters
+
+      -- gets head symbol type
+      headType <- normalise =<< defType <$> getConstInfo h
+
+      -- gets num of params of head symbol
+      numParams <- fromMaybe (error "Why no Parameters?") <$> getNumberOfParameters h
+
+      reportSDoc "toDk.clause" 30 $ return
+        $ text "    The type of this applied constructor is" <+> pretty patternType
+      reportSDoc "toDk.clause" 50 $ return
+        $ text "    Type of the constructor is" <+>  pretty headType
+      reportSDoc "toDk.clause" 30 $ return
+        $ text "    We investigate for" <+>int numParams<+>text "params"
+
+
+      -- gets the parameters
+      (tyArgs, params) <-
+        case patternType of
+          El _ (Def _ l) -> do
+            reportSDoc "toDk.clause" 30 $ return
+              $ text "    Found parameters"
+            caseParamFun headType (take numParams l)
+          otherwise      ->  do
+            reportSDoc "toDk.clause" 30 $ return
+              $ text "    Parameters not found, the type is not a Def _ l"
+            return $ (__DUMMY_TYPE__, replicate numParams DkJoker)
+
+      -- now we have the parameters which are applied to the head symbol g. it's left
+      -- to translate the a1 ... ak which are applied to them
+
+      -- translates head symbol
       Right head <- qName2DkName env h
 
-      -- parameter arguments for the constructor
-      nbParams <- fromMaybe (error "Why no Parameters?") <$> getNumberOfParameters h
-      let params = replicate nbParams DkJoker
+      -- translates the arguments
+      (head, args) <- extractPatterns env tl tyArgs params head
 
-      -- real arguments
-      (head, args) <- extractPatterns env tl params head
+      let translatedPatt = DkFun head args
+
+      -- gets type of f e1 ... ek p
+      let finalTy = piApply applyingType [defaultArg (patternToTerm (namedArg p))]
       
-      return $ DkFun head args
+      return $ (translatedPatt, finalTy)
+
     LitP _ l                            -> do
       reportSDoc "bla" 3 $ return $ text "LitP"
-      return $ DkPattBuiltin (translateLiteral l)
+      -- gets type of f e1 ... ek p
+      let finalTy = piApply applyingType [defaultArg (patternToTerm (namedArg p))]
+      return $ (DkPattBuiltin (translateLiteral l), finalTy)
     ProjP _ nam                         -> do
       reportSDoc "bla" 3 $ return $ text "ProjP"
-      imp <- isProjection nam
-      reportSDoc "bla" 3 $ return $ text "Is proj done"
-      mbNbParams <-
-        case imp of
-          Nothing                                                        ->
-            error "What is this projection !?"
-          Just Projection{projProper = Nothing}                          ->
-            error "What is this projection !?"
-          Just Projection{projProper = Just n, projFromType = Arg _ nn}  -> do
-            -- takes the definition of the name n
-            d <- getConstInfo' n
-            case d of
-              Right def ->
-                case theDef def of
-                  Record{ recPars = n } -> return $ Just n
-              Left _ ->
-                getNumberOfParameters nn
-      reportSDoc "bla" 3 $ return $ text "Nb Pars"
-      nbParams <-
-        case mbNbParams of
-          Nothing -> error "Why no Parameters?"
-          Just n  -> return n
-      reportSDoc "bla" 3 $ return $ text "Computed"
 
+      -- we are translating a projection p which is applied to the term f e1 .. ek of
+      -- type applyingType. the term f e1 ... ek must be of a record type, so we
+      -- should translate this application as p (f e1 .. ek). however, we also need
+      -- to translate the parameters of the record, as the type of p is actually
+      -- p : {x1 : X1} -> ... -> {xn : Xn} -> Rec x1 .. xn. so the translation
+      -- should be p x1 .. xn (f e1 .. ek).
+      -- we therefore extract the parameters x1 .. xn from the type of (f e1 .. ek)
+      
+      -- gets projection def
+      imp <- isProjection nam
+
+      -- gets head symbol type
+      headType <- normalise =<< defType <$> getConstInfo nam
+
+      -- gets number of parameters
+      numParams <-
+        case imp of
+          Just Projection{projProper = Just _, projFromType = Arg _ nn}  -> do
+                maybeNumParams <- getNumberOfParameters nn
+                case maybeNumParams of Just n -> return n
+                                       _      -> error "Why no params?"
+          _ -> error "What is this projection?"
+      
+      -- gets the parameters
+      (tyArgs, params) <-
+        case applyingType of
+          El _ (Def _ l) -> do
+            reportSDoc "toDk.clause" 30 $ return
+              $ text "    Found parameters"
+            caseParamFun headType (take numParams l)
+          otherwise      ->  do
+            reportSDoc "toDk.clause" 30 $ return
+              $ text "    Parameters not found, the type is not a Def _ l"
+            return $ (__DUMMY_TYPE__, replicate numParams DkJoker)
+      
       Right dkNam <- qName2DkName env nam
-      reportSDoc "bla" 3 $ return $ text "Name OK"
-      reportSDoc "bla" 3 $ return $ text "Name OK " <+> pretty nam
-      let args = replicate nbParams DkJoker
-      reportSDoc "bla" 3 $ return $ text "Finished"
-      return $ DkFun dkNam args
+
+      -- gets type of p x1 .. xn (f e1 .. ek)
+      -- HYPOTHESIS: If proj : {x1:X1} -> .. -> {xn:Xn} -> (rec:Rec x1 .. xn) -> field
+      -- is a projection, then field does not depend on rec
+
+      finalTy <- case tyArgs of
+                   (El _ (Pi _ u)) -> return $ unAbs u
+                   _ -> do
+                     reportSDoc "toDk.clause" 30 $ return
+                       $ text "    Not an elim, continuing with a dummy "
+                       <+> pretty tyArgs
+                     return __DUMMY_TYPE__
+                                
+      return $ (DkFun dkNam params, finalTy)
+
     otherwise                           ->
       error "Unexpected pattern of HoTT"
   where
@@ -936,10 +1015,11 @@ etaIsId env@(_,eta) n i j cons = do
           }
 
     pattCons cc args =
-      DkFun cc <$> nextIndex [] 0 args
+      DkFun cc <$> nextIndex [] 0 args 
     nextIndex acc j []     = return acc
     nextIndex acc j (_:tl) = do
-      vj <- extractPattern env (defaultArg $ unnamed $ varP (DBPatVar "_" j))      
+      (vj, _) <- extractPattern env (defaultArg $ unnamed $ varP (DBPatVar "_" j))
+                 __DUMMY_TYPE__
       nextIndex (vj:acc) (j+1) tl
 
     constructRhsFields _ t [] = return t
@@ -984,7 +1064,8 @@ etaExpansionDecl env@(_,eta) n nbPars ConHead{conName = cons} l = do
     nextIndex acc 0 (_:tl) = nextIndex acc 1 tl
     nextIndex acc j []     = return acc
     nextIndex acc j (_:tl) = do
-      vj <- extractPattern env (defaultArg $ unnamed $ varP (DBPatVar "_" j))
+      (vj, _) <- extractPattern env (defaultArg $ unnamed $ varP (DBPatVar "_" j))
+                 __DUMMY_TYPE__
       nextIndex (vj:acc) (j+1) tl
     constructRhs :: DkTerm -> [Dom (Name, Type)] -> DkIdent -> TCM DkTerm
     constructRhs t args y = do
@@ -1083,7 +1164,8 @@ doesNotEtaExpand env@(_,eta) n nbPars ConHead{conName = cons} l = do
     nextIndex acc 0 (_:tl) = nextIndex acc 1 tl
     nextIndex acc j []     = return acc
     nextIndex acc j (_:tl) = do
-      vj <- extractPattern env (defaultArg $ unnamed $ varP (DBPatVar "_" j))
+      (vj, _) <- extractPattern env (defaultArg $ unnamed $ varP (DBPatVar "_" j))
+                 __DUMMY_TYPE__
       nextIndex (vj:acc) (j+1) tl
 
 
