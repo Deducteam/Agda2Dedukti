@@ -100,6 +100,7 @@ data DkOptions = DkOptions
   , optDkFlags   :: [String]
   , optDkDir     :: Maybe String
   , optDkRegen   :: Bool
+  , optDkModeLp  :: Bool
   } deriving Generic
 
 instance NFData DkOptions
@@ -111,6 +112,7 @@ defaultDkOptions = DkOptions
   , optDkFlags   = []
   , optDkDir     = Nothing
   , optDkRegen   = False
+  , optDkModeLp  = False
   }
 
 
@@ -126,11 +128,14 @@ dkCommandLineFlags =
     [ Option [] ["dk"]     (NoArg compileDkFlag) "compile program using the Dk backend"
     , Option [] ["outDir"] (OptArg outp "DIR")   "output DIR"
     , Option [] ["regen"]  (NoArg forceRegenDk)  "regenerate the Dedukti file even if it already exists"
+    , Option [] ["lp"]     (NoArg setLpModeOn)   "change to lp mode"
     ]
   where
     compileDkFlag o = return $ o { optDkCompile = True}
     outp d o        = return $ o { optDkDir = d}
     forceRegenDk o  = return $ o { optDkRegen = True}
+    setLpModeOn o   = return $ o { optDkModeLp = True}
+    
 
 ------------------------------------------------------------------------------
 --- Module compilation ---
@@ -166,7 +171,9 @@ filePath opts mods =
   let dir = case optDkDir opts of Nothing -> ""
                                   Just s  -> s  in
   let mod = dropAll (intercalate "__" concMods) in
-  dir++mod++".dk"
+  let extension = case optDkModeLp opts of False -> ".dk"
+                                           True  -> ".lp" in
+  dir ++ mod ++ extension
 
 orderDeclRules :: [(Int32,DkDocs)] -> DkModName -> Doc
 orderDeclRules l mods = orderDeclRules' 0 mods empty empty empty (sortOn fst l)
@@ -195,7 +202,7 @@ orderDeclRules' mut mods accTy accOther accRules l@((m,(a,b,c)):tl)
 ------------------------------------------------------------------------------
 
 dkCompileDef :: DkOptions -> DkModuleEnv -> IsMain -> Definition -> TCM DkCompiled
-dkCompileDef _ env@(mod,eta) _ def@(Defn {defCopy=isCopy, defName=n, theDef=d, defType=t, defMutual=MutId m}) =
+dkCompileDef dkOpts env@(mod,eta) _ def@(Defn {defCopy=isCopy, defName=n, theDef=d, defType=t, defMutual=MutId m}) =
   if isCopy
   then do
     reportSDoc "toDk" 8 $ (\x -> text "  No compilation of"<+>x<+>text "which is a copy") <$> AP.prettyTCM n
@@ -231,13 +238,20 @@ dkCompileDef _ env@(mod,eta) _ def@(Defn {defCopy=isCopy, defName=n, theDef=d, d
       stat       <- extractStaticity n d
       reportSDoc "toDk" 15 $ return $ text "Getting rules of " <+> pretty d
       rules      <- extractRules env n d t
+
+      let dkMode = case (optDkModeLp dkOpts) of False -> DkMode
+                                                True  -> LpMode
       let dkDef = DkDefinition
             { name      = name
             , staticity = stat
             , typ       = typ
             , kind      = kind
             , rules     = rules}
-      return $ Just (m, toDkDocs (modName2DkModIdent mod) dkDef)
+      let printedDef = toDkDocs (modName2DkModIdent mod) dkMode dkDef
+      let deff = case printedDef of (aa, bb, cc) -> aa <> bb <> cc
+      reportSDoc "toDk" 15 $ return $ text "printed rules  " <+> text (show rules)
+      reportSDoc "toDk" 15 $ return $ text "printed def is  " <+> deff
+      return $ Just (m, printedDef)
 
   where
     defaultCase = do
@@ -688,7 +702,7 @@ translateElim env t (el@(Apply e):tl)      = do
   translateElim env (DkApp t arg) tl
 -- elimination have gone through unspining, so we cannot have proj eliminations
 translateElim env t (el@(Proj _ qn):tl)    = do
-  reportSDoc "toDk" 2 $ ((text "    Pb with:" <+> printTerm Top [] t <+>)<$> AP.prettyTCM el)
+  reportSDoc "toDk" 2 $ ((text "    Pb with:" <+> printTerm Top [] DkMode [] t <+>)<$> AP.prettyTCM el)
   error "Unspining not performed!"
 translateElim env t ((IApply _ _ _):tl) = error "Unexpected IApply"
 
