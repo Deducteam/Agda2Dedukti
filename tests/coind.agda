@@ -56,9 +56,8 @@ tailn (suc n) x = tl (tailn n x)
 
 tailNatS : (n : Nat) -> tailn n (natS 0) ≈ natS n
 tailNatS 0 = refl-≈
+tailNatS (suc n) = tl-≈ (tailNatS n)
 
-hd-≡ (tailNatS (suc n)) = hd-≡ (tl-≈ (tailNatS n))
-tl-≈ (tailNatS (suc n)) = tl-≈ (tl-≈ (tailNatS n))
 
 plusS : (n : Nat) -> Stream Nat -> Stream Nat
 hd (plusS n x) = n + (hd x)

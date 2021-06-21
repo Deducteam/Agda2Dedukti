@@ -20,6 +20,10 @@ import Data.Text (unpack)
 import Control.DeepSeq (NFData)
 import GHC.Generics (Generic)
 
+-- needed for detecting the requires on the output
+import Text.Regex.TDFA ((=~), getAllTextMatches)
+import Data.List.Unique (sortUniq)
+
 import Agda.Compiler.Backend
 import Agda.Compiler.Common
 import Agda.Interaction.Options
@@ -162,7 +166,28 @@ dkPostModule opts _ _ mods defs =
 -- We sort the file, to make sure that declarations and rules
 -- do not refer to formerly declared symbols.    
   let output = show $ orderDeclRules (catMaybes defs) concMods in
-  liftIO $ writeFile (filePath opts mods) output
+  let outReq = addRequires output in
+  liftIO $ writeFile (filePath opts mods) outReq
+
+-- this functions goes through the text that is going to be printed in the .lp file
+-- and seee which modules it uses and add a require for them. using regular
+-- expressions, it matches names of the form '(NAME.', ' NAME.', '↪Name' and ',Name.'
+-- which are then included with a require on the begining of the file. this might
+-- not be the cleanest way of adding the requires, but it seems to work well
+-- at least right now
+addRequires :: String -> String
+addRequires s =
+  let moduleRegex = "[ (↪,][a-zA-Z0-9_']*\\." in
+  let removeFirstAndLastChars s = reverse $ tail $ reverse $ tail s in
+  let allmods = map removeFirstAndLastChars $
+                getAllTextMatches (s =~moduleRegex) :: [String] in
+  let filteredmods = filter (\s -> not $ or [s == "Agda", s == "univ"]) allmods in
+  let uniquemods = sortUniq filteredmods in
+  let reqList = (["require open theory.AgdaTheory;"] ++) $
+                map (\s -> "require tests." ++ s ++ " as " ++ s ++ ";") uniquemods in
+  let requires = intercalate "\n" reqList in
+  requires ++ "\n" ++  s
+
 
 filePath :: DkOptions -> ModuleName -> String
 filePath opts mods =
@@ -248,9 +273,10 @@ dkCompileDef dkOpts env@(mod,eta) _ def@(Defn {defCopy=isCopy, defName=n, theDef
             , kind      = kind
             , rules     = rules}
       let printedDef = toDkDocs (modName2DkModIdent mod) dkMode dkDef
-      let deff = case printedDef of (aa, bb, cc) -> aa <> bb <> cc
+--      let deff = case printedDef of (aa, bb, cc) -> aa <> bb <> cc
       reportSDoc "toDk" 15 $ return $ text "printed rules  " <+> text (show rules)
-      reportSDoc "toDk" 15 $ return $ text "printed def is  " <+> deff
+      reportSDoc "toDk" 15 $ return $ text "oi"      
+--      reportSDoc "toDk" 15 $ return $ text "printed def is  " <+> deff
       return $ Just (m, printedDef)
 
   where
@@ -288,7 +314,7 @@ extractStaticity _ (AbstractDefn {})    = return Static
 
   
 extractRules :: DkModuleEnv -> QName -> Defn -> Type -> TCM [DkRule]
-extractRules env n (t@Function {funCovering=f}) ty =
+extractRules env n (t@Function {funClauses=f}) ty =
   do
     reportSDoc "toDk" 50 $ (text " Recomputing coverage of " <+>) <$> (return $ pretty t)
 --    f' <- getFunCovering n ty f
@@ -328,7 +354,7 @@ decodedVersion env@(_,eta) nam i = do
   reportSDoc "toDk" 5 $ return $ text "  Decoding" <+> pretty nam
   Right nn@(DkQualified mods pseudo n) <- qName2DkName env nam -- nam is not a copy
   let decodedName = DkQualified mods ("TYPE":pseudo) n
-  let hd = DkQualified ["Agda"] [] "Term"
+  let hd = DkSpecial TermSymb
   ty <- defType <$> getConstInfo nam
   tele <- theTel <$> (telView ty)
   reportSDoc "toDk" 15 $ ((text "    In the context:") <+> ) <$> (AP.prettyTCM tele)
@@ -880,7 +906,7 @@ addEl _ _ = error "Those terms do not expect elimination"
 
 qName2DkName :: DkModuleEnv -> QName -> TCM (Either Term DkName)
 qName2DkName env@(_,eta) qn@QName{qnameModule=mods, qnameName=nam}
-  | qn == eta = return $ Right $ DkQualified ["Agda"] [] "etaExpand"
+  | qn == eta = return $ Right $ DkSpecial EtaExpandSymb
   | otherwise = do
       topMod <- topLevelModuleName mods
       def <- getConstInfo qn
@@ -1007,7 +1033,7 @@ etaIsId env@(_,eta) n i j cons = do
   mapM oneCase cons
 
   where
-    hd = DkQualified ["Agda"] [] "etaExpand"
+    hd = DkSpecial EtaExpandSymb
     oneCase f = do
       Defn{defType=tt} <- getConstInfo f
       TelV tele _ <- telView tt
@@ -1048,7 +1074,7 @@ etaIsId env@(_,eta) n i j cons = do
 etaExpansionDecl :: DkModuleEnv -> QName -> Int -> ConHead -> [Dom QName] -> TCM DkRule
 etaExpansionDecl env@(_,eta) n nbPars ConHead{conName = cons} l = do
   reportSDoc "toDk.eta" 5 $ (text "  Declaration of eta-expansion of" <+>) <$> AP.prettyTCM n
-  let hd = DkQualified ["Agda"] [] "etaExpand"
+  let hd = DkSpecial EtaExpandSymb
   Defn{defType=tt} <- getConstInfo n
   TelV tele _ <- telView tt
   addContext tele $
@@ -1141,7 +1167,7 @@ etaExpansionDecl env@(_,eta) n nbPars ConHead{conName = cons} l = do
             addContext (absName body,a) $
               unsafeModifyContext separateVars $ do
               x <- nameOfBV 0
-              let clo2 rest = DkApp rest (DkApp (DkApp (DkApp (DkConst (DkQualified ["Agda"] [] "etaExpand")) (DkLevel dkL)) dkTDom)  (DkDB (name2DkIdent x) 0))
+              let clo2 rest = DkApp rest (DkApp (DkApp (DkApp (DkConst (DkSpecial EtaExpandSymb)) (DkLevel dkL)) dkTDom)  (DkDB (name2DkIdent x) 0))
               DkLam (name2DkIdent x) (Just (dkTDom,dkS)) <$> studyEtaExpansion (absBody body) args prName (i+1) (absBody b) (clo2 . clo)
           otherwise -> __IMPOSSIBLE__
       otherwise -> __IMPOSSIBLE__
@@ -1149,7 +1175,7 @@ etaExpansionDecl env@(_,eta) n nbPars ConHead{conName = cons} l = do
 doesNotEtaExpand :: DkModuleEnv -> QName -> Int -> ConHead -> [Dom QName] -> TCM DkRule
 doesNotEtaExpand env@(_,eta) n nbPars ConHead{conName = cons} l = do
   reportSDoc "toDk.eta" 5 $ (text "  Declaration of non eta-expansion of" <+>) <$> AP.prettyTCM n
-  let hd = DkQualified ["Agda"] [] "etaExpand"
+  let hd = DkSpecial EtaExpandSymb
   Defn{defType=tt} <- getConstInfo n
   TelV tele _ <- telView tt
   addContext tele $

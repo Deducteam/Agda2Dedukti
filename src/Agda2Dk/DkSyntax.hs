@@ -17,6 +17,7 @@ import Agda.Syntax.Internal
 import qualified Agda.Syntax.Concrete.Name as CN
 import Agda.Utils.Impossible
 
+
 type DkModName = [String]
 
 type DkIdent = String
@@ -37,7 +38,8 @@ data DkDefinition =
 
 
 etaExpandSymb :: DkName
-etaExpandSymb = DkQualified ["Agda"] [] "etaExpand"
+etaExpandSymb = DkSpecial EtaExpandSymb
+--etaExpandSymb = DkQualified ["Agda"] [] "etaExpand"
 
 printDecl :: DkModName -> DkMode -> DkDefinition -> Doc
 printDecl mods dkMode
@@ -75,7 +77,7 @@ printDecodedDecl :: DkModName -> DkName -> DkMode -> DkTerm -> Doc
 printDecodedDecl mods (DkQualified _ pseudo id) dkMode defType =
   let defName = "TYPE__" ++ (concat (map (++ "__") pseudo)) ++ id in
   pCons dkMode <+> -- constant symbol or empty
-  printIdent [] id <+> -- definition name
+  printIdent [] defName <+> -- definition name
   char ':' <+>
   decodedType mods dkMode defType <> -- type of the def
   pEndDef dkMode -- .\n or ;\n
@@ -83,12 +85,12 @@ printDecodedDecl mods (DkQualified _ pseudo id) dkMode defType =
 decodedType :: DkModName -> DkMode -> DkTerm -> Doc
 decodedType mods dkMode (DkSort _)              = pType dkMode
 decodedType mods dkMode (DkProd domSort _ id dom coDom)    =
-  let transType = printSort Nested mods dkMode [] domSort in
-  let transSort = printTerm Nested mods dkMode [] dom in
+  let transSort = printSort Nested mods dkMode [] domSort in
+  let transType = printTerm Nested mods dkMode [] dom in
   pProd dkMode (printIdent [] id) (Just $ pEl dkMode <+> transSort <+> transType) <+>
   decodedType mods dkMode coDom
 decodedType mods dkMode (DkQuantifLevel _ id coDomType) =
-  pProd dkMode (printIdent [] id) (Just $ text ":" <+> pLvl dkMode) <+>
+  pProd dkMode (printIdent [] id) (Just $ pLvl dkMode) <+>
   decodedType mods dkMode coDomType
 
 printRules :: DkModName -> (DkRule -> Bool) -> DkMode -> DkDefinition -> [Doc]
@@ -166,7 +168,7 @@ printRule :: DkModName -> DkMode -> DkRule -> Doc
 printRule mods dkMode
   (DkRule {context=ctx, headsymb=hdSymb, patts=patts, rhs=rhs}) =
   let varList = concat (map usedIndex patts) in
-  let boundCtx = extractRealCtx varList boundCtx in    
+  let boundCtx = extractRealCtx varList ctx in    
   let lhs = prettyDk mods dkMode boundCtx hdSymb <+>
             hsep (map (printPattern Nested mods dkMode boundCtx) patts) in
   let printedRhs = printTerm Top mods dkMode boundCtx rhs in
@@ -379,14 +381,22 @@ printPattern pos mods dkMode boundCtx DkJoker =
 type DkCtx = [DkIdent]
 
 
+data DkSpecial =
+    TermSymb
+  | EtaExpandSymb
+  deriving (Eq, Show)
+
 data DkName =
     -- local identifier
     DkLocal DkIdent
     -- qualified identifier
   | DkQualified DkModName DkModName DkIdent
+  | DkSpecial DkSpecial
   deriving (Eq, Show)
 
 instance PrettyDk DkName where
+  prettyDk mods dkMode boundCtx (DkSpecial TermSymb)       = pEl dkMode
+  prettyDk mods dkMode boundCtx (DkSpecial EtaExpandSymb)  = pEta dkMode  
   prettyDk mods dkMode boundCtx (DkLocal n)            = printIdent boundCtx n
   prettyDk mods dkMode boundCtx (DkQualified qualif pseudo n) =
     let modName =
@@ -441,7 +451,7 @@ type DkDocs = (Doc, Doc, Doc)
 toDkDocs ::  DkModName -> DkMode -> DkDefinition -> DkDocs
 toDkDocs mods dkMode def =
   case staticity def of
-    TypeConstr ->
+    TypeConstr -> 
       ( printDecl mods dkMode def <> hcat (printRules mods decoding dkMode def)
       , empty
       , (hcat $ printRules mods (not . decoding) dkMode def) <+> text "\n")
