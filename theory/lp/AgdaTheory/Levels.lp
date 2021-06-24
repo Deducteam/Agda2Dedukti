@@ -2,8 +2,8 @@
 
 // Nat to count succesors 
 constant symbol ℕ : TYPE;
-constant symbol 0ₙ : ℕ; builtin "0" ≔ 0ₙ;
-constant symbol sₙ : ℕ → ℕ; builtin "+1" ≔ sₙ;
+constant symbol 0ₙ : ℕ;// builtin "0" ≔ 0ₙ;
+constant symbol sₙ : ℕ → ℕ; //builtin "+1" ≔ sₙ;
 
 // max function on natural numbers
 symbol ⊕ₙ : ℕ → ℕ → ℕ; notation ⊕ₙ infix right 10;
@@ -29,17 +29,18 @@ associative commutative symbol ⊕ : IntLvl → IntLvl → IntLvl; // associativ
 notation ⊕ infix right 10;
 
 
-rule s 0 z ⊕ $x ↪ $x
-with $x ⊕ s 0 z ↪ $x;
+//rule s 0ₙ z ⊕ $x ↪ $x
+//with $x ⊕ s 0ₙ z ↪ $x;
 
-rule $x ⊕ $x ↪ $x
-with $x ⊕ ($x ⊕ $y)  ↪ $x ⊕ $y;
+//rule $x ⊕ $x ↪ $x
+//with $x ⊕ ($x ⊕ $y)  ↪ $x ⊕ $y;
 
 rule s $p (s $q $x) ↪ s ($p + $q) $x
 with s $p ($x ⊕ $y) ↪ s $p $x ⊕ s $p $y;
 
 rule s $p $x ⊕ s $q $x ↪ s ($p ⊕ₙ $q) $x
 with s $p $x ⊕ (s $q $x ⊕ $y) ↪ s ($p ⊕ₙ $q) $x ⊕ $y;
+
 
 // example
 //compute λ a b c, (s 2 z ⊕ s 1 a) ⊕ s 0 b ⊕ (s 2 c ⊕ (s 1 a ⊕ z) ⊕ s 1 c);

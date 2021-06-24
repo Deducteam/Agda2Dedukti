@@ -46,7 +46,6 @@ import Agda.TypeChecking.Reduce
 import Agda.TypeChecking.Substitute
 import Agda.TypeChecking.Substitute.Class
 import Agda.TypeChecking.Telescope
---import Agda.TypeChecking.Coverage (getFunCovering)
 import qualified Agda.TypeChecking.Pretty as AP
 import Agda.Utils.Monad
 import Agda.Utils.Pretty (pretty)
@@ -152,10 +151,11 @@ dkPreModule :: DkOptions -> IsMain -> ModuleName -> Maybe FilePath -> TCM (Recom
 dkPreModule opts _ mods _ =
   let path = filePath opts mods in
   let doNotRecompileFile = not (optDkRegen opts) in
+  let sizeTypesFile = (modName2DkModIdent mods == ["Agda", "Builtin", "Size"]) in
   do
     name <- createEtaExpandSymbol ()
     fileAlreadyCompiled <- liftIO $ doesFileExist path
-    if fileAlreadyCompiled && doNotRecompileFile
+    if (fileAlreadyCompiled && doNotRecompileFile) || sizeTypesFile
     then return $ Skip ()
     else do liftIO $ putStrLn $ "Generation of " ++ path
             return $ Recompile (mods, name)
@@ -166,8 +166,9 @@ dkPostModule opts _ _ mods defs =
 -- We sort the file, to make sure that declarations and rules
 -- do not refer to formerly declared symbols.    
   let output = show $ orderDeclRules (catMaybes defs) concMods in
-  let outReq = addRequires output in
-  liftIO $ writeFile (filePath opts mods) outReq
+  let outLp = addRequires output in
+  liftIO $ writeFile (filePath opts mods) (if (optDkModeLp opts) then outLp else output)
+
 
 -- this functions goes through the text that is going to be printed in the .lp file
 -- and seee which modules it uses and add a require for them. using regular
@@ -183,7 +184,7 @@ addRequires s =
                 getAllTextMatches (s =~moduleRegex) :: [String] in
   let filteredmods = filter (\s -> not $ or [s == "Agda", s == "univ"]) allmods in
   let uniquemods = sortUniq filteredmods in
-  let reqList = (["require open theory.AgdaTheory;"] ++) $
+  let reqList = (["require open AgdaTheory.Base;", ""] ++) $
                 map (\s -> "require tests." ++ s ++ " as " ++ s ++ ";") uniquemods in
   let requires = intercalate "\n" reqList in
   requires ++ "\n" ++  s
@@ -314,11 +315,10 @@ extractStaticity _ (AbstractDefn {})    = return Static
 
   
 extractRules :: DkModuleEnv -> QName -> Defn -> Type -> TCM [DkRule]
-extractRules env n (t@Function {funClauses=f}) ty =
+extractRules env n (t@Function {funCovering=f}) ty =
   do
-    reportSDoc "toDk" 50 $ (text " Recomputing coverage of " <+>) <$> (return $ pretty t)
---    f' <- getFunCovering n ty f
-    reportSDoc "toDk" 50 $ return $ text " Done, converting clauses "
+    reportSDoc "toDk.clause" 20 $ (text " funCovering : " <+>) <$> (return $ pretty $ funCovering t)    
+
     l  <- mapM (clause2rule env n) f
     return $ catMaybes l
 extractRules env n (Datatype {dataCons=cons, dataClause=Just c, dataPars=i, dataIxs=j}) ty=

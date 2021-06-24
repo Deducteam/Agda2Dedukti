@@ -1,5 +1,5 @@
 .POSIX:
-SRC = 
+SRC = Base.lp Levels.lp
 OBJ = $(SRC:.lp=.lpo)
 .SUFFIXES:
 

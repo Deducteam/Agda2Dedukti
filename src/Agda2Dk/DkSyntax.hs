@@ -25,7 +25,7 @@ type DkIdent = String
 class PrettyDk a where
   prettyDk :: DkModName -> DkMode -> DkCtx -> a -> Doc
 
-data DkMode = DkMode | LpMode
+data DkMode = DkMode | LpMode deriving (Show, Eq)
 
 data DkDefinition =
    DkDefinition
@@ -57,14 +57,14 @@ printDecl mods dkMode
           otherwise                                    -> empty
   in
   let defHead = case defStat of
-                  Defin      -> text "symbol"
+                  Defin      -> pSymb dkMode
                   TypeConstr -> printDecodedDecl mods defName dkMode defType
-                                <> text "constant symbol"
-                  Static     -> text "constant symbol"
+                                <> pCons dkMode
+                  Static     -> pCons dkMode
   in
   let transType = printTerm Nested mods dkMode [] defType in 
   let transSort = printSort Nested mods dkMode [] defSort in
-  defHead <+> -- symbol + decoded declaration if we are declaring a type
+  defHead <> -- symbol + decoded declaration if we are declaring a type
   prettyDk mods dkMode [] defName <+> -- definition name
   text ":" <+> 
   pEl dkMode <+> -- El or Agda.Term
@@ -76,8 +76,8 @@ printDecl mods dkMode
 printDecodedDecl :: DkModName -> DkName -> DkMode -> DkTerm -> Doc
 printDecodedDecl mods (DkQualified _ pseudo id) dkMode defType =
   let defName = "TYPE__" ++ (concat (map (++ "__") pseudo)) ++ id in
-  pCons dkMode <+> -- constant symbol or empty
-  printIdent [] defName <+> -- definition name
+  pCons dkMode <> -- constant symbol or empty
+  printIdent dkMode [] defName <+> -- definition name
   char ':' <+>
   decodedType mods dkMode defType <> -- type of the def
   pEndDef dkMode -- .\n or ;\n
@@ -87,10 +87,10 @@ decodedType mods dkMode (DkSort _)              = pType dkMode
 decodedType mods dkMode (DkProd domSort _ id dom coDom)    =
   let transSort = printSort Nested mods dkMode [] domSort in
   let transType = printTerm Nested mods dkMode [] dom in
-  pProd dkMode (printIdent [] id) (Just $ pEl dkMode <+> transSort <+> transType) <+>
+  pProd dkMode (printIdent dkMode [] id) (Just $ pEl dkMode <+> transSort <+> transType) <+>
   decodedType mods dkMode coDom
 decodedType mods dkMode (DkQuantifLevel _ id coDomType) =
-  pProd dkMode (printIdent [] id) (Just $ pLvl dkMode) <+>
+  pProd dkMode (printIdent dkMode [] id) (Just $ pLvl dkMode) <+>
   decodedType mods dkMode coDomType
 
 printRules :: DkModName -> (DkRule -> Bool) -> DkMode -> DkDefinition -> [Doc]
@@ -174,7 +174,7 @@ printRule mods dkMode
   let printedRhs = printTerm Top mods dkMode boundCtx rhs in
   let printedCtx = 
         brackets (hsep (punctuate (char ',')
-                        (map (printIdent []) (reverse boundCtx)))) in
+                        (map (printIdent dkMode []) (reverse boundCtx)))) in
   pRewRule dkMode printedCtx lhs printedRhs
 
 -- takes a full ctx and indices of variables in the real ctx
@@ -230,7 +230,7 @@ printTerm pos mods dkMode boundCtx (DkProd domSort coDomSort varName domTy coDom
   let trCoDomSort = printSort Nested mods dkMode boundCtx coDomSort in
   let trDomTy     = printTerm Nested mods dkMode boundCtx domTy in    
   let trCoDomTy   = printTerm Nested mods dkMode boundCtx coDomTy in
-  let coDom       = parens (pAbs dkMode (printIdent boundCtx varName) Nothing
+  let coDom       = parens (pAbs dkMode (printIdent dkMode boundCtx varName) Nothing
                             <+> trCoDomTy) in
   paren pos $ pPi dkMode <+> trDomSort <+> trCoDomSort <+> trDomTy <+> coDom
 printTerm pos mods dkMode boundCtx
@@ -239,7 +239,7 @@ printTerm pos mods dkMode boundCtx
   let trCoDomSort = printSort Nested mods dkMode boundCtx coDomSort in
   let trDomTy     = printTerm Nested mods dkMode boundCtx domTy in    
   let trCoDomTy   = printTerm Nested mods dkMode boundCtx coDomTy in
-  let coDom       = parens (pAbs dkMode (printIdent boundCtx varName) Nothing <+>
+  let coDom       = parens (pAbs dkMode (printIdent dkMode boundCtx varName) Nothing <+>
                             trCoDomTy) in
   paren pos $ pProjPi dkMode <+> trDomSort <+> trCoDomSort <+> trDomTy <+> coDom
 
@@ -247,9 +247,9 @@ printTerm pos mods dkMode boundCtx (DkQuantifLevel sort varName coDom)   =
   let trSort     = printSort Top mods dkMode boundCtx sort in
   let trCoDom    = printTerm Top mods dkMode boundCtx coDom in    
   let trAbsSort  = parens $
-                   pAbs dkMode (printIdent boundCtx varName) Nothing <+> trSort in
+                   pAbs dkMode (printIdent dkMode boundCtx varName) Nothing <+> trSort in
   let trAbsCoDom = parens $
-                   pAbs dkMode (printIdent boundCtx varName) Nothing <+> trCoDom in
+                   pAbs dkMode (printIdent dkMode boundCtx varName) Nothing <+> trCoDom in
   paren pos $ pForall dkMode <+> trAbsSort <+> trAbsCoDom
 
 printTerm pos mods dkMode boundCtx (DkConst name)        =
@@ -277,7 +277,7 @@ printTerm pos mods dkMode boundCtx (DkApp t u)           =
 
 printTerm pos mods dkMode boundCtx (DkLam varName Nothing coDom)      =
   paren pos $
-    pAbs dkMode (printIdent boundCtx varName) Nothing <+>
+    pAbs dkMode (printIdent dkMode boundCtx varName) Nothing <+>
     printTerm Top mods dkMode boundCtx coDom
 
 printTerm pos mods dkMode boundCtx (DkLam varName (Just (domTy, domSort)) coDom) =
@@ -285,11 +285,11 @@ printTerm pos mods dkMode boundCtx (DkLam varName (Just (domTy, domSort)) coDom)
   let trDomSort = printSort Nested mods dkMode boundCtx domSort in
   let trDom     = pEl dkMode <+> trDomSort <+> trDomTy in
   paren pos $
-    pAbs dkMode (printIdent boundCtx varName) (Just trDom) <+>
+    pAbs dkMode (printIdent dkMode boundCtx varName) (Just trDom) <+>
     printTerm Top mods dkMode boundCtx coDom
 
 printTerm pos mods dkMode boundCtx (DkDB n _)               =
-  printIdent boundCtx n
+  printIdent dkMode boundCtx n
 printTerm pos mods dkMode boundCtx (DkLevel l)              =
   printLvl mods dkMode boundCtx l
 printTerm pos mods dkMode boundCtx (DkBuiltin b)            =
@@ -354,10 +354,10 @@ data DkPattern =
 
 printPattern ::   Position -> DkModName -> DkMode -> DkCtx -> DkPattern -> Doc
 printPattern pos mods dkMode boundCtx (DkVar n _ [])  =
-  printIdent boundCtx n
+  printIdent dkMode boundCtx n
 printPattern pos mods dkMode boundCtx (DkVar n _ l)  =
   paren pos $
-    printIdent boundCtx n <+> hsep (map (printPattern Nested mods dkMode boundCtx) l)
+    printIdent dkMode boundCtx n <+> hsep (map (printPattern Nested mods dkMode boundCtx) l)
 printPattern pos mods dkMode boundCtx (DkFun n [])    =
   prettyDk mods dkMode boundCtx n
 printPattern pos mods dkMode boundCtx (DkFun n l)    =
@@ -366,15 +366,17 @@ printPattern pos mods dkMode boundCtx (DkFun n l)    =
     hsep (map (printPattern Nested mods dkMode boundCtx) l)
 printPattern pos mods dkMode boundCtx (DkLambda n t) =
   paren pos $
-    pAbs dkMode (printIdent boundCtx n) Nothing <+>
+    pAbs dkMode (printIdent dkMode boundCtx n) Nothing <+>
     printPattern Top mods dkMode boundCtx t
 printPattern pos mods dkMode boundCtx (DkPattBuiltin t) =
   printTerm pos mods dkMode boundCtx t
 -- We do not guard variables, since non-linear rules are more efficient.
 printPattern pos mods dkMode boundCtx (DkGuarded (DkDB n _)) =
-  printIdent boundCtx n
+  printIdent dkMode boundCtx n
 printPattern pos mods dkMode boundCtx (DkGuarded t) =
-  braces (printTerm Top mods dkMode boundCtx t)
+  case dkMode of
+    DkMode -> braces (printTerm Top mods dkMode boundCtx t)
+    LpMode -> text "_" -- no brace patterns in lambdapi
 printPattern pos mods dkMode boundCtx DkJoker =
   char '_'
 
@@ -397,20 +399,20 @@ data DkName =
 instance PrettyDk DkName where
   prettyDk mods dkMode boundCtx (DkSpecial TermSymb)       = pEl dkMode
   prettyDk mods dkMode boundCtx (DkSpecial EtaExpandSymb)  = pEta dkMode  
-  prettyDk mods dkMode boundCtx (DkLocal n)            = printIdent boundCtx n
+  prettyDk mods dkMode boundCtx (DkLocal n)            = printIdent dkMode boundCtx n
   prettyDk mods dkMode boundCtx (DkQualified qualif pseudo n) =
     let modName =
           if mods == qualif
           then empty
           else hcat (punctuate (text "__") (map (text . dropAll) qualif)) <> char '.'
     in
-    let symName = printIdent boundCtx $ (concat (map (++ "__") pseudo)) ++ n in
+    let symName = printIdent dkMode boundCtx $ (concat (map (++ "__") pseudo)) ++ n in
     modName <> symName
 
-printIdent :: DkCtx -> DkIdent -> Doc
-printIdent boundCtx name =
+printIdent :: DkMode -> DkCtx -> DkIdent -> Doc
+printIdent dkMode boundCtx name =
   let newName = map (\c -> if c == '.' then '\'' else c) name in
-  if elem name boundCtx
+  if (dkMode == LpMode) && (elem name boundCtx)
   then text $ "$" ++ (encapsulate newName)
   else text $ (encapsulate newName)
   
@@ -549,12 +551,12 @@ pEta DkMode = text "Agda.etaExpand"
 pEta LpMode = text "η"
 
 pSymb :: DkMode -> Doc
-pSymb DkMode = text "def"
-pSymb LpMode = text "symbol"
+pSymb DkMode = text "def "
+pSymb LpMode = text "symbol "
 
 pCons :: DkMode -> Doc
 pCons DkMode = empty
-pCons LpMode = text "constant symbol"
+pCons LpMode = text "constant symbol "
 
 pRewRule :: DkMode -> Doc -> Doc -> Doc -> Doc
 pRewRule DkMode ruleCtx lhs rhs = ruleCtx <+>

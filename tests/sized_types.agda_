@@ -1,0 +1,10 @@
+{-# OPTIONS --sized-types --guardedness #-}
+open import Agda.Builtin.Size
+open import Agda.Builtin.Bool
+
+
+record Lang (i : Size) (A : Set) : Set where
+  coinductive
+  field
+    ν : Bool
+    δ : ∀{j : Size< i} → A → Lang j A
