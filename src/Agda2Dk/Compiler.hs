@@ -315,11 +315,34 @@ extractStaticity _ (AbstractDefn {})    = return Static
 
   
 extractRules :: DkModuleEnv -> QName -> Defn -> Type -> TCM [DkRule]
-extractRules env n (t@Function {funCovering=f}) ty =
+extractRules env n (funDef@Function {}) ty =
   do
-    reportSDoc "toDk.clause" 20 $ (text " funCovering : " <+>) <$> (return $ pretty $ funCovering t)    
+    -- gets the clauses to be translated
+    clauses <- case funProjection funDef of
+        Nothing -> do
+        -- not a projection, we get the clauses after the covering checker          
+          reportSDoc "toDk.clause" 20 $
+            (text " taking clauses from funCovering : " <+>) <$>
+            (return $ pretty $ funCovering funDef )            
+          return $ funCovering funDef          
+        Just proj  -> case projProper proj of
+        -- this function is projection-like, but is it a real projection
+        -- from a record?
+          Nothing -> do
+        -- not a record projection, we get clauses from funCovering
+            reportSDoc "toDk.clause" 20 $
+              (text " taking clauses from funCovering : " <+>) <$>
+              (return $ pretty $ funCovering funDef )            
+            return $ funCovering funDef
+          Just _ -> do
+        -- record projection, we take funClauses because projections don't go
+        -- trought the covering checker          
+            reportSDoc "toDk.clause" 20 $
+              (text " taking clauses from funClauses : " <+>) <$>
+              (return $ pretty $ funClauses funDef )
+            return $ funClauses funDef
 
-    l  <- mapM (clause2rule env n) f
+    l  <- mapM (clause2rule env n) clauses
     return $ catMaybes l
 extractRules env n (Datatype {dataCons=cons, dataClause=Just c, dataPars=i, dataIxs=j}) ty=
   do
@@ -400,22 +423,27 @@ clause2rule env@(_,eta) nam c = do
       unsafeModifyContext separateVars $
       do
         reportSDoc "bla" 3 $ return $ text "On a changé le contexte"
-        imp <- isProjection nam
+        tele <- getContext
+        ctx <- extractContextNames tele
 
-        -- gets the number of implicit arguments
+        -- record projections clauses don't go trought the covering checker, so in
+        -- particular the clauses do not contain the implicit arguments (which in
+        -- this case are simply the record parameters), which are inserted by the
+        -- covering checker. therefore, we get the number of implicit arguments, so we
+        -- generate joker in order to fill the implicit arguments.
+        -- for the othe functions, they already have the implicit arguments, as they
+        -- have already went trough the covering checker
+        imp <- isProjection nam        
         implicits <-
           case imp of
             Nothing                             -> return 0
             Just Projection{projProper=Nothing} -> return 0
             Just Projection{projProper=Just n}  ->
               (fromMaybe __IMPOSSIBLE__) <$> getNumberOfParameters n
+        let impArgs = implicitArgs implicits (reverse ctx)
+        
         reportSDoc "bla" 3 $ return $ text "On a les implicites"
 
-        tele <- getContext
-        ctx <- extractContextNames tele
-        reportSDoc "bla" 3 $ return $ text "On a extrait le contexte"
-
---        let preLhs = Def nam (patternsToElims (namedClausePats c))
         -- eta expands the rhs and reconstructs the parameters
         rhsExpanded <-
           case clauseType c of
@@ -441,7 +469,6 @@ clause2rule env@(_,eta) nam c = do
 
         
         reportSDoc "bla" 3 $ return $ text "On a traduit à droite"
-        let impArgs = implicitArgs implicits (reverse ctx)
         let tyInst = piApply tyHd (map (defaultArg . patternToTerm . snd) impArgs)
         reportSDoc "bla" 3 $ return $ text "On extrait les patterns"
 
