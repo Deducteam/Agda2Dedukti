@@ -184,7 +184,9 @@ addRequires s =
                 getAllTextMatches (s =~moduleRegex) :: [String] in
   let filteredmods = filter (\s -> not $ or [s == "Agda", s == "univ"]) allmods in
   let uniquemods = sortUniq filteredmods in
-  let reqList = (["require open AgdaTheory.Base;", ""] ++) $
+  let reqList = (["require open AgdaTheory.Base;",
+                  "require open AgdaTheory.Levels;",
+                  ""] ++) $
                 map (\s -> "require tests." ++ s ++ " as " ++ s ++ ";") uniquemods in
   let requires = intercalate "\n" reqList in
   requires ++ "\n" ++  s
@@ -568,6 +570,7 @@ extractPattern env@(_,eta) p applyingType = do
       let finalTy = piApply applyingType [defaultArg (patternToTerm (namedArg p))]
       
       return $ (DkGuarded term, finalTy)
+--      return $ (DkJoker, finalTy)
 
     ConP (ConHead {conName=h}) ci tl     -> do
       reportSDoc "bla" 3 $ return $ text "ConP" <+> pretty h

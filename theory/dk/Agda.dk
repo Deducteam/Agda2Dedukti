@@ -22,6 +22,7 @@ def rule : Sort -> Sort -> Sort.
 (; Types and terms ;)
 
 Univ : s : Sort -> Type.
+
 def Term : s : Sort -> a : Univ s -> Type.
 
 code : s : Sort -> Univ (axiom s).

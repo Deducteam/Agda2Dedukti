@@ -22,18 +22,11 @@ with sₙ $x + $y ↪ sₙ ($x + $y)
 with $x + sₙ $y ↪ sₙ ($x + $y)
 with ($x + $y) + $z ↪ $x + ($y + $z);
 
-constant symbol IntLvl : TYPE;
-constant symbol z : IntLvl;
-symbol s : ℕ → IntLvl → IntLvl;
-associative commutative symbol ⊕ : IntLvl → IntLvl → IntLvl; // associative right by default
+constant symbol L : TYPE;
+constant symbol z : L;
+symbol s : ℕ → L → L;
+associative commutative symbol ⊕ : L → L → L; // associative right by default
 notation ⊕ infix right 10;
-
-
-//rule s 0ₙ z ⊕ $x ↪ $x
-//with $x ⊕ s 0ₙ z ↪ $x;
-
-//rule $x ⊕ $x ↪ $x
-//with $x ⊕ ($x ⊕ $y)  ↪ $x ⊕ $y;
 
 rule s $p (s $q $x) ↪ s ($p + $q) $x
 with s $p ($x ⊕ $y) ↪ s $p $x ⊕ s $p $y;
@@ -41,12 +34,6 @@ with s $p ($x ⊕ $y) ↪ s $p $x ⊕ s $p $y;
 rule s $p $x ⊕ s $q $x ↪ s ($p ⊕ₙ $q) $x
 with s $p $x ⊕ (s $q $x ⊕ $y) ↪ s ($p ⊕ₙ $q) $x ⊕ $y;
 
-
-// example
-//compute λ a b c, (s 2 z ⊕ s 1 a) ⊕ s 0 b ⊕ (s 2 c ⊕ (s 1 a ⊕ z) ⊕ s 1 c);
-
-
-//compute λ x, s 0 x ⊕ (s 0 z ⊕ s 0 z);
 
 
 

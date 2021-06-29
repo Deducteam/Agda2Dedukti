@@ -103,21 +103,32 @@ data Lvl = LvlMax Int [PreLvl]  deriving (Show)
 printLvl :: DkModName -> DkMode -> DkCtx -> Lvl -> Doc
 printLvl mods dkMode boundCtx (LvlMax n []) = unary dkMode n
 printLvl mods dkMode boundCtx (LvlMax 0 [a]) = prettyDk mods dkMode boundCtx a
-printLvl mods dkMode boundCtx (LvlMax n l) =
-  parens $ pMax dkMode <+> unary dkMode n <+> printPreLvlList mods dkMode boundCtx l
+printLvl mods DkMode boundCtx (LvlMax n l) =
+  parens $ pMax DkMode <+> unary DkMode n <+> printPreLvlList mods DkMode boundCtx l
+printLvl mods LpMode boundCtx (LvlMax n l) =
+  parens $ unary LpMode n <+> pMax LpMode <+> printPreLvlList mods LpMode boundCtx l
 
 printPreLvlList :: DkModName -> DkMode -> DkCtx -> [PreLvl] -> Doc
 printPreLvlList mods dkMode boundCtx (a:[]) = prettyDk mods dkMode boundCtx a
-printPreLvlList mods dkMode boundCtx (a:tl) =
-  parens $ pMax dkMode <+>
-  prettyDk mods dkMode boundCtx a <+>
-  printPreLvlList mods dkMode boundCtx tl
+printPreLvlList mods DkMode boundCtx (a:tl) =
+  parens $ pMax DkMode <+>
+  prettyDk mods DkMode boundCtx a <+>
+  printPreLvlList mods DkMode boundCtx tl
+printPreLvlList mods LpMode boundCtx (a:tl) =
+  parens $ prettyDk mods LpMode boundCtx a <+>
+  pMax LpMode <+>
+  printPreLvlList mods LpMode boundCtx tl
+
 
 -- a pre-level is an integer and a level expression
 data PreLvl = LvlPlus Int DkTerm  deriving (Show)
 
 instance PrettyDk PreLvl where
-  prettyDk mods dkMode boundCtx (LvlPlus i t) = iterateSuc dkMode i $ printTerm Nested mods dkMode boundCtx t
+  prettyDk mods DkMode boundCtx (LvlPlus i t) =
+    iterateSuc DkMode i $ printTerm Nested mods DkMode boundCtx t
+  prettyDk mods LpMode boundCtx (LvlPlus i t) =
+    parens $ text "s" <+> printNat i <+> parens (
+    (printTerm Nested mods LpMode boundCtx t) <+> pMax LpMode <+> text "z")
 
 iterateSuc :: DkMode -> Int -> Doc -> Doc
 iterateSuc dkMode x s
@@ -125,7 +136,12 @@ iterateSuc dkMode x s
   | x >  0 = parens $ pSucc dkMode <+> (iterateSuc dkMode (x - 1) s)
 
 unary :: DkMode -> Int -> Doc
-unary dkMode x = iterateSuc dkMode x $ pZero dkMode
+unary DkMode x = iterateSuc DkMode x $ pZero DkMode
+unary LpMode x = parens $ text "s" <+> printNat x <+> text "z"
+
+printNat :: Int -> Doc
+printNat 0 = text "0ₙ"
+printNat x = parens $ text "sₙ" <+> printNat (x - 1)
 
 data DkSort =
     DkSet Lvl
@@ -376,7 +392,8 @@ printPattern pos mods dkMode boundCtx (DkGuarded (DkDB n _)) =
 printPattern pos mods dkMode boundCtx (DkGuarded t) =
   case dkMode of
     DkMode -> braces (printTerm Top mods dkMode boundCtx t)
-    LpMode -> text "_" -- no brace patterns in lambdapi
+    LpMode ->
+      text "_" -- no brace patterns in lambdapi
 printPattern pos mods dkMode boundCtx DkJoker =
   char '_'
 
@@ -420,7 +437,8 @@ data IsStatic = Static | Defin | TypeConstr deriving (Show)
 
 keywords = ["Type", "def", "thm", "injective", "defac", "defacu", "symbol", "constant",
             "TYPE", "rule", "with", "builtin", "notation", "infix", "right", "left",
-            "associative", "commutative", "compute", "assert"]
+            "associative", "commutative", "compute", "assert", "set", "prop", "U", "Sort",
+            "∨", "□", "El", "⋄", "∀", "⇝", "⇝proj", "η", "⊕", "L", "z", "s"]
 
 encapsulate :: String -> String
 encapsulate l =
@@ -516,7 +534,7 @@ pEndDef LpMode = text ";\n"
 
 pMax :: DkMode -> Doc
 pMax DkMode = text "univ.max"
-pMax LpMode = text "⊔"
+pMax LpMode = text "⊕"
 
 pRule :: DkMode -> Doc
 pRule DkMode = text "Agda.rule"
