@@ -1,4 +1,4 @@
-AGDA_STD_DIR = /home/thiago/Documents/Programacao/agda_guillaume/Agda2Dedukti_sandbox/agda-stdlib-1.6
+AGDA_STD_DIR = /home/thiago/git/Agda2Dedukti/agda-stdlib
 EXEC = $(shell pwd)/dist/build/Agda2Dedukti/Agda2Dedukti
 
 DK_TEST_DIR = translation/dk/tests/
@@ -42,7 +42,7 @@ NB ?= -1
 TIMEOUT ?=0
 
 std-lib: compile
-	bash "./translation/generate_std-lib.sh" $(AGDA_STD_DIR) $(EXEC) "--dk $(OPTS)" $(shell pwd)/$(STD_DIR) $(NB)
+	bash "./translation/dk/generate_std-lib.sh" $(AGDA_STD_DIR) $(EXEC) "--dk $(OPTS)" $(shell pwd)/$(DK_STD_DIR) $(NB)
 	cd $(STD_DIR) && make FLAGS="-e --snf $(DK_FLAGS)" TIMEOUT=$(TIMEOUT);
 
 clean-std-lib:

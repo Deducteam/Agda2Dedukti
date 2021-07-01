@@ -5,6 +5,7 @@ Sort : Type.
 set  : univ.Lvl -> Sort.
 prop : univ.Lvl -> Sort.
 sortOmega : Sort.
+sizeUniv : Sort.
 
 (; Universe successors ;)
 def axiom : Sort -> Sort.
@@ -19,11 +20,19 @@ def rule : Sort -> Sort -> Sort.
 [i, j] rule (prop i) (prop j)  --> prop (univ.max i j).
 []     rule _        sortOmega --> sortOmega.
 
+[]    rule _        sizeUniv  --> sizeUniv.
+[s]   rule sizeUniv s         --> s.
+
+
+
 (; Types and terms ;)
 
 Univ : s : Sort -> Type.
 
 def Term : s : Sort -> a : Univ s -> Type.
+
+size : Univ sizeUniv.
+
 
 code : s : Sort -> Univ (axiom s).
 prod : s1 : Sort -> s2 : Sort -> A : Univ s1 -> B : (Term s1 A -> Univ s2) -> Univ (rule s1 s2).
@@ -39,6 +48,10 @@ def etaExpand : (l : univ.Lvl) -> (A : Univ (set l)) -> Term (set l) A -> Term (
 [a, b, A, B] Term _ (prod (set a) b A B) --> x : Term (set a) A -> Term b (B (etaExpand a A x)).
 [a, b, A, B] Term _ (prod (prop a) b A B) --> x : Term (prop a) A -> Term b (B x).
 [a, b, A, B] Term _ (proj_prod a  b A B) --> x : Term a A -> Term b (B x).
+
+[b, B, t]       Term _ (prod sizeUniv b t B) --> x : Term sizeUniv t -> Term b (B x).
+
+[b, B, f, t] etaExpand _ (prod sizeUniv (set b) t B) f --> x : Term sizeUniv t => etaExpand b (B x) (f x).
 
 [l,A,x] etaExpand _ _ (etaExpand l A x) --> etaExpand l A x.
 [x] etaExpand _ (code _) x --> x.

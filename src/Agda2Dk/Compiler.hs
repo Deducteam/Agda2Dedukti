@@ -878,7 +878,7 @@ extractSort env (Prop i)                  =
 extractSort env (Inf _ _)                 =
   return DkSetOmega
 extractSort env SizeUniv                  =
-  return $ DkSet (LvlMax 0 [])
+  return $ DkSizeUniv
 
 -- not sure about the following change
 
@@ -1253,42 +1253,56 @@ etaExpansion eta t u@(Lam _ _)  = return u -- No need to eta-expand a lambda
 etaExpansion eta t u = do
   reportSDoc "toDk.eta" 35 $ (text "    Eta expansion of" <+>) <$> AP.prettyTCM u
   reportSDoc "toDk.eta" 50 $ (text "      of type" <+>) <$> AP.prettyTCM t
-  case unEl t of
-    Var _ _   -> etaExp t u
-    Def n _ -> do
-      defin <- getConstInfo n
-      reportSDoc "toDk.eta" 70 $ (text "     theDef" <+>) <$> (return $ text $ show $ theDef defin)
-      case (theDef $ defin) of
-        Record {recEtaEquality' = withEta} ->
-          case theEtaEquality withEta of
-            YesEta  -> ifM (isLevel n) (return u) (etaExp t u)
-            NoEta _ -> return u
-        _  -> ifM (isLevel n) (return u) (etaExp t u)
-
-    Pi (a@Dom{domInfo=info}) b -> do
-      reportSDoc "toDk.eta" 40 $ (text "    In the product" <+>) <$> AP.prettyTCM t
-      ctx <- getContext
-      let n = freshStr ctx (absName b)
-      aExp <- etaExpandType eta (unDom a)
-      aIsLevel <-
-        case aExp of
-          El _ (Def n _) -> isLevel n
-          otherwise      -> return False
-      addContext (n,a) $ do
-        let s = raise 1 (getElimSort (unDom a))
-        let varLong = Def eta [Apply s, Apply . defaultArg . (raise 1) . unEl $ aExp, Apply $ defaultArg (Var 0 [])]
-        let theVar = if aIsLevel then Var 0 [] else varLong
-        let appli = applyE (raise 1 u) [Apply (Arg info theVar)]
-        body <- etaExpansion eta (absBody b) appli
-        return $ Lam info (Abs n body)
-    Sort _ -> return u
-    otherwise ->
-      do
-        reportSDoc "toDk.eta" 3 $ (text "    Eta expansion of" <+>) <$> AP.prettyTCM u
-        reportSDoc "toDk.eta" 3 $ (text "      of type" <+>) <$> AP.prettyTCM t
-        __IMPOSSIBLE__
-
+  reportSDoc "toDk.eta" 50 $ (text "      of sort" <+>) <$> AP.prettyTCM (_getSort t)
+  case _getSort t of
+    Type _ -> defaultCase
+    _ -> return u
   where
+    defaultCase =
+      case unEl t of
+        Var _ _   -> etaExp t u
+        Def n _ -> do
+          defin <- getConstInfo n
+          reportSDoc "toDk.eta" 70 $ (text "     theDef" <+>) <$> (return $ text $ show $ theDef defin)
+          case (theDef $ defin) of
+            Record {recEtaEquality' = withEta} ->
+              case theEtaEquality withEta of
+                YesEta  -> ifM (isLevel n) (return u) (etaExp t u)
+                NoEta _ -> return u
+            _  -> ifM (isLevel n) (return u) (etaExp t u)
+
+        Pi (a@Dom{domInfo=info}) b -> do
+          reportSDoc "toDk.eta" 40 $ (text "    In the product" <+>) <$> AP.prettyTCM t
+          ctx <- getContext
+          let n = freshStr ctx (absName b)
+
+          case _getSort $ unDom a of
+            Type _ -> do
+              aExp <- etaExpandType eta (unDom a)
+              aIsLevel <- case aExp of
+                            El _ (Def n _) -> isLevel n
+                            otherwise      -> return False
+              addContext (n,a) $ do
+                let s = raise 1 (getElimSort (unDom a))
+                let varLong = Def eta [Apply s, Apply . defaultArg . (raise 1) . unEl $ aExp, Apply $ defaultArg (Var 0 [])]
+                let theVar = if aIsLevel then Var 0 [] else varLong
+                let appli = applyE (raise 1 u) [Apply (Arg info theVar)]
+                body <- etaExpansion eta (absBody b) appli
+                return $ Lam info (Abs n body)
+            _ -> do
+              let aExp = unDom a
+              addContext (n,a) $ do
+                let theVar = Var 0 []
+                let appli = applyE (raise 1 u) [Apply (Arg info theVar)]
+                body <- etaExpansion eta (absBody b) appli
+                return $ Lam info (Abs n body)
+
+        Sort _ -> return u
+        otherwise ->
+          do
+            reportSDoc "toDk.eta" 3 $ (text "    Eta expansion of" <+>) <$> AP.prettyTCM u
+            reportSDoc "toDk.eta" 3 $ (text "      of type" <+>) <$> AP.prettyTCM t
+            __IMPOSSIBLE__
 
     etaExp t u = do
       let s = getElimSort t

@@ -20,6 +20,7 @@ src/Main
 agda/
 translation/tests_/
 agda-stdlib-1.6/
+agda-stdlib/
 dist/
 .cabal-sandbox/
 

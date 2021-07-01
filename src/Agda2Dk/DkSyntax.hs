@@ -147,6 +147,7 @@ data DkSort =
     DkSet Lvl
   | DkProp Lvl
   | DkSetOmega
+  | DkSizeUniv
   -- uncomputed successor sort (Axiom)
   | DkUniv DkSort
   -- uncomputed product sort (Rule)
@@ -163,6 +164,9 @@ printSort pos _ dkMode _ DkSetOmega    =
   pOmega dkMode
 printSort pos mods dkMode boundCtx (DkUniv sort)    =
   paren pos $ pAxiom dkMode <+> printSort pos mods dkMode boundCtx sort
+printSort pos mods _      boundCtx DkSizeUniv       =
+-- only dedukti syntax
+  text "Agda.sizeUniv"
 printSort pos mods dkMode boundCtx (DkPi domSort coDomSort)    =
   paren pos $
     pRule dkMode <+> printSort pos mods dkMode boundCtx domSort
