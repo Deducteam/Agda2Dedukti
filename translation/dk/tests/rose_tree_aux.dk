@@ -1,0 +1,21 @@
+TYPE__rose_tree : Type.
+rose_tree : Agda.Term (Agda.set (univ.s univ.0)) (Agda.code (Agda.set univ.0)).
+[] Agda.Term _ rose_tree --> TYPE__rose_tree.
+TYPE__rose_tree_l : Type.
+rose_tree_l : Agda.Term (Agda.set (univ.s univ.0)) (Agda.code (Agda.set univ.0)).
+[] Agda.Term _ rose_tree_l --> TYPE__rose_tree_l.
+rose_tree__Nd : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) rose_tree_l (_0 => rose_tree)).
+rose_tree_l__Nil : Agda.Term (Agda.set univ.0) rose_tree_l.
+rose_tree_l__Cons : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) rose_tree (_0 => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) rose_tree_l (_0 => rose_tree_l)))).
+
+
+
+
+
+def map : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) rose_tree (_0 => rose_tree_l)) (_0 => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) rose_tree (_0 => rose_tree)))).
+def aux : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) rose_tree (_0 => rose_tree_l)) (_0 => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) rose_tree_l (_0 => rose_tree_l)))).
+[x0, x] map x0 (rose_tree__Nd x) --> rose_tree__Nd (aux x0 x).
+ 
+[x] aux x rose_tree_l__Nil --> x (rose_tree__Nd rose_tree_l__Nil).
+[x1, x0, x] aux x1 (rose_tree_l__Cons x0 x) --> rose_tree_l__Cons (map x1 x0) (aux x1 x).
+ 

@@ -1,0 +1,9 @@
+TYPE__Box : (A : Agda.Term (Agda.set (univ.s univ.0)) (Agda.code (Agda.set univ.0))) -> Type.
+Box : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set (univ.s univ.0)) (Agda.code (Agda.set univ.0)) (A => (Agda.code (Agda.set univ.0)))).
+[A] Agda.Term _ (Box A) --> TYPE__Box A.
+Box__inside : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set univ.0) (Agda.code (Agda.set univ.0)) (A => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) A (_0 => (Box A))))).
+
+
+def openBox : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set univ.0) (Agda.code (Agda.set univ.0)) (A => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) (Box A) (_0 => A)))).
+[A, x] openBox A (Box__inside A x) --> x.
+ 

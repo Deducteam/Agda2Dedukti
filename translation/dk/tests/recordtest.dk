@@ -1,0 +1,45 @@
+TYPE__Pair : (A : Agda.Term (Agda.set (univ.s univ.0)) (Agda.code (Agda.set univ.0))) -> (B : Agda.Term (Agda.set (univ.s univ.0)) (Agda.code (Agda.set univ.0))) -> Type.
+Pair : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set (univ.s univ.0)) (Agda.code (Agda.set univ.0)) (A => (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set (univ.s univ.0)) (Agda.code (Agda.set univ.0)) (B => (Agda.code (Agda.set univ.0)))))).
+[A, B] Agda.Term _ (Pair A B) --> TYPE__Pair A B.
+{|!Pair'constructor|} : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set (univ.s univ.0)) (Agda.code (Agda.set univ.0)) (A => (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set univ.0) (Agda.code (Agda.set univ.0)) (B => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) A (fst => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) B (snd => (Pair A B))))))))).
+def Pair__fst : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set (univ.s univ.0)) (Agda.code (Agda.set univ.0)) (A => (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set univ.0) (Agda.code (Agda.set univ.0)) (B => (Agda.proj_prod (Agda.set univ.0) (Agda.set univ.0) (Pair A B) (r => A)))))).
+def Pair__snd : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set (univ.s univ.0)) (Agda.code (Agda.set univ.0)) (A => (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set univ.0) (Agda.code (Agda.set univ.0)) (B => (Agda.proj_prod (Agda.set univ.0) (Agda.set univ.0) (Pair A B) (r => B)))))).
+
+
+[A, B, fst, snd] Pair__fst A B ({|!Pair'constructor|} A B fst snd) --> fst.
+ 
+[A, B, fst, snd] Pair__snd A B ({|!Pair'constructor|} A B fst snd) --> snd.
+ 
+def p23 : Agda.Term (Agda.set univ.0) (Pair Agda__Builtin__Nat.Nat Agda__Builtin__Nat.Nat).
+[] p23 --> {|!Pair'constructor|} Agda__Builtin__Nat.Nat Agda__Builtin__Nat.Nat (Agda__Builtin__Nat.Nat__suc (Agda__Builtin__Nat.Nat__suc Agda__Builtin__Nat.Nat__zero)) (Agda__Builtin__Nat.Nat__suc (Agda__Builtin__Nat.Nat__suc (Agda__Builtin__Nat.Nat__suc Agda__Builtin__Nat.Nat__zero))).
+ 
+def p34 : Agda.Term (Agda.set univ.0) (Pair Agda__Builtin__Nat.Nat Agda__Builtin__Nat.Nat).
+[] Pair__fst {Agda__Builtin__Nat.Nat} {Agda__Builtin__Nat.Nat} p34 --> Agda__Builtin__Nat.Nat__suc (Agda__Builtin__Nat.Nat__suc (Agda__Builtin__Nat.Nat__suc Agda__Builtin__Nat.Nat__zero)).
+[] Pair__snd {Agda__Builtin__Nat.Nat} {Agda__Builtin__Nat.Nat} p34 --> Agda__Builtin__Nat.Nat__suc (Agda__Builtin__Nat.Nat__suc (Agda__Builtin__Nat.Nat__suc (Agda__Builtin__Nat.Nat__suc Agda__Builtin__Nat.Nat__zero))).
+ 
+def p56 : Agda.Term (Agda.set univ.0) (Pair Agda__Builtin__Nat.Nat Agda__Builtin__Nat.Nat).
+[] Pair__fst {Agda__Builtin__Nat.Nat} {Agda__Builtin__Nat.Nat} p56 --> Agda__Builtin__Nat.Nat__suc (Agda__Builtin__Nat.Nat__suc (Agda__Builtin__Nat.Nat__suc (Agda__Builtin__Nat.Nat__suc (Agda__Builtin__Nat.Nat__suc Agda__Builtin__Nat.Nat__zero)))).
+[] Pair__snd {Agda__Builtin__Nat.Nat} {Agda__Builtin__Nat.Nat} p56 --> Agda__Builtin__Nat.Nat__suc (Agda__Builtin__Nat.Nat__suc (Agda__Builtin__Nat.Nat__suc (Agda__Builtin__Nat.Nat__suc (Agda__Builtin__Nat.Nat__suc (Agda__Builtin__Nat.Nat__suc Agda__Builtin__Nat.Nat__zero))))).
+ 
+def p78 : Agda.Term (Agda.set univ.0) (Pair Agda__Builtin__Nat.Nat Agda__Builtin__Nat.Nat).
+def {|!'extendedlambda0|} : Agda.Term (Agda.set univ.0) (Pair Agda__Builtin__Nat.Nat Agda__Builtin__Nat.Nat).
+[] p78 --> {|!'extendedlambda0|}.
+ 
+[] Pair__fst {Agda__Builtin__Nat.Nat} {Agda__Builtin__Nat.Nat} {|!'extendedlambda0|} --> Agda__Builtin__Nat.Nat__suc (Agda__Builtin__Nat.Nat__suc (Agda__Builtin__Nat.Nat__suc (Agda__Builtin__Nat.Nat__suc (Agda__Builtin__Nat.Nat__suc (Agda__Builtin__Nat.Nat__suc (Agda__Builtin__Nat.Nat__suc Agda__Builtin__Nat.Nat__zero)))))).
+[] Pair__snd {Agda__Builtin__Nat.Nat} {Agda__Builtin__Nat.Nat} {|!'extendedlambda0|} --> Agda__Builtin__Nat.Nat__suc (Agda__Builtin__Nat.Nat__suc (Agda__Builtin__Nat.Nat__suc (Agda__Builtin__Nat.Nat__suc (Agda__Builtin__Nat.Nat__suc (Agda__Builtin__Nat.Nat__suc (Agda__Builtin__Nat.Nat__suc (Agda__Builtin__Nat.Nat__suc Agda__Builtin__Nat.Nat__zero))))))).
+ 
+TYPE__Pair2 : (A : Agda.Term (Agda.set (univ.s univ.0)) (Agda.code (Agda.set univ.0))) -> (B : Agda.Term (Agda.set (univ.s univ.0)) (Agda.code (Agda.set univ.0))) -> Type.
+Pair2 : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set (univ.s univ.0)) (Agda.code (Agda.set univ.0)) (A => (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set (univ.s univ.0)) (Agda.code (Agda.set univ.0)) (B => (Agda.code (Agda.set univ.0)))))).
+[A, B] Agda.Term _ (Pair2 A B) --> TYPE__Pair2 A B.
+def Pair2__fst : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set (univ.s univ.0)) (Agda.code (Agda.set univ.0)) (A => (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set univ.0) (Agda.code (Agda.set univ.0)) (B => (Agda.proj_prod (Agda.set univ.0) (Agda.set univ.0) (Pair2 A B) (r => A)))))).
+def Pair2__snd : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set (univ.s univ.0)) (Agda.code (Agda.set univ.0)) (A => (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set univ.0) (Agda.code (Agda.set univ.0)) (B => (Agda.proj_prod (Agda.set univ.0) (Agda.set univ.0) (Pair2 A B) (r => B)))))).
+{|!_,_|} : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set (univ.s univ.0)) (Agda.code (Agda.set univ.0)) (A => (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set univ.0) (Agda.code (Agda.set univ.0)) (B => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) A (fst => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) B (snd => (Pair2 A B))))))))).
+
+[A, B, fst, snd] Pair2__fst A B ({|!_,_|} A B fst snd) --> fst.
+ 
+[A, B, fst, snd] Pair2__snd A B ({|!_,_|} A B fst snd) --> snd.
+ 
+
+def p45 : Agda.Term (Agda.set univ.0) (Pair2 Agda__Builtin__Nat.Nat Agda__Builtin__Nat.Nat).
+[] p45 --> {|!_,_|} Agda__Builtin__Nat.Nat Agda__Builtin__Nat.Nat (Agda__Builtin__Nat.Nat__suc (Agda__Builtin__Nat.Nat__suc (Agda__Builtin__Nat.Nat__suc (Agda__Builtin__Nat.Nat__suc Agda__Builtin__Nat.Nat__zero)))) (Agda__Builtin__Nat.Nat__suc (Agda__Builtin__Nat.Nat__suc (Agda__Builtin__Nat.Nat__suc (Agda__Builtin__Nat.Nat__suc (Agda__Builtin__Nat.Nat__suc Agda__Builtin__Nat.Nat__zero))))).
+ 

@@ -1,0 +1,12 @@
+{|!TYPE__Σ|} : (A : Agda.Term (Agda.set (univ.s univ.0)) (Agda.code (Agda.set univ.0))) -> (B : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set univ.0) (Agda.set (univ.s univ.0)) A (_0 => (Agda.code (Agda.set univ.0))))) -> Type.
+{|!Σ|} : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set (univ.s univ.0)) (Agda.code (Agda.set univ.0)) (A => (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set univ.0) (Agda.set (univ.s univ.0)) A (_0 => (Agda.code (Agda.set univ.0)))) (B => (Agda.code (Agda.set univ.0)))))).
+[A, B] Agda.Term _ ({|!Σ|} A B) --> {|!TYPE__Σ|} A B.
+{|!Σ'constructor|} : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set (univ.s univ.0)) (Agda.code (Agda.set univ.0)) (A => (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set (univ.s univ.0)) A (_0 => (Agda.code (Agda.set univ.0)))) (B => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) A (fst => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) (B fst) (snd => ({|!Σ|} A B))))))))).
+def {|!Σ__fst|} : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set (univ.s univ.0)) (Agda.code (Agda.set univ.0)) (A => (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set (univ.s univ.0)) A (_0 => (Agda.code (Agda.set univ.0)))) (B => (Agda.proj_prod (Agda.set univ.0) (Agda.set univ.0) ({|!Σ|} A B) (r => A)))))).
+def {|!Σ__snd|} : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set (univ.s univ.0)) (Agda.code (Agda.set univ.0)) (A => (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set (univ.s univ.0)) A (_0 => (Agda.code (Agda.set univ.0)))) (B => (Agda.proj_prod (Agda.set univ.0) (Agda.set univ.0) ({|!Σ|} A B) (r => (B ({|!Σ__fst|} A B r)))))))).
+
+
+[A, B, fst, snd] {|!Σ__fst|} A B ({|!Σ'constructor|} A B fst snd) --> fst.
+ 
+[A, B, fst, snd] {|!Σ__snd|} A B ({|!Σ'constructor|} A B fst snd) --> snd.
+ 

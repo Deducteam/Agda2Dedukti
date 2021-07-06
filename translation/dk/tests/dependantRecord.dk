@@ -1,0 +1,12 @@
+TYPE__r : Type.
+r : Agda.Term (Agda.set (univ.s (univ.s univ.0))) (Agda.code (Agda.set (univ.s univ.0))).
+[] Agda.Term _ r --> TYPE__r.
+def r__A : Agda.Term (Agda.set (univ.s univ.0)) (Agda.proj_prod (Agda.set (univ.s univ.0)) (Agda.set (univ.s univ.0)) r (r => (Agda.code (Agda.set univ.0)))).
+def r__b : Agda.Term (Agda.set (univ.s univ.0)) (Agda.proj_prod (Agda.set (univ.s univ.0)) (Agda.set univ.0) r (r => (r__A r))).
+cons : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set (univ.s univ.0)) (Agda.code (Agda.set univ.0)) (A => (Agda.prod (Agda.set univ.0) (Agda.set (univ.s univ.0)) A (b => r)))).
+
+[A, b] r__A (cons A b) --> A.
+ 
+[A, b] r__b (cons A b) --> b.
+ 
+

@@ -5,14 +5,10 @@
 #*
 .#*
 *.dko
+*.lpo
 !theory/*.dko
+!theory/*.lpo
 
-translation/*/
-!translation/tests/
-!translation/std-lib/
-
-translation/*/*
-!translation/*/Makefile
 
 # normally very big file
 src/Main

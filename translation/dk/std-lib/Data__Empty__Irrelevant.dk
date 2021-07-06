@@ -1,0 +1,2 @@
+def {|⊥-elim|} : Agda.Term Agda.sortOmega (Agda.qLevel (w => Agda.set (univ.s w)) (w => Agda.prod (Agda.set (univ.s w)) (Agda.set w) (Agda.code (Agda.set w)) (Whatever => (Agda.prod (Agda.set univ.0) (Agda.set w) Data__Empty.{|⊥|} (_0 => Whatever))))).
+

@@ -1,0 +1,25 @@
+TYPE__N : Type.
+N : Agda.Term (Agda.set (univ.s univ.0)) (Agda.code (Agda.set univ.0)).
+[] Agda.Term _ N --> TYPE__N.
+N__zero : Agda.Term (Agda.set univ.0) N.
+N__suc : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) N (_0 => N)).
+
+
+
+TYPE__Eq : (A : Agda.Term (Agda.set (univ.s univ.0)) (Agda.code (Agda.set univ.0))) -> (_0 : Agda.Term (Agda.set univ.0) A) -> (_0 : Agda.Term (Agda.set univ.0) A) -> Type.
+Eq : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set (univ.s univ.0)) (Agda.code (Agda.set univ.0)) (A => (Agda.prod (Agda.set univ.0) (Agda.set (univ.s univ.0)) A (_0 => (Agda.prod (Agda.set univ.0) (Agda.set (univ.s univ.0)) A (_0 => (Agda.code (Agda.set univ.0)))))))).
+[A, x0, x] Agda.Term _ (Eq A x0 x) --> TYPE__Eq A x0 x.
+Eq__refl : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set univ.0) (Agda.code (Agda.set univ.0)) (A => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) A (a => (Eq A a a))))).
+
+
+def cong : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) N (x => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) N (y => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) (Eq N x y) (_0 => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) N (_0 => N)) (f => (Eq N (f x) (f y)))))))))).
+[x, f] cong x x (Eq__refl {N} x) f --> Eq__refl N (f x).
+ 
+def sum : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) N (_0 => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) N (_0 => N)))).
+[x] sum N__zero x --> x.
+[x0, x] sum (N__suc x0) x --> N__suc (sum x0 x).
+ 
+def sum0 : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) N (x => (Eq N x (sum x N__zero)))).
+[] sum0 N__zero --> Eq__refl N N__zero.
+[x] sum0 (N__suc x) --> cong x (sum x N__zero) (sum0 x) N__suc.
+ 

@@ -1,0 +1,10 @@
+TYPE__Bool : Type.
+Bool : Agda.Term (Agda.set (univ.s univ.0)) (Agda.code (Agda.set univ.0)).
+[] Agda.Term _ Bool --> TYPE__Bool.
+Bool__false : Agda.Term (Agda.set univ.0) Bool.
+Bool__true : Agda.Term (Agda.set univ.0) Bool.
+[] Agda.etaExpand _ Bool Bool__false --> Bool__false.
+[] Agda.etaExpand _ Bool Bool__true --> Bool__true.
+ 
+
+

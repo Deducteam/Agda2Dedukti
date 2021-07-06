@@ -1,0 +1,10 @@
+TYPE__Maybe : (a : univ.Lvl) -> (A : Agda.Term (Agda.set (univ.s a)) (Agda.code (Agda.set a))) -> Type.
+Maybe : Agda.Term Agda.sortOmega (Agda.qLevel (a => Agda.set (univ.s a)) (a => Agda.prod (Agda.set (univ.s a)) (Agda.set (univ.s a)) (Agda.code (Agda.set a)) (A => (Agda.code (Agda.set a))))).
+[a, A] Agda.Term _ (Maybe a A) --> TYPE__Maybe a A.
+Maybe__just : Agda.Term Agda.sortOmega (Agda.qLevel (a => Agda.set (univ.s a)) (a => Agda.prod (Agda.set (univ.s a)) (Agda.set a) (Agda.code (Agda.set a)) (A => (Agda.prod (Agda.set a) (Agda.set a) A (_0 => (Maybe a A)))))).
+Maybe__nothing : Agda.Term Agda.sortOmega (Agda.qLevel (a => Agda.set (univ.s a)) (a => Agda.prod (Agda.set (univ.s a)) (Agda.set a) (Agda.code (Agda.set a)) (A => (Maybe a A)))).
+[a, A, x] Agda.etaExpand _ (Maybe _ _) (Maybe__just a A x) --> Maybe__just a A (Agda.etaExpand a A x).
+[a, A] Agda.etaExpand _ (Maybe _ _) (Maybe__nothing a A) --> Maybe__nothing a A.
+ 
+
+

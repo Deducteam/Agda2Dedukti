@@ -1,0 +1,24 @@
+TYPE__r : Type.
+r : Agda.Term (Agda.set (univ.s univ.0)) (Agda.code (Agda.set univ.0)).
+[] Agda.Term _ r --> TYPE__r.
+def r__n : Agda.Term (Agda.set univ.0) (Agda.proj_prod (Agda.set univ.0) (Agda.set univ.0) r (r => Agda__Builtin__Nat.Nat)).
+def r__m : Agda.Term (Agda.set univ.0) (Agda.proj_prod (Agda.set univ.0) (Agda.set univ.0) r (r => Agda__Builtin__Nat.Nat)).
+cons : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Nat.Nat (n => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Nat.Nat (m => r)))).
+
+[n, m] r__n (cons n m) --> n.
+ 
+[n, m] r__m (cons n m) --> m.
+ 
+
+TYPE__rr : (A : Agda.Term (Agda.set (univ.s univ.0)) (Agda.code (Agda.set univ.0))) -> Type.
+rr : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set (univ.s univ.0)) (Agda.code (Agda.set univ.0)) (A => (Agda.code (Agda.set univ.0)))).
+[A] Agda.Term _ (rr A) --> TYPE__rr A.
+def rr__nn : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set univ.0) (Agda.code (Agda.set univ.0)) (A => (Agda.proj_prod (Agda.set univ.0) (Agda.set univ.0) (rr A) (r => A)))).
+def rr__mm : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set univ.0) (Agda.code (Agda.set univ.0)) (A => (Agda.proj_prod (Agda.set univ.0) (Agda.set univ.0) (rr A) (r => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) A (_0 => Agda__Builtin__Nat.Nat)))))).
+conss : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set univ.0) (Agda.code (Agda.set univ.0)) (A => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) A (nn => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) A (_0 => Agda__Builtin__Nat.Nat)) (mm => (rr A))))))).
+
+[A, nn, mm] rr__nn A (conss A nn mm) --> nn.
+ 
+[A, nn, mm] rr__mm A (conss A nn mm) --> mm.
+ 
+

@@ -1,0 +1,17 @@
+TYPE__N : Type.
+N : Agda.Term (Agda.set (univ.s univ.0)) (Agda.code (Agda.set univ.0)).
+[] Agda.Term _ N --> TYPE__N.
+N__zero : Agda.Term (Agda.set univ.0) N.
+N__suc : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) N (_0 => N)).
+
+
+
+TYPE__Neq : (_0 : Agda.Term (Agda.set univ.0) N) -> (_0 : Agda.Term (Agda.set univ.0) N) -> Type.
+Neq : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set univ.0) (Agda.set (univ.s univ.0)) N (_0 => (Agda.prod (Agda.set univ.0) (Agda.set (univ.s univ.0)) N (_0 => (Agda.code (Agda.set univ.0)))))).
+[x0, x] Agda.Term _ (Neq x0 x) --> TYPE__Neq x0 x.
+Neq__refl : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) N (x => (Neq x x))).
+
+
+def cong : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) N (x => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) N (y => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) (Neq x y) (_0 => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) N (_0 => N)) (f => (Neq (f x) (f y)))))))))).
+[x, f] cong x x (Neq__refl x) f --> Neq__refl (f x).
+ 

@@ -1,0 +1,7 @@
+def f : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Nat.Nat (_0 => Agda__Builtin__Nat.Nat)).
+def g : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Nat.Nat (_0 => Agda__Builtin__Nat.Nat)).
+[x] f x --> g x.
+ 
+[] g Agda__Builtin__Nat.Nat__zero --> Agda__Builtin__Nat.Nat__zero.
+[x] g (Agda__Builtin__Nat.Nat__suc x) --> f x.
+ 

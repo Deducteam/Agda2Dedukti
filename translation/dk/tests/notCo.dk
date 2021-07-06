@@ -1,0 +1,12 @@
+TYPE__Tree : (A : Agda.Term (Agda.set (univ.s univ.0)) (Agda.code (Agda.set univ.0))) -> Type.
+Tree : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set (univ.s univ.0)) (Agda.code (Agda.set univ.0)) (A => (Agda.code (Agda.set univ.0)))).
+[A] Agda.Term _ (Tree A) --> TYPE__Tree A.
+def Tree__elem : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set univ.0) (Agda.code (Agda.set univ.0)) (A => (Agda.proj_prod (Agda.set univ.0) (Agda.set univ.0) (Tree A) (r => A)))).
+def Tree__subtrees : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set univ.0) (Agda.code (Agda.set univ.0)) (A => (Agda.proj_prod (Agda.set univ.0) (Agda.set univ.0) (Tree A) (r => (Agda__Builtin__List.List univ.0 (Tree A)))))).
+tree : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set univ.0) (Agda.code (Agda.set univ.0)) (A => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) A (elem => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) (Agda__Builtin__List.List univ.0 (Tree A)) (subtrees => (Tree A))))))).
+
+[A, elem, subtrees] Tree__elem A (tree A elem subtrees) --> elem.
+ 
+[A, elem, subtrees] Tree__subtrees A (tree A elem subtrees) --> subtrees.
+ 
+

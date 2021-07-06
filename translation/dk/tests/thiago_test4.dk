@@ -1,0 +1,3 @@
+def tet3 : Agda.Term (Agda.set (univ.s (univ.s univ.0))) (Agda.code (Agda.set (univ.s univ.0))).
+[] tet3 --> Agda.code (Agda.set Agda__Primitive.lzero).
+ 

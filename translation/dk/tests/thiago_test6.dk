@@ -1,0 +1,2 @@
+tet2 : Agda.Term Agda.sortOmega (Agda.qLevel (i => Agda.sortOmega) (i => Agda.qLevel (j => Agda.set (univ.max univ.0 (univ.max (univ.s i) (univ.s j)))) (j => Agda.code (Agda.set (univ.max univ.0 (univ.max i j)))))).
+

@@ -1,0 +1,22 @@
+a : Agda.Term (Agda.set univ.0) Agda__Primitive.Level.
+
+A : Agda.Term Agda.sortOmega (Agda.qLevel (a => Agda.set (univ.s a)) (a => Agda.code (Agda.set a))).
+
+TYPE__R : (a : univ.Lvl) -> (A : Agda.Term (Agda.set (univ.s a)) (Agda.code (Agda.set a))) -> Type.
+R : Agda.Term Agda.sortOmega (Agda.qLevel (a => Agda.set (univ.s (univ.s a))) (a => Agda.prod (Agda.set (univ.s a)) (Agda.set (univ.s (univ.s a))) (Agda.code (Agda.set a)) (A => (Agda.code (Agda.set (univ.s a)))))).
+[a, A] Agda.Term _ (R a A) --> TYPE__R a A.
+def R__n : Agda.Term Agda.sortOmega (Agda.qLevel (a => Agda.set (univ.s a)) (a => Agda.prod (Agda.set (univ.s a)) (Agda.set (univ.s a)) (Agda.code (Agda.set a)) (A => (Agda.proj_prod (Agda.set (univ.s a)) (Agda.set univ.0) (R a A) (r => Agda__Builtin__Nat.Nat))))).
+def R__m : Agda.Term Agda.sortOmega (Agda.qLevel (a => Agda.set (univ.s a)) (a => Agda.prod (Agda.set (univ.s a)) (Agda.set (univ.s a)) (Agda.code (Agda.set a)) (A => (Agda.proj_prod (Agda.set (univ.s a)) (Agda.set a) (R a A) (r => A))))).
+cons : Agda.Term Agda.sortOmega (Agda.qLevel (a => Agda.set (univ.s a)) (a => Agda.prod (Agda.set (univ.s a)) (Agda.set (univ.s a)) (Agda.code (Agda.set a)) (A => (Agda.prod (Agda.set univ.0) (Agda.set (univ.s a)) Agda__Builtin__Nat.Nat (n => (Agda.prod (Agda.set a) (Agda.set (univ.s a)) A (m => (R a A)))))))).
+
+[a, A, n, m] R__n a A (cons a A n m) --> n.
+ 
+[a, A, n, m] R__m a A (cons a A n m) --> m.
+ 
+
+def f : Agda.Term Agda.sortOmega (Agda.qLevel ({|!A'a|} => Agda.set (univ.s {|!A'a|})) ({|!A'a|} => Agda.prod (Agda.set (univ.s {|!A'a|})) (Agda.set (univ.s {|!A'a|})) (Agda.code (Agda.set {|!A'a|})) (A => (Agda.prod (Agda.set (univ.s {|!A'a|})) (Agda.set (univ.s univ.0)) (R {|!A'a|} A) (_0 => (Agda.prod (Agda.set univ.0) (Agda.set (univ.s univ.0)) Agda__Builtin__Nat.Nat (_0 => (R univ.0 Agda__Builtin__Nat.Nat)))))))).
+[{|!A'a|}, A, n, m, x] f {|!A'a|} A (cons {|!A'a|} A n m) x --> cons univ.0 Agda__Builtin__Nat.Nat x n.
+ 
+def g : Agda.Term Agda.sortOmega (Agda.qLevel ({|!A'a|} => Agda.set (univ.s {|!A'a|})) ({|!A'a|} => Agda.prod (Agda.set (univ.s {|!A'a|})) (Agda.set (univ.s {|!A'a|})) (Agda.code (Agda.set {|!A'a|})) (A => (Agda.prod (Agda.set univ.0) (Agda.set (univ.s {|!A'a|})) Agda__Builtin__Nat.Nat (_0 => (Agda.prod (Agda.set (univ.s {|!A'a|})) (Agda.set (univ.s univ.0)) (R {|!A'a|} A) (_0 => (R univ.0 Agda__Builtin__Nat.Nat)))))))).
+[{|!A'a|}, A, x, n, m] g {|!A'a|} A x (cons {|!A'a|} A n m) --> cons univ.0 Agda__Builtin__Nat.Nat x n.
+ 

@@ -1,0 +1,18 @@
+def Set : Agda.Term (Agda.set (univ.s (univ.s univ.0))) (Agda.code (Agda.set (univ.s univ.0))).
+
+def Prop : Agda.Term (Agda.set (univ.s (univ.s univ.0))) (Agda.code (Agda.set (univ.s univ.0))).
+
+
+
+Level : Agda.Term (Agda.set (univ.s univ.0)) (Agda.code (Agda.set univ.0)).
+[] Agda.Term _ Level --> univ.Lvl.
+
+def lzero : Agda.Term (Agda.set univ.0) Level.
+[] lzero --> univ.0.
+
+def lsuc : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Level ({|!ℓ|} => Level)).
+[] lsuc --> univ.s.
+
+def {|!_⊔_|} : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Level ({|!ℓ₁|} => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Level ({|!ℓ₂|} => Level)))).
+[] {|!_⊔_|} --> univ.max.
+
