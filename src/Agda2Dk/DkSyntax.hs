@@ -53,7 +53,7 @@ printDecl mods dkMode
           DkQualified ["Agda", "Primitive"] [] "lsuc"  ->
             pRewRule dkMode (text "[]") (text "lsuc") (pSucc dkMode)
           DkQualified ["Agda", "Primitive"] [] "_⊔_"   ->
-            pRewRule dkMode (text "[]") (text "{|_⊔_|}") (pMax dkMode)
+            pRewRule dkMode (text "[]") (text "{|!_⊔_|}") (pMax dkMode)
           otherwise                                    -> empty
   in
   let defHead = case defStat of
@@ -390,9 +390,16 @@ printPattern pos mods dkMode boundCtx (DkLambda n t) =
     printPattern Top mods dkMode boundCtx t
 printPattern pos mods dkMode boundCtx (DkPattBuiltin t) =
   printTerm pos mods dkMode boundCtx t
+
+-- THE FOLLOWING SHOULD BE RECHECKED  
 -- We do not guard variables, since non-linear rules are more efficient.
+-- For certain cases in dedukti, if we print a guarded variable
+-- without the brackets it will complain
 printPattern pos mods dkMode boundCtx (DkGuarded (DkDB n _)) =
-  printIdent dkMode boundCtx n
+  case dkMode of
+    DkMode -> printIdent dkMode boundCtx n
+    LpMode -> text "_"
+  
 printPattern pos mods dkMode boundCtx (DkGuarded t) =
   case dkMode of
     DkMode -> braces (printTerm Top mods dkMode boundCtx t)
@@ -448,7 +455,7 @@ encapsulate :: String -> String
 encapsulate l =
   if all (`elem` ['a'..'z']++['A'..'Z']++['0'..'9']++['_']) l && not (elem l keywords)
   then l
-  else "{|"++l++"|}"
+  else "{|!"++l++"|}"
 
 dropAll :: String -> String
 dropAll []    = []

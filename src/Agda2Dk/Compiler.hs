@@ -104,6 +104,7 @@ data DkOptions = DkOptions
   , optDkDir     :: Maybe String
   , optDkRegen   :: Bool
   , optDkModeLp  :: Bool
+  , optDkEtaMode :: Bool
   } deriving Generic
 
 instance NFData DkOptions
@@ -116,6 +117,7 @@ defaultDkOptions = DkOptions
   , optDkDir     = Nothing
   , optDkRegen   = False
   , optDkModeLp  = False
+  , optDkEtaMode = False
   }
 
 
@@ -128,17 +130,20 @@ defaultDkOptions = DkOptions
 --    - explanation of option for user 
 dkCommandLineFlags :: [OptDescr (Flag DkOptions)]
 dkCommandLineFlags =
-    [ Option [] ["dk"]     (NoArg compileDkFlag) "compile program using the Dk backend"
-    , Option [] ["outDir"] (OptArg outp "DIR")   "output DIR"
-    , Option [] ["regen"]  (NoArg forceRegenDk)  "regenerate the Dedukti file even if it already exists"
-    , Option [] ["lp"]     (NoArg setLpModeOn)   "change to lp mode"
+    [ Option [] ["dk"]      (NoArg compileDkFlag) "compile program using the Dk backend"
+    , Option [] ["outDir"]  (OptArg outp "DIR")   "output DIR"
+    , Option [] ["regen"]   (NoArg forceRegenDk)  "regenerate the Dedukti file even if it already exists"
+    , Option [] ["lp"]      (NoArg setLpModeOn)   "change to lp mode"
+    , Option [] ["etaMode"] (NoArg setEtaModeOn)  "enables eta expansion and annotations"    
     ]
   where
     compileDkFlag o = return $ o { optDkCompile = True}
     outp d o        = return $ o { optDkDir = d}
     forceRegenDk o  = return $ o { optDkRegen = True}
     setLpModeOn o   = return $ o { optDkModeLp = True}
+    setEtaModeOn o  = return $ o { optDkEtaMode = True}
     
+type EtaMode = Bool
 
 ------------------------------------------------------------------------------
 --- Module compilation ---
@@ -166,7 +171,7 @@ dkPostModule opts _ _ mods defs =
 -- We sort the file, to make sure that declarations and rules
 -- do not refer to formerly declared symbols.    
   let output = show $ orderDeclRules (catMaybes defs) concMods in
-  let outLp = addRequires output in
+  let outLp = addRequires opts output in
   liftIO $ writeFile (filePath opts mods) (if (optDkModeLp opts) then outLp else output)
 
 
@@ -176,17 +181,18 @@ dkPostModule opts _ _ mods defs =
 -- which are then included with a require on the begining of the file. this might
 -- not be the cleanest way of adding the requires, but it seems to work well
 -- at least right now
-addRequires :: String -> String
-addRequires s =
+addRequires :: DkOptions -> String -> String
+addRequires opts s =
   let moduleRegex = "[ (↪,][a-zA-Z0-9_']*\\." in
   let removeFirstAndLastChars s = reverse $ tail $ reverse $ tail s in
   let allmods = map removeFirstAndLastChars $
                 getAllTextMatches (s =~moduleRegex) :: [String] in
   let filteredmods = filter (\s -> not $ or [s == "Agda", s == "univ"]) allmods in
   let uniquemods = sortUniq filteredmods in
-  let reqList = (["require open AgdaTheory.Base;",
-                  "require open AgdaTheory.Levels;",
-                  ""] ++) $
+  let reqBase = if optDkEtaMode opts
+                then "require open AgdaTheory.eta.Base;"
+                else "require open AgdaTheory.noEta.Base;" in
+  let reqList = ([reqBase, "require open AgdaTheory.Levels;", ""] ++) $
                 map (\s -> "require tests." ++ s ++ " as " ++ s ++ ";") uniquemods in
   let requires = intercalate "\n" reqList in
   requires ++ "\n" ++  s
@@ -239,36 +245,41 @@ dkCompileDef dkOpts env@(mod,eta) _ def@(Defn {defCopy=isCopy, defName=n, theDef
     reportSDoc "toDk" 3 $ (text "  Compiling definition of" <+>) <$> AP.prettyTCM n
     reportSDoc "toDk" 10 $ return $ text "    of type" <+> pretty t
     reportSDoc "toDk" 60 $ return $ text "    " <> pretty def
+
+    let dkMode = case (optDkModeLp dkOpts) of False -> DkMode
+                                              True  -> LpMode
+
+    let etaMode = optDkEtaMode dkOpts
+    
     (projPar,tParam) <-
       case d of
         Function {funProjection=pr} ->
           case pr of
-            Nothing                               -> defaultCase
-            Just Projection{projProper=Nothing}   -> defaultCase
+            Nothing                               -> defaultCase etaMode
+            Just Projection{projProper=Nothing}   -> defaultCase etaMode
             -- In case of record projector, symetrically, because of the eta-rule,
             -- the argument type must not be eta-expanded.
             Just Projection{projProper=Just recN} -> do
               dd@Defn{theDef=Record{recPars=i}} <- getConstInfo recN
-              tExpand <- etaExpandType eta t
+              tExpand <- if etaMode then etaExpandType eta t else return t
               tPar <- inTopContext $ do
-                reconstructParametersInType' (etaExpandAction eta) tExpand
+                reconstructParametersInType' (etaExpandAction eta etaMode) tExpand
               return (Just i, tPar)
-        _ -> defaultCase
+        _ -> defaultCase etaMode
     reportSDoc "toDk.eta" 35 $ (text "    tParam is" <+>) <$> AP.pretty tParam
+
     inTopContext $ do
       reportSDoc "toDk" 15 $ return $ text "Getting type"
-      typ        <- translateType env tParam projPar
+      typ        <- translateType env etaMode tParam projPar
       reportSDoc "toDk" 15 $ return $ text "Getting name"      
-      Right name <- qName2DkName env n -- n is not a copy
+      Right name <- qName2DkName env etaMode n -- n is not a copy
       reportSDoc "toDk" 15 $ return $ text "Getting kind"
-      kind       <- getKind env t
+      kind       <- getKind env etaMode t
       reportSDoc "toDk" 15 $ return $ text "Getting staticity"
       stat       <- extractStaticity n d
       reportSDoc "toDk" 15 $ return $ text "Getting rules of " <+> pretty d
-      rules      <- extractRules env n d t
+      rules      <- extractRules env etaMode n d t
 
-      let dkMode = case (optDkModeLp dkOpts) of False -> DkMode
-                                                True  -> LpMode
       let dkDef = DkDefinition
             { name      = name
             , staticity = stat
@@ -276,26 +287,22 @@ dkCompileDef dkOpts env@(mod,eta) _ def@(Defn {defCopy=isCopy, defName=n, theDef
             , kind      = kind
             , rules     = rules}
       let printedDef = toDkDocs (modName2DkModIdent mod) dkMode dkDef
---      let deff = case printedDef of (aa, bb, cc) -> aa <> bb <> cc
-      reportSDoc "toDk" 15 $ return $ text "printed rules  " <+> text (show rules)
-      reportSDoc "toDk" 15 $ return $ text "oi"      
---      reportSDoc "toDk" 15 $ return $ text "printed def is  " <+> deff
       return $ Just (m, printedDef)
 
   where
-    defaultCase = do
-      tExpand <- checkInternalType' (etaExpandAction eta) t
+    defaultCase etaMode = do
+      tExpand <- checkInternalType' (etaExpandAction eta etaMode) t
 
       reportSDoc "toDk.eta" 35 $ return (text " t1")
       tPar <- inTopContext $ do
-        reconstructParametersInType' (etaExpandAction eta) tExpand
+        reconstructParametersInType' (etaExpandAction eta etaMode) tExpand
       reportSDoc "toDk.eta" 35 $ return (text " t2")
       return (Nothing, tPar)
 
-translateType :: DkModuleEnv -> Type -> Maybe Nat -> TCM DkTerm
+translateType :: DkModuleEnv -> EtaMode -> Type -> Maybe Nat -> TCM DkTerm
 -- a type is a term with a sort annotation (as in nat : Set0)
 -- to translate it, we extract the term and ignore the sort
-translateType env (El {unEl=ty}) i = translateTerm' env ty i
+translateType env etaMode (El {unEl=ty}) i = translateTerm' env etaMode ty i
 
 extractStaticity :: QName -> Defn -> TCM IsStatic
 extractStaticity _ (Axiom _)         = return Static
@@ -316,8 +323,8 @@ extractStaticity _ (AbstractDefn {})    = return Static
 
 
   
-extractRules :: DkModuleEnv -> QName -> Defn -> Type -> TCM [DkRule]
-extractRules env n (funDef@Function {}) ty =
+extractRules :: DkModuleEnv -> EtaMode -> QName -> Defn -> Type -> TCM [DkRule]
+extractRules env etaMode n (funDef@Function {}) ty =
   do
     -- gets the clauses to be translated
     clauses <- case funProjection funDef of
@@ -344,40 +351,44 @@ extractRules env n (funDef@Function {}) ty =
               (return $ pretty $ funClauses funDef )
             return $ funClauses funDef
 
-    l  <- mapM (clause2rule env n) clauses
+    l  <- mapM (clause2rule env etaMode n) clauses
     return $ catMaybes l
-extractRules env n (Datatype {dataCons=cons, dataClause=Just c, dataPars=i, dataIxs=j}) ty=
+extractRules env etaMode n (Datatype {dataCons=cons, dataClause=dataClauses, dataPars=i, dataIxs=j}) ty=
   do
-    l <- sequence [clause2rule env n c, Just <$> decodedVersion env n (i+j)]
-    (catMaybes l ++) <$> (etaIsId env n i j cons)
-extractRules env n (Datatype {dataCons=cons, dataClause=Nothing, dataPars=i, dataIxs=j}) ty =
+    l <- case dataClauses of
+           Just c  -> sequence [clause2rule env etaMode n c, Just <$> decodedVersion env etaMode n (i+j)]
+           Nothing -> sequence [Just <$> decodedVersion env etaMode n (i+j)]
+    if etaMode
+      then (catMaybes l ++) <$> (etaIsId env n i j cons)
+      else return $ catMaybes l
+extractRules env etaMode n (t@Record {recClause=clauses, recPars=i, recConHead=hd, recFields=f}) ty =
   do
-    l <- sequence [Just <$> decodedVersion env n (i+j)]
-    (catMaybes l ++) <$> (etaIsId env n i j cons)
-extractRules env n (t@Record {recClause=clauses, recPars=i, recConHead=hd, recFields=f}) ty =
-  let hasEta =  case (theEtaEquality $ recEtaEquality' t) of
-        YesEta  -> True
-        NoEta _ -> False
-        in
-  do
-    translatedClauses <- maybe (return []) (\c -> sequence [clause2rule env n c]) clauses
-    decodedVers <- sequence [Just <$> decodedVersion env n i]
-    etaExpDecl <- if hasEta
-                  then sequence [Just <$> etaExpansionDecl env n i hd f]
-                  else sequence [Just <$> doesNotEtaExpand env n i hd f]
-    return $ catMaybes $ translatedClauses ++ decodedVers ++ etaExpDecl
+    translatedClauses <- maybe (return []) (\c -> sequence [clause2rule env etaMode n c]) clauses
+    decodedVers <- sequence [Just <$> decodedVersion env etaMode n i]
+    if etaMode
+      then do
+      let hasEta =
+            case (theEtaEquality $ recEtaEquality' t) of
+              YesEta  -> True
+              NoEta _ -> False
+      etaExpDecl <- if hasEta
+                    then sequence [Just <$> etaExpansionDecl env n i hd f]
+                    else sequence [Just <$> doesNotEtaExpand env n i hd f]
+      return $ catMaybes $ translatedClauses ++ decodedVers ++ etaExpDecl
 
-extractRules env n (Primitive {primClauses=p}) ty =
+      else return $ catMaybes $ translatedClauses ++ decodedVers
+    
+extractRules env etaMode n (Primitive {primClauses=p}) ty =
   do
     recordCleaned <- mapM translateRecordPatterns p
-    l <- mapM (clause2rule env n) recordCleaned
+    l <- mapM (clause2rule env etaMode n) recordCleaned
     return $ catMaybes l
-extractRules _ _ _ _                            = sequence []
+extractRules _ _ _ _ _                            = sequence []
 
-decodedVersion :: DkModuleEnv -> QName -> Int -> TCM DkRule
-decodedVersion env@(_,eta) nam i = do
+decodedVersion :: DkModuleEnv -> EtaMode -> QName -> Int -> TCM DkRule
+decodedVersion env@(_,eta) etaMode nam i = do
   reportSDoc "toDk" 5 $ return $ text "  Decoding" <+> pretty nam
-  Right nn@(DkQualified mods pseudo n) <- qName2DkName env nam -- nam is not a copy
+  Right nn@(DkQualified mods pseudo n) <- qName2DkName env etaMode nam -- nam is not a copy
   let decodedName = DkQualified mods ("TYPE":pseudo) n
   let hd = DkSpecial TermSymb
   ty <- defType <$> getConstInfo nam
@@ -404,12 +415,12 @@ decodedVersion env@(_,eta) nam i = do
     constructRhs :: [Dom(Name,Type)] -> Nat -> (DkTerm -> TCM DkTerm) -> DkTerm -> TCM DkTerm
     constructRhs []                     _ clo t = clo t
     constructRhs (Dom{unDom=(a,ty)}:tl) i clo t = do
-      va <- etaExpansion eta (raise (i+1) ty) (var i)
+      va <- if etaMode then etaExpansion eta (raise (i+1) ty) (var i) else return $ var i
       vaPar <- reconstructParameters (raise (i+1) ty) va
-      constructRhs tl (i+1) (\x -> clo =<< (DkApp x <$> translateTerm env vaPar)) t
+      constructRhs tl (i+1) (\x -> clo =<< (DkApp x <$> translateTerm env etaMode vaPar)) t
 
-clause2rule :: DkModuleEnv -> QName -> Clause -> TCM (Maybe DkRule)
-clause2rule env@(_,eta) nam c = do
+clause2rule :: DkModuleEnv -> EtaMode -> QName -> Clause -> TCM (Maybe DkRule)
+clause2rule env@(_,eta) etaMode nam c = do
   reportSDoc "toDk.clause" 5  $ ((text "  We are treating:") <+>) <$> (AP.prettyTCM nam)
   reportSDoc "toDk.clause" 10 $ return $ (text "  The clause is") <+> (pretty c)
   reportSDoc "toDk.clause" 20 $ ((text "  In the context:") <+> ) <$> (AP.prettyTCM (clauseTel c))
@@ -456,15 +467,15 @@ clause2rule env@(_,eta) nam c = do
             Just t  -> do
               -- We use the type to eta expand
               reportSDoc "bla" 3 $ return $ text "On a bien un type"
-              r1 <- checkInternal' (etaExpandAction eta) r CmpLeq (unArg t)
+              r1 <- checkInternal' (etaExpandAction eta etaMode) r CmpLeq (unArg t)
               reportSDoc "bla" 3 $ return $ text "On a fait le premier chkIn"
-              reconstructParameters' (etaExpandAction eta) (unArg t) r1
+              reconstructParameters' (etaExpandAction eta etaMode) (unArg t) r1
         reportSDoc "toDk.clause" 30 $ return $ text "    Parameters reconstructed"
         reportSDoc "toDk.clause" 40 $ return $ text "    The final body is" <+> pretty rhsExpanded
         reportSDoc "bla" 3 $ return $ text "On a reconstruit les paramètres"
 
         -- translates rhs
-        rhsDk <- translateTerm env rhsExpanded
+        rhsDk <- translateTerm env etaMode rhsExpanded
 
         -- gets the type of the name nam
         tyHd <- defType <$> getConstInfo nam
@@ -475,9 +486,9 @@ clause2rule env@(_,eta) nam c = do
         reportSDoc "bla" 3 $ return $ text "On extrait les patterns"
 
 
-        Right headSymb <- qName2DkName env nam -- nam is not a copy
+        Right headSymb <- qName2DkName env etaMode nam -- nam is not a copy
 
-        (headSymb, patts) <- extractPatterns env (namedClausePats c) tyInst (map fst impArgs) headSymb
+        (headSymb, patts) <- extractPatterns env etaMode (namedClausePats c) tyInst (map fst impArgs) headSymb
 
         reportSDoc "bla" 3 $ return $ text "On a extrait les patterns"
         reportSDoc "bla" 3 $ return $ text "On a extrait les p " <+> pretty (namedClausePats c)
@@ -506,21 +517,22 @@ extractContextAux acc (Dom {unDom=(n,t)}:r) = extractContextAux (name2DkIdent n:
 
 
 extractPatterns ::  DkModuleEnv ->
+                    EtaMode ->
                     [NamedArg DeBruijnPattern] -> --patterns p1 .. pk to be translated
                     Type -> -- type of already translated part
                     [DkPattern] -> -- already translated part
                     DkName -> -- head of the already translated part
                     TCM (DkName, [DkPattern])
-extractPatterns env [] typ dkPatts dkHead = do
+extractPatterns env etaMode [] typ dkPatts dkHead = do
   reportSDoc "toDk.pattern" 15 $ return $ text $ "    Finished extraction, the result is " ++ show (dkHead, dkPatts)
   return (dkHead, dkPatts)
 
-extractPatterns env (p:patts) typ dkPatts dkHead = do
+extractPatterns env etaMode (p:patts) typ dkPatts dkHead = do
   reportSDoc "toDk.pattern" 15 $ return $ text $ "    The current state is  " ++ show (dkHead, dkPatts)
   reportSDoc "toDk.pattern" 15 $ return $ text "    Now we begin translating  " <+> pretty p
   
   typ <- normalise typ
-  (translatedPattern, newType) <- extractPattern env p typ
+  (translatedPattern, newType) <- extractPattern env etaMode p typ
   
   case namedArg p of
     ProjP _ _ -> do
@@ -530,18 +542,18 @@ extractPatterns env (p:patts) typ dkPatts dkHead = do
       -- gets the head symbol and the arguments
       DkFun head args <- return translatedPattern
 
-      extractPatterns env patts newType (args ++ [DkFun dkHead dkPatts]) head
+      extractPatterns env etaMode patts newType (args ++ [DkFun dkHead dkPatts]) head
 
     _ -> do
-      extractPatterns env patts newType (dkPatts ++ [translatedPattern]) dkHead
+      extractPatterns env etaMode patts newType (dkPatts ++ [translatedPattern]) dkHead
 
 
 -- if we are translating a pattern p which is applied to f e1 .. ek, then we need
 -- the type of f e1 .. ek. we return the translation of p and the type
 -- of f e1 .. ek p
-extractPattern :: DkModuleEnv -> NamedArg DeBruijnPattern -> Type ->
+extractPattern :: DkModuleEnv -> EtaMode -> NamedArg DeBruijnPattern -> Type ->
                   TCM (DkPattern, Type)
-extractPattern env@(_,eta) p applyingType = do
+extractPattern env@(_,eta) etaMode p applyingType = do
   reportSDoc "toDk.pattern" 15 $ return $ text "    Extraction of the pattern" <+> pretty p
 
   let patt = namedThing (unArg p)
@@ -562,9 +574,9 @@ extractPattern env@(_,eta) p applyingType = do
                           El _ (Pi (Dom{unDom=domainType}) _) -> domainType
                           _ -> __DUMMY_TYPE__
  
-      tChk <- checkInternal' (etaExpandAction eta) t CmpLeq patternType
-      tRecons <- reconstructParameters' (etaExpandAction eta) patternType tChk
-      term <- translateTerm env tRecons
+      tChk <- checkInternal' (etaExpandAction eta etaMode) t CmpLeq patternType
+      tRecons <- reconstructParameters' (etaExpandAction eta etaMode) patternType tChk
+      term <- translateTerm env etaMode tRecons
 
       -- gets type of f e1 ... ek p
       let finalTy = piApply applyingType [defaultArg (patternToTerm (namedArg p))]
@@ -623,10 +635,10 @@ extractPattern env@(_,eta) p applyingType = do
       -- to translate the a1 ... ak which are applied to them
 
       -- translates head symbol
-      Right head <- qName2DkName env h
+      Right head <- qName2DkName env etaMode h
 
       -- translates the arguments
-      (head, args) <- extractPatterns env tl tyArgs params head
+      (head, args) <- extractPatterns env etaMode tl tyArgs params head
 
       let translatedPatt = DkFun head args
 
@@ -678,7 +690,7 @@ extractPattern env@(_,eta) p applyingType = do
               $ text "    Parameters not found, the type is not a Def _ l"
             return $ (__DUMMY_TYPE__, replicate numParams DkJoker)
       
-      Right dkNam <- qName2DkName env nam
+      Right dkNam <- qName2DkName env etaMode nam
 
       -- gets type of p x1 .. xn (f e1 .. ek)
       -- HYPOTHESIS: If proj : {x1:X1} -> .. -> {xn:Xn} -> (rec:Rec x1 .. xn) -> field
@@ -710,11 +722,11 @@ extractPattern env@(_,eta) p applyingType = do
       reportSDoc "bla" 3 $ return $ text "The type is ..."
       ctxHere <- getContext
       reportSDoc "bla" 3 $ return $ text "The context is ..."
-      tEta <- checkInternal' (etaExpandAction eta) t CmpLeq tyArg
+      tEta <- checkInternal' (etaExpandAction eta etaMode) t CmpLeq tyArg
       reportSDoc "bla" 3 $ return $ text "Eta-expansion done"
-      tPar <- reconstructParameters' (etaExpandAction eta) tyArg tEta
+      tPar <- reconstructParameters' (etaExpandAction eta etaMode) tyArg tEta
       reportSDoc "bla" 3 $ return $ text "params reconstructed"
-      tDk <- translateTerm env tPar
+      tDk <- translateTerm env etaMode tPar
       reportSDoc "bla" 3 $ return $ text "term translated"
       caseParamFun' (piApply tyCons [defaultArg t]) tl (DkGuarded tDk:acc)
 
@@ -748,30 +760,30 @@ substiSort l (DkUniv s)    = DkUniv (substiSort l s)
 substiSort l (DkPi s1 s2)  = DkPi (substiSort l s1) (substiSort l s2)
 substiSort _ DkDefaultSort = DkDefaultSort
 
-translateElim :: DkModuleEnv -> DkTerm -> Elims -> TCM DkTerm
+translateElim :: DkModuleEnv -> EtaMode -> DkTerm -> Elims -> TCM DkTerm
 -- empty elimination, return the applying term
-translateElim env t []                  = return t
+translateElim env etaMode t []                  = return t
 -- we have t applied to el = (e tl). the translation is given by translating
 -- e, applying it to t and the callind translateElim env (t e) tl
-translateElim env t (el@(Apply e):tl)      = do
-  arg <- translateTerm env (unArg e)
-  translateElim env (DkApp t arg) tl
+translateElim env etaMode t (el@(Apply e):tl)      = do
+  arg <- translateTerm env etaMode (unArg e)
+  translateElim env etaMode (DkApp t arg) tl
 -- elimination have gone through unspining, so we cannot have proj eliminations
-translateElim env t (el@(Proj _ qn):tl)    = do
+translateElim env etaMode t (el@(Proj _ qn):tl)    = do
   reportSDoc "toDk" 2 $ ((text "    Pb with:" <+> printTerm Top [] DkMode [] t <+>)<$> AP.prettyTCM el)
   error "Unspining not performed!"
-translateElim env t ((IApply _ _ _):tl) = error "Unexpected IApply"
+translateElim env etaMode t ((IApply _ _ _):tl) = error "Unexpected IApply"
 
-translateTerm' :: DkModuleEnv -> Term -> Maybe Nat -> TCM DkTerm
+translateTerm' :: DkModuleEnv -> EtaMode -> Term -> Maybe Nat -> TCM DkTerm
 -- Var is a variable possibly applied to a sequence of eliminations (x es)
-translateTerm' env (Var i elims) Nothing = do
+translateTerm' env etaMode (Var i elims) Nothing = do
   -- gets name of bound variable
   nam <- nameOfBV i
   -- the result is the name of the variable applied to the translation
   -- of the elimination
-  translateElim env (DkDB (name2DkIdent nam) i) elims
+  translateElim env etaMode (DkDB (name2DkIdent nam) i) elims
 
-translateTerm' env (Lam _ ab) Nothing = do
+translateTerm' env etaMode (Lam _ ab) Nothing = do
   ctx <- getContext
   -- n will be name of the abstracting variable
   let n = freshStr ctx (absName ab)
@@ -780,55 +792,55 @@ translateTerm' env (Lam _ ab) Nothing = do
   addContext n $
     do
       -- translates the term inside the abstraction, on this new context
-      body <- translateTerm env (unAbs ab)
+      body <- translateTerm env etaMode (unAbs ab)
       -- gets name of debrunji index 0 (why isn't this always n?)
       nam <- nameOfBV 0
       return $ DkLam (name2DkIdent nam) Nothing body
 
 -- builtin things, like strings, integers, etc
-translateTerm' env (Lit l) Nothing =
+translateTerm' env etaMode (Lit l) Nothing =
   return $ translateLiteral l
 
 -- a function symbol n applied to a list of eliminations
-translateTerm' env (Def n elims) Nothing = do
+translateTerm' env etaMode (Def n elims) Nothing = do
   -- translate the function symbol
-  nn <- qName2DkName env n
+  nn <- qName2DkName env etaMode n
   case nn of
     -- if we get a constant name, we return it applied to the translation of the elim
-    Right nam -> translateElim env (DkConst nam) elims
+    Right nam -> translateElim env etaMode (DkConst nam) elims
     -- if we get a term (why?) we translate it applied to the elim
-    Left tt -> translateTerm env (tt `applyE` elims)
+    Left tt -> translateTerm env etaMode (tt `applyE` elims)
 
-translateTerm' env (Con hh@(ConHead {conName=h}) i elims) Nothing = do
-  nn <- qName2DkName env h
+translateTerm' env etaMode (Con hh@(ConHead {conName=h}) i elims) Nothing = do
+  nn <- qName2DkName env etaMode h
   case nn of
-    Right nam -> translateElim env (DkConst nam) elims
-    Left tt -> translateTerm env (tt `applyE` elims)
+    Right nam -> translateElim env etaMode (DkConst nam) elims
+    Left tt -> translateTerm env etaMode (tt `applyE` elims)
 
-translateTerm' env (Pi d@(Dom {unDom=a}) bb) mb_j = do
+translateTerm' env etaMode (Pi d@(Dom {unDom=a}) bb) mb_j = do
   ctx <- getContext
   -- nn is the name of the abstracting variable (Pi nn : a. bb)
   let nn = freshStr ctx (absName bb)
   -- translates the domain type
-  dom <- translateType env a Nothing
+  dom <- translateType env etaMode a Nothing
   -- gets kind s_a of the domain type
-  ka <- getKind env a
+  ka <- getKind env etaMode a
   case bb of
     -- this is a real dependent product, we need to add nn : d to the context
     -- before calculating the domain type
     Abs n b ->
       addContext (nn,d) $ do
         -- translates codomain type
-        body <- translateType env b (pred mb_j)
+        body <- translateType env etaMode b (pred mb_j)
         -- gets codomain sort
-        kb <- getKind env b
+        kb <- getKind env etaMode b
         -- gets name of type parameter (is it different from nn?)
         nam <- nameOfBV 0
         -- analyse the codomain type
         case a of
           -- is it a constant type?
           El {unEl=Def h []} -> do
-            hd <- qName2DkName env h
+            hd <- qName2DkName env etaMode h
             -- is it Level?
             if hd == Right (DkQualified ["Agda","Primitive"] [] "Level")
               -- yes! this is a a level quantification
@@ -841,9 +853,9 @@ translateTerm' env (Pi d@(Dom {unDom=a}) bb) mb_j = do
     -- not a real dependent product, just a regular function arrow a -> bb
     NoAbs n b -> do
       -- translate the codomain type
-      body <- translateType env b (pred mb_j)
+      body <- translateType env etaMode b (pred mb_j)
       -- gets codomain sort
-      kb <- getKind env b
+      kb <- getKind env etaMode b
       -- gets name of type parameter (is it different from nn?)
       nam <- addContext (nn,d) $ nameOfBV 0
       return $ (sp_prod mb_j) ka kb (name2DkIdent nam) dom body
@@ -854,65 +866,65 @@ translateTerm' env (Pi d@(Dom {unDom=a}) bb) mb_j = do
     sp_prod (Just 0) = DkProjProd
     sp_prod _        = DkProd
 
-translateTerm' env (Sort s) Nothing = do
-  ss <- extractSort env s
+translateTerm' env etaMode (Sort s) Nothing = do
+  ss <- extractSort env etaMode s
   return $ DkSort ss
   
-translateTerm' env (Level lev) Nothing = do
-  lv <- lvlFromLevel env lev
+translateTerm' env etaMode (Level lev) Nothing = do
+  lv <- lvlFromLevel env etaMode lev
   return $ DkLevel lv
   
-translateTerm' env (MetaV {}) Nothing = error "Not implemented yet : MetaV"
-translateTerm' env (DontCare t) Nothing = translateTerm env t
-translateTerm' env (Dummy _ _) Nothing = error "Not implemented yet : Dummy"
+translateTerm' env etaMode (MetaV {}) Nothing = error "Not implemented yet : MetaV"
+translateTerm' env etaMode (DontCare t) Nothing = translateTerm env etaMode t
+translateTerm' env etaMode (Dummy _ _) Nothing = error "Not implemented yet : Dummy"
 
-translateTerm env t = translateTerm' env t Nothing
+translateTerm env etaMode t = translateTerm' env etaMode t Nothing
 
-extractSort :: DkModuleEnv -> Sort -> TCM DkSort
-extractSort env (Type i)                  =
-  DkSet <$> lvlFromLevel env i
-extractSort env (Prop i)                  =
-  DkProp <$> lvlFromLevel env i
+extractSort :: DkModuleEnv -> EtaMode -> Sort -> TCM DkSort
+extractSort env etaMode (Type i)                  =
+  DkSet <$> lvlFromLevel env etaMode i
+extractSort env etaMode (Prop i)                  =
+  DkProp <$> lvlFromLevel env etaMode i
 -- for the time beeing we translate all the SetOmegai to the same sort
 -- this clearly makes the theory inconsistent, but it should work for now
-extractSort env (Inf _ _)                 =
+extractSort env etaMode (Inf _ _)                 =
   return DkSetOmega
-extractSort env SizeUniv                  =
+extractSort env etaMode SizeUniv                  =
   return $ DkSizeUniv
 
 -- not sure about the following change
 
-extractSort env (PiSort _ s t) = do
-  dom <- extractSort env s
-  codom <- extractSort env (unAbs t)
+extractSort env etaMode (PiSort _ s t) = do
+  dom <- extractSort env etaMode s
+  codom <- extractSort env etaMode (unAbs t)
   return $ DkPi dom codom
 
 --extractSort env (PiSort (Dom{unDom=s}) t) = do
 --  dom <- extractSort env (_getSort s)
 --  codom <- extractSort env (unAbs t)
 --  return $ DkPi dom codom
-extractSort env (UnivSort s)              =
-  DkUniv <$> extractSort env s
-extractSort _   _                         =
+extractSort env etaMode (UnivSort s)              =
+  DkUniv <$> extractSort env etaMode s
+extractSort _ _ _                         =
   return DkDefaultSort
 
-lvlOf :: DkModuleEnv -> Sort -> TCM Lvl
-lvlOf env (Type i)                  = lvlFromLevel env i
-lvlOf env (Prop i)                  = lvlFromLevel env i
+lvlOf :: DkModuleEnv -> EtaMode -> Sort -> TCM Lvl
+lvlOf env etaMode (Type i) = lvlFromLevel env etaMode i
+lvlOf env etaMode (Prop i) = lvlFromLevel env etaMode i
 
-getKind :: DkModuleEnv -> Type -> TCM DkSort
-getKind env (El {_getSort=s}) = extractSort env s
+getKind :: DkModuleEnv -> EtaMode -> Type -> TCM DkSort
+getKind env etaMode (El {_getSort=s}) = extractSort env etaMode s
 
 -- the two functions were modified to account for the new representation of
 -- levels in agda
-lvlFromLevel :: DkModuleEnv -> Level -> TCM Lvl
-lvlFromLevel env (Max i l) =
+lvlFromLevel :: DkModuleEnv -> EtaMode -> Level -> TCM Lvl
+lvlFromLevel env etaMode (Max i l) =
   do
-    preLvls <- mapM (preLvlFromPlusLevel env) l
+    preLvls <- mapM (preLvlFromPlusLevel env etaMode) l
     return $ LvlMax (fromInteger i) preLvls
 
-preLvlFromPlusLevel :: DkModuleEnv -> PlusLevel -> TCM PreLvl
-preLvlFromPlusLevel env (Plus i t) = LvlPlus (fromInteger i) <$> translateTerm env t
+preLvlFromPlusLevel :: DkModuleEnv -> EtaMode -> PlusLevel -> TCM PreLvl
+preLvlFromPlusLevel env etaMode (Plus i t) = LvlPlus (fromInteger i) <$> translateTerm env etaMode t
 
 translateLiteral :: Literal -> DkTerm
 translateLiteral (LitNat    i)   = DkBuiltin (DkNat (fromInteger i))
@@ -934,8 +946,8 @@ addEl _ _ = error "Those terms do not expect elimination"
 -- Translation of Name and QName function
 --------------------------------------------------------------------------------
 
-qName2DkName :: DkModuleEnv -> QName -> TCM (Either Term DkName)
-qName2DkName env@(_,eta) qn@QName{qnameModule=mods, qnameName=nam}
+qName2DkName :: DkModuleEnv -> EtaMode -> QName -> TCM (Either Term DkName)
+qName2DkName env@(_,eta) etaMode qn@QName{qnameModule=mods, qnameName=nam}
   | qn == eta = return $ Right $ DkSpecial EtaExpandSymb
   | otherwise = do
       topMod <- topLevelModuleName mods
@@ -947,14 +959,14 @@ qName2DkName env@(_,eta) qn@QName{qnameModule=mods, qnameName=nam}
         -- only to get the name?
         reportSDoc "bla" 3 $ return $ text "ty Here" <+> pretty ty
         -- this first step is just to eta-expand, in order to trigger reduction
-        tChk <- checkInternal' (etaExpandAction eta) (Def qn []) CmpLeq ty
+        tChk <- checkInternal' (etaExpandAction eta etaMode) (Def qn []) CmpLeq ty
         reportSDoc "bla" 3 $ return $ text "tChk OK"
         tRed <- normalise tChk
         reportSDoc "bla" 3 $ return $ text "tRed OK"
         -- We have to do it again since normalise eliminated it
-        tChk2 <- checkInternal' (etaExpandAction eta) tRed CmpLeq ty
+        tChk2 <- checkInternal' (etaExpandAction eta etaMode) tRed CmpLeq ty
         reportSDoc "bla" 3 $ return $ text "tChk2 OK"
-        tRecons <- reconstructParameters' (etaExpandAction eta) ty tChk2
+        tRecons <- reconstructParameters' (etaExpandAction eta etaMode) ty tChk2
         reportSDoc "bla" 3 $ return $ text "tRecons OK"
         return $ Left tRecons
       else
@@ -1048,13 +1060,13 @@ createEtaExpandSymbol () =
 
 etaExpandType :: QName -> Type -> TCM Type
 etaExpandType eta (El s (Pi a@Dom{unDom=El sa u} b)) = do
-  uu <- checkInternal' (etaExpandAction eta) u CmpLeq (sort sa)
+  uu <- checkInternal' (etaExpandAction eta True) u CmpLeq (sort sa)
   let dom = El sa uu
   addContext (absName b,a) $ do
     codom <- etaExpandType eta (absBody b)
     unsafeEscapeContext 1 $ return $ El s (Pi a{unDom=dom} (Abs (absName b) codom))
 etaExpandType eta (El s u) = do
-  uu <- checkInternal' (etaExpandAction eta) u CmpLeq (sort s)
+  uu <- checkInternal' (etaExpandAction eta True) u CmpLeq (sort s)
   return $ El s uu
 
 etaIsId :: DkModuleEnv -> QName -> Nat -> Nat -> [QName] -> TCM [DkRule]
@@ -1071,8 +1083,8 @@ etaIsId env@(_,eta) n i j cons = do
         unsafeModifyContext separateVars $ do
         -- We do have the information that n is not a copy,
         -- otherwise it would not have gone through compileDef
-        Right cc <- qName2DkName env f
-        Right nn <- qName2DkName env n
+        Right cc <- qName2DkName env True f
+        Right nn <- qName2DkName env True n
         ctx <- getContext
         context <- extractContextNames ctx
         consArg <- pattCons cc ctx
@@ -1089,16 +1101,16 @@ etaIsId env@(_,eta) n i j cons = do
       DkFun cc <$> nextIndex [] 0 args 
     nextIndex acc j []     = return acc
     nextIndex acc j (_:tl) = do
-      (vj, _) <- extractPattern env (defaultArg $ unnamed $ varP (DBPatVar "_" j))
+      (vj, _) <- extractPattern env True (defaultArg $ unnamed $ varP (DBPatVar "_" j))
                  __DUMMY_TYPE__
       nextIndex (vj:acc) (j+1) tl
 
     constructRhsFields _ t [] = return t
     constructRhsFields j t (Dom{unDom=(_,tt)}:tl) = do
       let ttGoodDB = raise (j+1) tt
-      vEta <- checkInternal' (etaExpandAction eta) (Var j []) CmpLeq ttGoodDB
-      vParam <- reconstructParameters' (etaExpandAction eta) ttGoodDB vEta
-      dkArg <- translateTerm env vParam
+      vEta <- checkInternal' (etaExpandAction eta True) (Var j []) CmpLeq ttGoodDB
+      vParam <- reconstructParameters' (etaExpandAction eta True) ttGoodDB vEta
+      dkArg <- translateTerm env True vParam
       (`DkApp` dkArg) <$> constructRhsFields (j+1) t tl
 
 etaExpansionDecl :: DkModuleEnv -> QName -> Int -> ConHead -> [Dom QName] -> TCM DkRule
@@ -1111,8 +1123,8 @@ etaExpansionDecl env@(_,eta) n nbPars ConHead{conName = cons} l = do
     unsafeModifyContext separateVars $ do
     -- We do have the information that n is not a copy,
     -- otherwise it would not have gone through compileDef
-    Right nn <- qName2DkName env n
-    Right cc <- qName2DkName env cons
+    Right nn <- qName2DkName env True n
+    Right cc <- qName2DkName env True cons
     y <- (\ctx -> freshStr ctx "y") <$> getContext
     let ty = apply (Def n []) (teleArgs tele)
     s <- checkType' $ El (Inf IsFibrant 0) ty
@@ -1135,7 +1147,7 @@ etaExpansionDecl env@(_,eta) n nbPars ConHead{conName = cons} l = do
     nextIndex acc 0 (_:tl) = nextIndex acc 1 tl
     nextIndex acc j []     = return acc
     nextIndex acc j (_:tl) = do
-      (vj, _) <- extractPattern env (defaultArg $ unnamed $ varP (DBPatVar "_" j))
+      (vj, _) <- extractPattern env True (defaultArg $ unnamed $ varP (DBPatVar "_" j))
                  __DUMMY_TYPE__
       nextIndex (vj:acc) (j+1) tl
     constructRhs :: DkTerm -> [Dom (Name, Type)] -> DkIdent -> TCM DkTerm
@@ -1149,7 +1161,7 @@ etaExpansionDecl env@(_,eta) n nbPars ConHead{conName = cons} l = do
     constructRhsParams' j t (Dom{unDom=(a,ty)}:tl) clo = do
       va <- etaExpansion eta (raise (j+1) ty) (var j)
       vaPar <- reconstructParameters (raise (j+1) ty) va
-      constructRhsParams' (j+1) t tl (\x -> clo =<< (DkApp x <$> translateTerm env vaPar))
+      constructRhsParams' (j+1) t tl (\x -> clo =<< (DkApp x <$> translateTerm env True vaPar))
 
     rightType 0 u = u
     rightType j (El _ (Pi _ b)) = rightType (j-1) (absBody b)
@@ -1162,10 +1174,10 @@ etaExpansionDecl env@(_,eta) n nbPars ConHead{conName = cons} l = do
       reportSDoc "toDk.eta" 35 $ (text "  tyProj" <+>) <$> AP.prettyTCM tyProj
       let tyRes = rightType (nbPars+1) tyProj
       reportSDoc "toDk.eta" 35 $ (text "  tyRes" <+>) <$> AP.prettyTCM tyRes
-      prEta <- checkInternal' (etaExpandAction eta) (Var 0 [Proj ProjSystem u]) CmpLeq tyRes
+      prEta <- checkInternal' (etaExpandAction eta True) (Var 0 [Proj ProjSystem u]) CmpLeq tyRes
       reportSDoc "toDk.eta" 35 $ return $ text "  Eta expansion done"
       reportSDoc "toDk.eta" 35 $ return $ text "    " <> pretty prEta
-      Right prDkName <- qName2DkName env u
+      Right prDkName <- qName2DkName env True u
       prDk <- studyEtaExpansion prEta args prDkName 0 tyRes (\x -> x)
       constructRhsFields (DkApp t prDk) args tl
 
@@ -1175,25 +1187,25 @@ etaExpansionDecl env@(_,eta) n nbPars ConHead{conName = cons} l = do
         then do
           case unArg s of
             Level ss -> do
-              tyRecons <- reconstructParameters' (etaExpandAction eta) (sort (Type ss)) (unArg tyBis)
-              etaCtx <- translateTerm env (Def nam [Apply s,Apply tyBis{unArg=tyRecons}])
+              tyRecons <- reconstructParameters' (etaExpandAction eta True) (sort (Type ss)) (unArg tyBis)
+              etaCtx <- translateTerm env True (Def nam [Apply s,Apply tyBis{unArg=tyRecons}])
               unsafeEscapeContext i $ do
-                v <- translateTerm env (Var 0 [])
+                v <- translateTerm env True (Var 0 [])
                 DkApp etaCtx <$> clo <$> (`DkApp` v) <$> constructRhsParams (DkConst prName) args
             otherwise -> __IMPOSSIBLE__
         else __IMPOSSIBLE__
       Var i _ -> do
-        v <- translateTerm env (Var i [])
+        v <- translateTerm env True (Var i [])
         unsafeEscapeContext i $
           clo <$> (`DkApp` v) <$> constructRhsParams (DkConst prName) args
       Lam _ body -> do
         case unEl tyRes of
           Pi a b -> do
             reportSDoc "toDk.eta" 40 $ return $ text "    We study a Lambda" <+> pretty (unAbs body)
-            El s tDom <- reconstructParametersInType' (etaExpandAction eta) =<< etaExpandType eta (unDom a)
-            dkTDom <- translateTerm env tDom
-            dkL <- lvlOf env s
-            dkS <- extractSort env s
+            El s tDom <- reconstructParametersInType' (etaExpandAction eta True) =<< etaExpandType eta (unDom a)
+            dkTDom <- translateTerm env True tDom
+            dkL <- lvlOf env True s
+            dkS <- extractSort env True s
             addContext (absName body,a) $
               unsafeModifyContext separateVars $ do
               x <- nameOfBV 0
@@ -1212,8 +1224,8 @@ doesNotEtaExpand env@(_,eta) n nbPars ConHead{conName = cons} l = do
     unsafeModifyContext separateVars $ do
     -- We do have the information that n is not a copy,
     -- otherwise it would not have gone through compileDef
-    Right nn <- qName2DkName env n
-    Right cc <- qName2DkName env cons
+    Right nn <- qName2DkName env True n
+    Right cc <- qName2DkName env True cons
     y <- (\ctx -> freshStr ctx "y") <$> getContext
     let ty = apply (Def n []) (teleArgs tele)
     s <- checkType' $ El (Inf IsFibrant 0) ty
@@ -1235,13 +1247,14 @@ doesNotEtaExpand env@(_,eta) n nbPars ConHead{conName = cons} l = do
     nextIndex acc 0 (_:tl) = nextIndex acc 1 tl
     nextIndex acc j []     = return acc
     nextIndex acc j (_:tl) = do
-      (vj, _) <- extractPattern env (defaultArg $ unnamed $ varP (DBPatVar "_" j))
+      (vj, _) <- extractPattern env True (defaultArg $ unnamed $ varP (DBPatVar "_" j))
                  __DUMMY_TYPE__
       nextIndex (vj:acc) (j+1) tl
 
 
-etaExpandAction :: QName -> Action TCM
-etaExpandAction eta = defaultAction { preAction = \y -> etaContractFun , postAction = etaExpansion eta}
+etaExpandAction :: QName -> Bool -> Action TCM
+etaExpandAction eta True = defaultAction { preAction = \y -> etaContractFun , postAction = etaExpansion eta}
+etaExpandAction eta False = defaultAction
 
 etaContractFun :: Term -> TCM Term
 etaContractFun u = case u of

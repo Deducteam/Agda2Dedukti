@@ -22,20 +22,30 @@ translation/dk/tests/%.dk: tests/%.agda
 translation/lp/tests/%.lp: tests/%.agda
 	cd tests && $(EXEC) --dk --lp $(OPTS) --outDir=../$(LP_TEST_DIR) $(<F)
 
+# sometimes using an old .agdai causes some problems
 rm-agdai:
 	cd tests && rm -f *.agdai && cd ..
 
-test-dk: compile rm-agdai $(DKS)
-	cd $(DK_TEST_DIR) && make
+set-eta:
+	$(eval OPTS+= --eta)
 
-test-lp: compile rm-agdai $(LPS)
+test-dk-eta: set-eta compile rm-agdai $(DKS)
+	cd $(DK_TEST_DIR) && make BASE_LOC="-I ../../../theory/dk/eta"
 
+test-dk-noEta: compile rm-agdai $(DKS)
+	cd $(DK_TEST_DIR) && make BASE_LOC="-I ../../../theory/dk/noEta"
+
+test-lp-eta: set-eta compile rm-agdai $(LPS)
+	cd $(LP_TEST_DIR) && make
+
+test-lp-noEta: compile rm-agdai $(LPS)
+	cd $(LP_TEST_DIR) && make
 
 clean-tests-dk:
 	rm $(DK_TEST_DIR)/*.dk* $(DK_TEST_DIR)/.depend
 
 clean-tests-lp:
-	rm $(LP_TEST_DIR)/*.lp* $(LP_TEST_DIR)/.depend
+	rm $(LP_TEST_DIR)/*.lp*
 
 
 NB ?= -1

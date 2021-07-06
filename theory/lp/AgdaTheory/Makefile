@@ -1,5 +1,5 @@
 .POSIX:
-SRC = Base.lp Levels.lp
+SRC = Levels.lp noEta/Base.lp eta/Base.lp
 OBJ = $(SRC:.lp=.lpo)
 .SUFFIXES:
 
