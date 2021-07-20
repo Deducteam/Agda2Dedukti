@@ -1,6 +1,0 @@
-{|!TYPE__⊤|} : Type.
-{|!⊤|} : Agda.Term (Agda.set (univ.s univ.0)) (Agda.code (Agda.set univ.0)).
-[] Agda.Term _ {|!⊤|} --> {|!TYPE__⊤|}.
-tt : Agda.Term (Agda.set univ.0) {|!⊤|}.
-
-

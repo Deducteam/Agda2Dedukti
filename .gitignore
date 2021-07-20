@@ -5,9 +5,13 @@
 #*
 .#*
 *.dko
+*.dk
+*.lp
 *.lpo
 !theory/*.dko
 !theory/*.lpo
+!translation/lp/Agda__Primitive-eta.lp
+!translation/lp/Agda__Primitive-noEta.lp
 
 # normally very big file
 src/Main

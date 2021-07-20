@@ -1,3 +1,0 @@
-def idpoly : Agda.Term Agda.sortOmega (Agda.qLevel (n => Agda.set (univ.s n)) (n => Agda.prod (Agda.set (univ.s n)) (Agda.set n) (Agda.code (Agda.set n)) (A => (Agda.prod (Agda.set n) (Agda.set n) A (_0 => A))))).
-[n, A, x] idpoly n A x --> Agda.etaExpand n A x.
- 

@@ -1,3 +1,0 @@
-def tet : Agda.Term (Agda.set (univ.s (univ.s univ.0))) (Agda.prod (Agda.set univ.0) (Agda.set (univ.s (univ.s univ.0))) Agda__Primitive.Level (i => (Agda.code (Agda.set (univ.s univ.0))))).
-[i] tet i --> Agda.code (Agda.set univ.0).
- 

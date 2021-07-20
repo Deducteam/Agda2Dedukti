@@ -1,3 +1,0 @@
-def tet2 : Agda.Term Agda.sortOmega (Agda.qLevel (i => Agda.sortOmega) (i => Agda.qLevel (j => Agda.set (univ.max univ.0 (univ.max (univ.s (univ.s i)) (univ.s (univ.s j))))) (j => Agda.code (Agda.set (univ.max univ.0 (univ.max (univ.s i) (univ.s j))))))).
-[i, j] tet2 i j --> Agda.code (Agda.set (univ.max univ.0 (univ.max i j))).
- 

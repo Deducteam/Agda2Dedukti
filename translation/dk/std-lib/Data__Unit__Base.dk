@@ -1,6 +1,0 @@
-{|!TYPE___≤_|} : (x : Agda.Term (Agda.set univ.0) Agda__Builtin__Unit.{|!⊤|}) -> (y : Agda.Term (Agda.set univ.0) Agda__Builtin__Unit.{|!⊤|}) -> Type.
-{|!_≤_|} : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set univ.0) (Agda.set (univ.s univ.0)) Agda__Builtin__Unit.{|!⊤|} (x => (Agda.prod (Agda.set univ.0) (Agda.set (univ.s univ.0)) Agda__Builtin__Unit.{|!⊤|} (y => (Agda.code (Agda.set univ.0)))))).
-[x, y] Agda.Term _ ({|!_≤_|} x y) --> {|!TYPE___≤_|} x y.
-{|!_≤_'constructor|} : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Unit.{|!⊤|} (x => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Unit.{|!⊤|} (y => ({|!_≤_|} x y))))).
-
-

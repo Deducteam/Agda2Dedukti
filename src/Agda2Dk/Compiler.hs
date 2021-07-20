@@ -326,14 +326,23 @@ extractStaticity _ (AbstractDefn {})    = return Static
 extractRules :: DkModuleEnv -> EtaMode -> QName -> Defn -> Type -> TCM [DkRule]
 extractRules env etaMode n (funDef@Function {}) ty =
   do
+    -- if this is an alias function, it does not go through the covering checker,
+    -- the only way to know if this is the case is to check if funCovering is empty
+    -- and funClauses is not
+    let getFunCovering = 
+          if (length (funCovering funDef) == 0 && length (funClauses funDef) /= 0)
+          then funClauses funDef 
+          else funCovering funDef
+                           
+    
     -- gets the clauses to be translated
     clauses <- case funProjection funDef of
         Nothing -> do
         -- not a projection, we get the clauses after the covering checker          
           reportSDoc "toDk.clause" 20 $
             (text " taking clauses from funCovering : " <+>) <$>
-            (return $ pretty $ funCovering funDef )            
-          return $ funCovering funDef          
+            (return $ pretty $ getFunCovering )            
+          return $ getFunCovering  
         Just proj  -> case projProper proj of
         -- this function is projection-like, but is it a real projection
         -- from a record?
@@ -341,8 +350,8 @@ extractRules env etaMode n (funDef@Function {}) ty =
         -- not a record projection, we get clauses from funCovering
             reportSDoc "toDk.clause" 20 $
               (text " taking clauses from funCovering : " <+>) <$>
-              (return $ pretty $ funCovering funDef )            
-            return $ funCovering funDef
+              (return $ pretty $ getFunCovering )            
+            return $ getFunCovering
           Just _ -> do
         -- record projection, we take funClauses because projections don't go
         -- trought the covering checker          
@@ -353,6 +362,7 @@ extractRules env etaMode n (funDef@Function {}) ty =
 
     l  <- mapM (clause2rule env etaMode n) clauses
     return $ catMaybes l
+
 extractRules env etaMode n (Datatype {dataCons=cons, dataClause=dataClauses, dataPars=i, dataIxs=j}) ty=
   do
     l <- case dataClauses of

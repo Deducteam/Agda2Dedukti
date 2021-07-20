@@ -1,6 +1,0 @@
-def max : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Nat.Nat (_0 => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Nat.Nat (_0 => Agda__Builtin__Nat.Nat)))).
-[] max Agda__Builtin__Nat.Nat__zero Agda__Builtin__Nat.Nat__zero --> Agda.etaExpand univ.0 Agda__Builtin__Nat.Nat Agda__Builtin__Nat.Nat__zero.
-[x] max Agda__Builtin__Nat.Nat__zero (Agda__Builtin__Nat.Nat__suc x) --> Agda.etaExpand univ.0 Agda__Builtin__Nat.Nat (Agda__Builtin__Nat.Nat__suc (Agda.etaExpand univ.0 Agda__Builtin__Nat.Nat x)).
-[x] max (Agda__Builtin__Nat.Nat__suc x) Agda__Builtin__Nat.Nat__zero --> Agda.etaExpand univ.0 Agda__Builtin__Nat.Nat (Agda__Builtin__Nat.Nat__suc (Agda.etaExpand univ.0 Agda__Builtin__Nat.Nat x)).
-[x0, x] max (Agda__Builtin__Nat.Nat__suc x0) (Agda__Builtin__Nat.Nat__suc x) --> Agda.etaExpand univ.0 Agda__Builtin__Nat.Nat (Agda__Builtin__Nat.Nat__suc (Agda.etaExpand univ.0 Agda__Builtin__Nat.Nat (max (Agda.etaExpand univ.0 Agda__Builtin__Nat.Nat x0) (Agda.etaExpand univ.0 Agda__Builtin__Nat.Nat x)))).
- 

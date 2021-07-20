@@ -1,3 +1,0 @@
-def fun : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set univ.0) (Agda.code (Agda.set univ.0)) (A => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) A (x => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) A (_0 => A)))))).
-[A, x0, x] fun A x0 x --> Agda.etaExpand univ.0 A x.
- 

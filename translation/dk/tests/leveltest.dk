@@ -1,3 +1,0 @@
-def id : Agda.Term Agda.sortOmega (Agda.qLevel (i => Agda.set (univ.s i)) (i => Agda.prod (Agda.set (univ.s i)) (Agda.set i) (Agda.code (Agda.set i)) (A => (Agda.prod (Agda.set i) (Agda.set i) A (_0 => A))))).
-[i, A, x] id i A x --> Agda.etaExpand i A x.
- 

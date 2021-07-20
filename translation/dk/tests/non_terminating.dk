@@ -1,3 +1,0 @@
-def f : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set univ.0) (Agda.code (Agda.set univ.0)) (A => A)).
-[A] f A --> Agda.etaExpand univ.0 A (f A).
- 
