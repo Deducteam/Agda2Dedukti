@@ -1,0 +1,18 @@
+String : Agda.Term (Agda.set (univ.s univ.0)) (Agda.code (Agda.set univ.0)).
+
+def primStringUncons : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) String (_0 => (Agda__Builtin__Maybe.Maybe univ.0 (Agda__Builtin__Sigma.{|!Σ|} univ.0 univ.0 Agda__Builtin__Char.Char (_0 => String))))).
+
+def primStringToList : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) String (_0 => (Agda__Builtin__List.List univ.0 Agda__Builtin__Char.Char))).
+
+def primStringFromList : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) (Agda__Builtin__List.List univ.0 Agda__Builtin__Char.Char) (_0 => String)).
+
+def primStringAppend : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) String (_0 => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) String (_0 => String)))).
+
+def primStringEquality : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) String (_0 => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) String (_0 => Agda__Builtin__Bool.Bool)))).
+
+def primShowChar : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Char.Char (_0 => String)).
+
+def primShowString : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) String (_0 => String)).
+
+def primShowNat : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Nat.Nat (_0 => String)).
+

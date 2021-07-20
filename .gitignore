@@ -9,7 +9,6 @@
 !theory/*.dko
 !theory/*.lpo
 
-
 # normally very big file
 src/Main
 

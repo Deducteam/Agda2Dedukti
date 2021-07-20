@@ -1,6 +1,0 @@
-def {|⊤|} : Agda.Term Agda.sortOmega (Agda.qLevel ({|ℓ|} => Agda.set (univ.s {|ℓ|})) ({|ℓ|} => Agda.code (Agda.set {|ℓ|}))).
-[{|ℓ|}] {|⊤|} {|ℓ|} --> Level.Lift univ.0 {|ℓ|} Agda__Builtin__Unit.{|⊤|}.
- 
-def tt : Agda.Term Agda.sortOmega (Agda.qLevel ({|ℓ|} => Agda.set {|ℓ|}) ({|ℓ|} => {|⊤|} {|ℓ|})).
-[{|ℓ|}] tt {|ℓ|} --> Agda.etaExpand {|ℓ|} ({|⊤|} {|ℓ|}) (Level.lift univ.0 {|ℓ|} Agda__Builtin__Unit.{|⊤|} (Agda.etaExpand univ.0 Agda__Builtin__Unit.{|⊤|} Agda__Builtin__Unit.tt)).
- 

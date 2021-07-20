@@ -1,0 +1,3 @@
+def {|!≤-pred|} : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Nat.Nat (m => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Nat.Nat (n => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) (Data__Nat__Base.{|!_≤_|} (Agda__Builtin__Nat.Nat__suc m) (Agda__Builtin__Nat.Nat__suc n)) (_0 => (Data__Nat__Base.{|!_≤_|} m n))))))).
+[m, n, x] {|!≤-pred|} m n (Data__Nat__Base.{|!_≤___s≤s|} m n x) --> x.
+ 

@@ -1,0 +1,32 @@
+{|!TYPE__Coℕ|} : Type.
+{|!Coℕ|} : Agda.Term (Agda.set (univ.s univ.0)) (Agda.code (Agda.set univ.0)).
+[] Agda.Term _ {|!Coℕ|} --> {|!TYPE__Coℕ|}.
+{|!Coℕ__zero|} : Agda.Term (Agda.set univ.0) {|!Coℕ|}.
+{|!Coℕ__suc|} : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) (Agda__Builtin__Coinduction.{|!∞|} univ.0 {|!Coℕ|}) (n => {|!Coℕ|})).
+
+
+
+def {|!∞ℕ|} : Agda.Term (Agda.set univ.0) {|!Coℕ|}.
+def {|!___♯-0|} : Agda.Term (Agda.set univ.0) (Agda__Builtin__Coinduction.{|!∞|} univ.0 {|!Coℕ|}).
+[] {|!∞ℕ|} --> {|!Coℕ__suc|} {|!___♯-0|}.
+ 
+[] Agda__Builtin__Coinduction.{|!♭|} {univ.0} {{|!Coℕ|}} {|!___♯-0|} --> {|!∞ℕ|}.
+ 
+def pred : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) {|!Coℕ|} (_0 => {|!Coℕ|})).
+[] pred {|!Coℕ__zero|} --> {|!Coℕ__zero|}.
+[n] pred ({|!Coℕ__suc|} n) --> Agda__Builtin__Coinduction.{|!♭|} univ.0 {|!Coℕ|} n.
+ 
+def {|!fromℕ|} : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Nat.Nat (_0 => {|!Coℕ|})).
+def {|!___♯-1|} : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Nat.Nat (n => (Agda__Builtin__Coinduction.{|!∞|} univ.0 {|!Coℕ|}))).
+[] {|!fromℕ|} Agda__Builtin__Nat.Nat__zero --> {|!Coℕ__zero|}.
+[x] {|!fromℕ|} (Agda__Builtin__Nat.Nat__suc x) --> {|!Coℕ__suc|} ({|!___♯-1|} x).
+ 
+[n] Agda__Builtin__Coinduction.{|!♭|} {univ.0} {{|!Coℕ|}} ({|!___♯-1|} n) --> {|!fromℕ|} n.
+ 
+def {|!_+_|} : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) {|!Coℕ|} (_0 => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) {|!Coℕ|} (_0 => {|!Coℕ|})))).
+def {|!___♯-2|} : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) (Agda__Builtin__Coinduction.{|!∞|} univ.0 {|!Coℕ|}) (m => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) {|!Coℕ|} (n => (Agda__Builtin__Coinduction.{|!∞|} univ.0 {|!Coℕ|}))))).
+[x] {|!_+_|} {|!Coℕ__zero|} x --> x.
+[n, x] {|!_+_|} ({|!Coℕ__suc|} n) x --> {|!Coℕ__suc|} ({|!___♯-2|} n x).
+ 
+[m, n] Agda__Builtin__Coinduction.{|!♭|} {univ.0} {{|!Coℕ|}} ({|!___♯-2|} m n) --> {|!_+_|} (Agda__Builtin__Coinduction.{|!♭|} univ.0 {|!Coℕ|} m) n.
+ 

@@ -1,4 +1,4 @@
-require open AgdaTheory.noEta.Base;
+require open AgdaTheory.eta.Base;
 require open AgdaTheory.Levels;
 
 require tests.Agda__Builtin__Nat as Agda__Builtin__Nat;
@@ -8,10 +8,11 @@ rule El _ r ↪ TYPE__r;
 symbol r__n : El (set (s 0ₙ z)) (⇝proj (set (s 0ₙ z)) (set (s 0ₙ z)) r (λ r, Agda__Builtin__Nat.Nat));
 symbol r__m : El (set (s 0ₙ z)) (⇝proj (set (s 0ₙ z)) (set (s 0ₙ z)) r (λ r, Agda__Builtin__Nat.Nat));
 constant symbol cons : El (set (s 0ₙ z)) (⇝ (set (s 0ₙ z)) (set (s 0ₙ z)) Agda__Builtin__Nat.Nat (λ n, (⇝ (set (s 0ₙ z)) (set (s 0ₙ z)) Agda__Builtin__Nat.Nat (λ m, r))));
-
-rule r__n (cons $n $m) ↪ $n;
+rule η _ r $y ↪ cons (η (s 0ₙ z) Agda__Builtin__Nat.Nat (r__n $y)) (η (s 0ₙ z) Agda__Builtin__Nat.Nat (r__m $y));
  
-rule r__m (cons $n $m) ↪ $m;
+rule r__n (cons $n $m) ↪ η (s 0ₙ z) Agda__Builtin__Nat.Nat $n;
+ 
+rule r__m (cons $n $m) ↪ η (s 0ₙ z) Agda__Builtin__Nat.Nat $m;
  
 
 constant symbol TYPE__rr : Π A : El (set (s (sₙ 0ₙ) z)) (⋄ (set (s 0ₙ z))), TYPE;
@@ -19,7 +20,8 @@ constant symbol rr : El (set (s (sₙ 0ₙ) z)) (⇝ (set (s (sₙ 0ₙ) z)) (se
 rule El _ (rr $A) ↪ TYPE__rr $A;
 symbol rr__nn : El (set (s (sₙ 0ₙ) z)) (⇝ (set (s (sₙ 0ₙ) z)) (set (s 0ₙ z)) (⋄ (set (s 0ₙ z))) (λ A, (⇝proj (set (s 0ₙ z)) (set (s 0ₙ z)) (rr A) (λ r, A))));
 constant symbol conss : El (set (s (sₙ 0ₙ) z)) (⇝ (set (s (sₙ 0ₙ) z)) (set (s 0ₙ z)) (⋄ (set (s 0ₙ z))) (λ A, (⇝ (set (s 0ₙ z)) (set (s 0ₙ z)) A (λ nn, (rr A)))));
-
-rule rr__nn $A (conss _ $nn) ↪ $nn;
+rule η _ (rr $A) $y ↪ conss $A (η (s 0ₙ z) $A (rr__nn $A $y));
+ 
+rule rr__nn $A (conss _ $nn) ↪ η (s 0ₙ z) $A $nn;
  
 

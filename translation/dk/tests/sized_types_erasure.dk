@@ -1,14 +1,14 @@
 def boolOr : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Bool.Bool (_0 => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Bool.Bool (_0 => Agda__Builtin__Bool.Bool)))).
-[x] boolOr Agda__Builtin__Bool.Bool__false x --> x.
-[x] boolOr Agda__Builtin__Bool.Bool__true x --> Agda__Builtin__Bool.Bool__true.
+[x] boolOr Agda__Builtin__Bool.Bool__false x --> Agda.etaExpand univ.0 Agda__Builtin__Bool.Bool x.
+[x] boolOr Agda__Builtin__Bool.Bool__true x --> Agda.etaExpand univ.0 Agda__Builtin__Bool.Bool Agda__Builtin__Bool.Bool__true.
  
 def boolAnd : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Bool.Bool (_0 => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Bool.Bool (_0 => Agda__Builtin__Bool.Bool)))).
-[x] boolAnd Agda__Builtin__Bool.Bool__false x --> Agda__Builtin__Bool.Bool__false.
-[x] boolAnd Agda__Builtin__Bool.Bool__true x --> x.
+[x] boolAnd Agda__Builtin__Bool.Bool__false x --> Agda.etaExpand univ.0 Agda__Builtin__Bool.Bool Agda__Builtin__Bool.Bool__false.
+[x] boolAnd Agda__Builtin__Bool.Bool__true x --> Agda.etaExpand univ.0 Agda__Builtin__Bool.Bool x.
  
 def if_then_else_ : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set univ.0) (Agda.code (Agda.set univ.0)) (A => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Bool.Bool (_0 => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) A (_0 => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) A (_0 => A)))))))).
-[A, x0, x] if_then_else_ A Agda__Builtin__Bool.Bool__false x0 x --> x.
-[A, x0, x] if_then_else_ A Agda__Builtin__Bool.Bool__true x0 x --> x0.
+[A, x0, x] if_then_else_ A Agda__Builtin__Bool.Bool__false x0 x --> Agda.etaExpand univ.0 A x.
+[A, x0, x] if_then_else_ A Agda__Builtin__Bool.Bool__true x0 x --> Agda.etaExpand univ.0 A x0.
  
 TYPE__Lang : (A : Agda.Term (Agda.set (univ.s univ.0)) (Agda.code (Agda.set univ.0))) -> Type.
 Lang : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set (univ.s univ.0)) (Agda.code (Agda.set univ.0)) (A => (Agda.code (Agda.set univ.0)))).
@@ -16,33 +16,34 @@ Lang : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set (univ.s univ.0)
 def {|!Lang__ν|} : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set univ.0) (Agda.code (Agda.set univ.0)) (A => (Agda.proj_prod (Agda.set univ.0) (Agda.set univ.0) (Lang A) (r => Agda__Builtin__Bool.Bool)))).
 def {|!Lang__δ|} : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set univ.0) (Agda.code (Agda.set univ.0)) (A => (Agda.proj_prod (Agda.set univ.0) (Agda.set univ.0) (Lang A) (r => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) A (_0 => (Lang A))))))).
 {|!Lang'constructor|} : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set univ.0) (Agda.code (Agda.set univ.0)) (A => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Bool.Bool ({|!ν|} => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) A (_0 => (Lang A))) ({|!δ|} => (Lang A))))))).
-
-[A, {|!ν|}, {|!δ|}] {|!Lang__ν|} A ({|!Lang'constructor|} A {|!ν|} {|!δ|}) --> {|!ν|}.
+[A, y] Agda.etaExpand _ (Lang A) y --> y.
  
-[A, {|!ν|}, {|!δ|}] {|!Lang__δ|} A ({|!Lang'constructor|} A {|!ν|} {|!δ|}) --> {|!δ|}.
+[A, {|!ν|}, {|!δ|}] {|!Lang__ν|} A ({|!Lang'constructor|} A {|!ν|} {|!δ|}) --> Agda.etaExpand univ.0 Agda__Builtin__Bool.Bool {|!ν|}.
+ 
+[A, {|!ν|}, {|!δ|}] {|!Lang__δ|} A ({|!Lang'constructor|} A {|!ν|} {|!δ|}) --> _0 => {|!δ|} (Agda.etaExpand univ.0 A _0).
  
 
 def {|!∅|} : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set univ.0) (Agda.code (Agda.set univ.0)) (A => (Lang A))).
-[A] {|!Lang__ν|} A ({|!∅|} A) --> Agda__Builtin__Bool.Bool__false.
+[A] {|!Lang__ν|} A ({|!∅|} A) --> Agda.etaExpand univ.0 Agda__Builtin__Bool.Bool Agda__Builtin__Bool.Bool__false.
 [A, x] {|!Lang__δ|} A ({|!∅|} A) x --> {|!∅|} A.
  
 def {|!ε|} : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set univ.0) (Agda.code (Agda.set univ.0)) (A => (Lang A))).
-[A] {|!Lang__ν|} A ({|!ε|} A) --> Agda__Builtin__Bool.Bool__true.
+[A] {|!Lang__ν|} A ({|!ε|} A) --> Agda.etaExpand univ.0 Agda__Builtin__Bool.Bool Agda__Builtin__Bool.Bool__true.
 [A, x] {|!Lang__δ|} A ({|!ε|} A) x --> {|!∅|} A.
  
 def {|!_+_|} : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set univ.0) (Agda.code (Agda.set univ.0)) (A => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) (Lang A) (_0 => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) (Lang A) (_0 => (Lang A))))))).
-[A, x0, x] {|!Lang__ν|} A ({|!_+_|} A x0 x) --> boolOr ({|!Lang__ν|} A x0) ({|!Lang__ν|} A x).
-[A, x1, x0, x] {|!Lang__δ|} A ({|!_+_|} A x1 x0) x --> {|!_+_|} A ({|!Lang__δ|} A x1 x) ({|!Lang__δ|} A x0 x).
+[A, x0, x] {|!Lang__ν|} A ({|!_+_|} A x0 x) --> Agda.etaExpand univ.0 Agda__Builtin__Bool.Bool (boolOr (Agda.etaExpand univ.0 Agda__Builtin__Bool.Bool ({|!Lang__ν|} A x0)) (Agda.etaExpand univ.0 Agda__Builtin__Bool.Bool ({|!Lang__ν|} A x))).
+[A, x1, x0, x] {|!Lang__δ|} A ({|!_+_|} A x1 x0) x --> {|!_+_|} A ({|!Lang__δ|} A x1 (Agda.etaExpand univ.0 A x)) ({|!Lang__δ|} A x0 (Agda.etaExpand univ.0 A x)).
  
 def {|!_·_|} : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set univ.0) (Agda.code (Agda.set univ.0)) (A => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) (Lang A) (_0 => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) (Lang A) (_0 => (Lang A))))))).
-[A, x0, x] {|!Lang__ν|} A ({|!_·_|} A x0 x) --> boolAnd ({|!Lang__ν|} A x0) ({|!Lang__ν|} A x).
-[A, x1, x0, x] {|!Lang__δ|} A ({|!_·_|} A x1 x0) x --> if_then_else_ (Lang A) ({|!Lang__ν|} A x1) ({|!_+_|} A ({|!_·_|} A ({|!Lang__δ|} A x1 x) x0) ({|!Lang__δ|} A x0 x)) ({|!_·_|} A ({|!Lang__δ|} A x1 x) x0).
+[A, x0, x] {|!Lang__ν|} A ({|!_·_|} A x0 x) --> Agda.etaExpand univ.0 Agda__Builtin__Bool.Bool (boolAnd (Agda.etaExpand univ.0 Agda__Builtin__Bool.Bool ({|!Lang__ν|} A x0)) (Agda.etaExpand univ.0 Agda__Builtin__Bool.Bool ({|!Lang__ν|} A x))).
+[A, x1, x0, x] {|!Lang__δ|} A ({|!_·_|} A x1 x0) x --> if_then_else_ (Lang A) (Agda.etaExpand univ.0 Agda__Builtin__Bool.Bool ({|!Lang__ν|} A x1)) ({|!_+_|} A ({|!_·_|} A ({|!Lang__δ|} A x1 (Agda.etaExpand univ.0 A x)) x0) ({|!Lang__δ|} A x0 (Agda.etaExpand univ.0 A x))) ({|!_·_|} A ({|!Lang__δ|} A x1 (Agda.etaExpand univ.0 A x)) x0).
  
 def {|!_*|} : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set univ.0) (Agda.code (Agda.set univ.0)) (A => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) (Lang A) (_0 => (Lang A))))).
-[A, x] {|!Lang__ν|} A ({|!_*|} A x) --> Agda__Builtin__Bool.Bool__true.
-[A, x0, x] {|!Lang__δ|} A ({|!_*|} A x0) x --> {|!_·_|} A ({|!Lang__δ|} A x0 x) ({|!_*|} A x0).
+[A, x] {|!Lang__ν|} A ({|!_*|} A x) --> Agda.etaExpand univ.0 Agda__Builtin__Bool.Bool Agda__Builtin__Bool.Bool__true.
+[A, x0, x] {|!Lang__δ|} A ({|!_*|} A x0) x --> {|!_·_|} A ({|!Lang__δ|} A x0 (Agda.etaExpand univ.0 A x)) ({|!_*|} A x0).
  
 def {|!_∈_|} : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set univ.0) (Agda.code (Agda.set univ.0)) (A => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) (Agda__Builtin__List.List univ.0 A) (_0 => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) (Lang A) (_0 => Agda__Builtin__Bool.Bool)))))).
-[A, x] {|!_∈_|} A (Agda__Builtin__List.{|!List__[]|} {univ.0} A) x --> {|!Lang__ν|} A x.
-[A, x1, x0, x] {|!_∈_|} A (Agda__Builtin__List.{|!List___∷_|} {univ.0} A x1 x0) x --> {|!_∈_|} A x0 ({|!Lang__δ|} A x x1).
+[A, x] {|!_∈_|} A (Agda__Builtin__List.{|!List__[]|} {univ.0} A) x --> Agda.etaExpand univ.0 Agda__Builtin__Bool.Bool ({|!Lang__ν|} A x).
+[A, x1, x0, x] {|!_∈_|} A (Agda__Builtin__List.{|!List___∷_|} {univ.0} A x1 x0) x --> Agda.etaExpand univ.0 Agda__Builtin__Bool.Bool ({|!_∈_|} A (Agda.etaExpand univ.0 (Agda__Builtin__List.List univ.0 A) x0) ({|!Lang__δ|} A x (Agda.etaExpand univ.0 A x1))).
  

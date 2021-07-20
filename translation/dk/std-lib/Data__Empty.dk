@@ -1,6 +1,6 @@
-{|TYPE__⊥|} : Type.
-{|⊥|} : Agda.Term (Agda.set (univ.s univ.0)) (Agda.code (Agda.set univ.0)).
-[] Agda.Term _ {|⊥|} --> {|TYPE__⊥|}.
+{|!TYPE__⊥|} : Type.
+{|!⊥|} : Agda.Term (Agda.set (univ.s univ.0)) (Agda.code (Agda.set univ.0)).
+[] Agda.Term _ {|!⊥|} --> {|!TYPE__⊥|}.
 
-def {|⊥-elim|} : Agda.Term Agda.sortOmega (Agda.qLevel (w => Agda.set (univ.s w)) (w => Agda.prod (Agda.set (univ.s w)) (Agda.set w) (Agda.code (Agda.set w)) (Whatever => (Agda.prod (Agda.set univ.0) (Agda.set w) {|⊥|} (_0 => Whatever))))).
+def {|!⊥-elim|} : Agda.Term Agda.sortOmega (Agda.qLevel (w => Agda.set (univ.s w)) (w => Agda.prod (Agda.set (univ.s w)) (Agda.set w) (Agda.code (Agda.set w)) (Whatever => (Agda.prod (Agda.set univ.0) (Agda.set w) {|!⊥|} (_0 => Whatever))))).
 

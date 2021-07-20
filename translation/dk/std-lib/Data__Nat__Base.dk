@@ -1,0 +1,154 @@
+def {|!_≤ᵇ_|} : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Nat.Nat (m => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Nat.Nat (n => Agda__Builtin__Bool.Bool)))).
+[n] {|!_≤ᵇ_|} Agda__Builtin__Nat.Nat__zero n --> Agda__Builtin__Bool.Bool__true.
+[m, n] {|!_≤ᵇ_|} (Agda__Builtin__Nat.Nat__suc m) n --> Agda__Builtin__Nat.{|!_<_|} m n.
+ 
+{|!TYPE___≤_|} : (_0 : Agda.Term (Agda.set univ.0) Agda__Builtin__Nat.Nat) -> (_0 : Agda.Term (Agda.set univ.0) Agda__Builtin__Nat.Nat) -> Type.
+{|!_≤_|} : Agda.Term (Agda.set (univ.s Level.{|!0ℓ|})) (Agda.prod (Agda.set univ.0) (Agda.set (univ.s Level.{|!0ℓ|})) Agda__Builtin__Nat.Nat (_0 => (Agda.prod (Agda.set univ.0) (Agda.set (univ.s Level.{|!0ℓ|})) Agda__Builtin__Nat.Nat (_0 => (Agda.code (Agda.set univ.0)))))).
+[x0, x] Agda.Term _ ({|!_≤_|} x0 x) --> {|!TYPE___≤_|} x0 x.
+{|!_≤___z≤n|} : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Nat.Nat (n => ({|!_≤_|} Agda__Builtin__Nat.Nat__zero n))).
+{|!_≤___s≤s|} : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Nat.Nat (m => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Nat.Nat (n => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) ({|!_≤_|} m n) ({|!m≤n|} => ({|!_≤_|} (Agda__Builtin__Nat.Nat__suc m) (Agda__Builtin__Nat.Nat__suc n)))))))).
+
+
+
+def {|!_<_|} : Agda.Term (Agda.set (univ.s univ.0)) (Relation__Binary__Core.Rel univ.0 Agda__Builtin__Nat.Nat Level.{|!0ℓ|}).
+[x0, x] {|!_<_|} x0 x --> {|!_≤_|} (Agda__Builtin__Nat.Nat__suc x0) x.
+ 
+def {|!_≥_|} : Agda.Term (Agda.set (univ.s univ.0)) (Relation__Binary__Core.Rel univ.0 Agda__Builtin__Nat.Nat Level.{|!0ℓ|}).
+[x0, x] {|!_≥_|} x0 x --> {|!_≤_|} x x0.
+ 
+def {|!_>_|} : Agda.Term (Agda.set (univ.s univ.0)) (Relation__Binary__Core.Rel univ.0 Agda__Builtin__Nat.Nat Level.{|!0ℓ|}).
+[x0, x] {|!_>_|} x0 x --> {|!_<_|} x x0.
+ 
+def {|!_≰_|} : Agda.Term (Agda.set (univ.s univ.0)) (Relation__Binary__Core.Rel univ.0 Agda__Builtin__Nat.Nat Level.{|!0ℓ|}).
+[x0, x] {|!_≰_|} x0 x --> Relation__Nullary.{|!¬_|} univ.0 ({|!_≤_|} x0 x).
+ 
+def {|!_≮_|} : Agda.Term (Agda.set (univ.s univ.0)) (Relation__Binary__Core.Rel univ.0 Agda__Builtin__Nat.Nat Level.{|!0ℓ|}).
+[x0, x] {|!_≮_|} x0 x --> Relation__Nullary.{|!¬_|} univ.0 ({|!_<_|} x0 x).
+ 
+def {|!_≱_|} : Agda.Term (Agda.set (univ.s univ.0)) (Relation__Binary__Core.Rel univ.0 Agda__Builtin__Nat.Nat Level.{|!0ℓ|}).
+[x0, x] {|!_≱_|} x0 x --> Relation__Nullary.{|!¬_|} univ.0 ({|!_≥_|} x0 x).
+ 
+def {|!_≯_|} : Agda.Term (Agda.set (univ.s univ.0)) (Relation__Binary__Core.Rel univ.0 Agda__Builtin__Nat.Nat Level.{|!0ℓ|}).
+[x0, x] {|!_≯_|} x0 x --> Relation__Nullary.{|!¬_|} univ.0 ({|!_>_|} x0 x).
+ 
+def NonZero : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set univ.0) (Agda.set (univ.s univ.0)) Agda__Builtin__Nat.Nat (_0 => (Agda.code (Agda.set univ.0)))).
+[] NonZero Agda__Builtin__Nat.Nat__zero --> Data__Empty.{|!⊥|}.
+[x] NonZero (Agda__Builtin__Nat.Nat__suc x) --> Agda__Builtin__Unit.{|!⊤|}.
+ 
+def {|!≢-nonZero|} : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Nat.Nat (n => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) (Relation__Binary__PropositionalEquality__Core.{|!_≢_|} univ.0 Agda__Builtin__Nat.Nat n Agda__Builtin__Nat.Nat__zero) (_0 => (NonZero n))))).
+[x] {|!≢-nonZero|} Agda__Builtin__Nat.Nat__zero x --> x (Agda__Builtin__Equality.{|!_≡___refl|} univ.0 Agda__Builtin__Nat.Nat Agda__Builtin__Nat.Nat__zero).
+[n, x] {|!≢-nonZero|} (Agda__Builtin__Nat.Nat__suc n) x --> Agda__Builtin__Unit.tt.
+ 
+def {|!>-nonZero|} : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Nat.Nat (n => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) ({|!_>_|} n Agda__Builtin__Nat.Nat__zero) (_0 => (NonZero n))))).
+[n, x] {|!>-nonZero|} (Agda__Builtin__Nat.Nat__suc n) ({|!_≤___s≤s|} {Agda__Builtin__Nat.Nat__zero} n x) --> Agda__Builtin__Unit.tt.
+ 
+def pred : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Nat.Nat (_0 => Agda__Builtin__Nat.Nat)).
+[x] pred x --> Agda__Builtin__Nat.{|!_-_|} x (Agda__Builtin__Nat.Nat__suc Agda__Builtin__Nat.Nat__zero).
+ 
+def {|!_+⋎_|} : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Nat.Nat (_0 => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Nat.Nat (_0 => Agda__Builtin__Nat.Nat)))).
+[x] {|!_+⋎_|} Agda__Builtin__Nat.Nat__zero x --> x.
+[x0, x] {|!_+⋎_|} (Agda__Builtin__Nat.Nat__suc x0) x --> Agda__Builtin__Nat.Nat__suc ({|!_+⋎_|} x x0).
+ 
+def {|!_⊔_|} : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Nat.Nat (_0 => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Nat.Nat (_0 => Agda__Builtin__Nat.Nat)))).
+[x] {|!_⊔_|} Agda__Builtin__Nat.Nat__zero x --> x.
+[x] {|!_⊔_|} (Agda__Builtin__Nat.Nat__suc x) Agda__Builtin__Nat.Nat__zero --> Agda__Builtin__Nat.Nat__suc x.
+[x0, x] {|!_⊔_|} (Agda__Builtin__Nat.Nat__suc x0) (Agda__Builtin__Nat.Nat__suc x) --> Agda__Builtin__Nat.Nat__suc ({|!_⊔_|} x0 x).
+ 
+def {|!_⊓_|} : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Nat.Nat (_0 => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Nat.Nat (_0 => Agda__Builtin__Nat.Nat)))).
+[x] {|!_⊓_|} Agda__Builtin__Nat.Nat__zero x --> Agda__Builtin__Nat.Nat__zero.
+[x] {|!_⊓_|} (Agda__Builtin__Nat.Nat__suc x) Agda__Builtin__Nat.Nat__zero --> Agda__Builtin__Nat.Nat__zero.
+[x0, x] {|!_⊓_|} (Agda__Builtin__Nat.Nat__suc x0) (Agda__Builtin__Nat.Nat__suc x) --> Agda__Builtin__Nat.Nat__suc ({|!_⊓_|} x0 x).
+ 
+def {|!⌊_/2⌋|} : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Nat.Nat (_0 => Agda__Builtin__Nat.Nat)).
+[] {|!⌊_/2⌋|} Agda__Builtin__Nat.Nat__zero --> Agda__Builtin__Nat.Nat__zero.
+[] {|!⌊_/2⌋|} (Agda__Builtin__Nat.Nat__suc Agda__Builtin__Nat.Nat__zero) --> Agda__Builtin__Nat.Nat__zero.
+[x] {|!⌊_/2⌋|} (Agda__Builtin__Nat.Nat__suc (Agda__Builtin__Nat.Nat__suc x)) --> Agda__Builtin__Nat.Nat__suc ({|!⌊_/2⌋|} x).
+ 
+def {|!⌈_/2⌉|} : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Nat.Nat (_0 => Agda__Builtin__Nat.Nat)).
+[x] {|!⌈_/2⌉|} x --> {|!⌊_/2⌋|} (Agda__Builtin__Nat.Nat__suc x).
+ 
+def {|!_^_|} : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Nat.Nat (_0 => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Nat.Nat (_0 => Agda__Builtin__Nat.Nat)))).
+[x] {|!_^_|} x Agda__Builtin__Nat.Nat__zero --> Agda__Builtin__Nat.Nat__suc Agda__Builtin__Nat.Nat__zero.
+[x0, x] {|!_^_|} x0 (Agda__Builtin__Nat.Nat__suc x) --> Agda__Builtin__Nat.{|!_*_|} x0 ({|!_^_|} x0 x).
+ 
+def {|!∣_-_∣|} : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Nat.Nat (_0 => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Nat.Nat (_0 => Agda__Builtin__Nat.Nat)))).
+[x] {|!∣_-_∣|} Agda__Builtin__Nat.Nat__zero x --> x.
+[x] {|!∣_-_∣|} (Agda__Builtin__Nat.Nat__suc x) Agda__Builtin__Nat.Nat__zero --> Agda__Builtin__Nat.Nat__suc x.
+[x0, x] {|!∣_-_∣|} (Agda__Builtin__Nat.Nat__suc x0) (Agda__Builtin__Nat.Nat__suc x) --> {|!∣_-_∣|} x0 x.
+ 
+{|!TYPE___≤′_|} : (m : Agda.Term (Agda.set univ.0) Agda__Builtin__Nat.Nat) -> (_0 : Agda.Term (Agda.set univ.0) Agda__Builtin__Nat.Nat) -> Type.
+{|!_≤′_|} : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set univ.0) (Agda.set (univ.s univ.0)) Agda__Builtin__Nat.Nat (m => (Agda.prod (Agda.set univ.0) (Agda.set (univ.s univ.0)) Agda__Builtin__Nat.Nat (_0 => (Agda.code (Agda.set univ.0)))))).
+[m, x] Agda.Term _ ({|!_≤′_|} m x) --> {|!TYPE___≤′_|} m x.
+{|!_≤′___≤′-refl|} : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Nat.Nat (m => ({|!_≤′_|} m m))).
+{|!_≤′___≤′-step|} : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Nat.Nat (m => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Nat.Nat (n => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) ({|!_≤′_|} m n) ({|!m≤′n|} => ({|!_≤′_|} m (Agda__Builtin__Nat.Nat__suc n)))))))).
+
+
+
+def {|!_<′_|} : Agda.Term (Agda.set (univ.s univ.0)) (Relation__Binary__Core.Rel univ.0 Agda__Builtin__Nat.Nat Level.{|!0ℓ|}).
+[x0, x] {|!_<′_|} x0 x --> {|!_≤′_|} (Agda__Builtin__Nat.Nat__suc x0) x.
+ 
+def {|!_≥′_|} : Agda.Term (Agda.set (univ.s univ.0)) (Relation__Binary__Core.Rel univ.0 Agda__Builtin__Nat.Nat Level.{|!0ℓ|}).
+[x0, x] {|!_≥′_|} x0 x --> {|!_≤′_|} x x0.
+ 
+def {|!_>′_|} : Agda.Term (Agda.set (univ.s univ.0)) (Relation__Binary__Core.Rel univ.0 Agda__Builtin__Nat.Nat Level.{|!0ℓ|}).
+[x0, x] {|!_>′_|} x0 x --> {|!_<′_|} x x0.
+ 
+{|!TYPE___≤″_|} : (m : Agda.Term (Agda.set univ.0) Agda__Builtin__Nat.Nat) -> (n : Agda.Term (Agda.set univ.0) Agda__Builtin__Nat.Nat) -> Type.
+{|!_≤″_|} : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set univ.0) (Agda.set (univ.s univ.0)) Agda__Builtin__Nat.Nat (m => (Agda.prod (Agda.set univ.0) (Agda.set (univ.s univ.0)) Agda__Builtin__Nat.Nat (n => (Agda.code (Agda.set univ.0)))))).
+[m, n] Agda.Term _ ({|!_≤″_|} m n) --> {|!TYPE___≤″_|} m n.
+def {|!_≤″___k|} : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Nat.Nat (m => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Nat.Nat (n => (Agda.proj_prod (Agda.set univ.0) (Agda.set univ.0) ({|!_≤″_|} m n) (r => Agda__Builtin__Nat.Nat)))))).
+def {|!_≤″___proof|} : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Nat.Nat (m => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Nat.Nat (n => (Agda.proj_prod (Agda.set univ.0) (Agda.set univ.0) ({|!_≤″_|} m n) (r => (Agda__Builtin__Equality.{|!_≡_|} univ.0 Agda__Builtin__Nat.Nat (Agda__Builtin__Nat.{|!_+_|} m ({|!_≤″___k|} m n r)) n))))))).
+{|!less-than-or-equal|} : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Nat.Nat (m => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Nat.Nat (n => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Nat.Nat (k => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) (Agda__Builtin__Equality.{|!_≡_|} univ.0 Agda__Builtin__Nat.Nat (Agda__Builtin__Nat.{|!_+_|} m k) n) (proof => ({|!_≤″_|} m n))))))))).
+
+[m, n, k, proof] {|!_≤″___k|} m n ({|!less-than-or-equal|} m n k proof) --> k.
+ 
+[m, n, k, proof] {|!_≤″___proof|} m n ({|!less-than-or-equal|} m n k proof) --> proof.
+ 
+
+def {|!_<″_|} : Agda.Term (Agda.set (univ.s univ.0)) (Relation__Binary__Core.Rel univ.0 Agda__Builtin__Nat.Nat Level.{|!0ℓ|}).
+[x0, x] {|!_<″_|} x0 x --> {|!_≤″_|} (Agda__Builtin__Nat.Nat__suc x0) x.
+ 
+def {|!_≥″_|} : Agda.Term (Agda.set (univ.s univ.0)) (Relation__Binary__Core.Rel univ.0 Agda__Builtin__Nat.Nat Level.{|!0ℓ|}).
+[x0, x] {|!_≥″_|} x0 x --> {|!_≤″_|} x x0.
+ 
+def {|!_>″_|} : Agda.Term (Agda.set (univ.s univ.0)) (Relation__Binary__Core.Rel univ.0 Agda__Builtin__Nat.Nat Level.{|!0ℓ|}).
+[x0, x] {|!_>″_|} x0 x --> {|!_<″_|} x x0.
+ 
+{|!TYPE___≤‴_|} : (_0 : Agda.Term (Agda.set univ.0) Agda__Builtin__Nat.Nat) -> (_0 : Agda.Term (Agda.set univ.0) Agda__Builtin__Nat.Nat) -> Type.
+{|!_≤‴_|} : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set univ.0) (Agda.set (univ.s univ.0)) Agda__Builtin__Nat.Nat (_0 => (Agda.prod (Agda.set univ.0) (Agda.set (univ.s univ.0)) Agda__Builtin__Nat.Nat (_0 => (Agda.code (Agda.set univ.0)))))).
+[x0, x] Agda.Term _ ({|!_≤‴_|} x0 x) --> {|!TYPE___≤‴_|} x0 x.
+{|!_≤‴___≤‴-refl|} : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Nat.Nat (m => ({|!_≤‴_|} m m))).
+{|!_≤‴___≤‴-step|} : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Nat.Nat (m => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Nat.Nat (n => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) ({|!_≤‴_|} (Agda__Builtin__Nat.Nat__suc m) n) (_0 => ({|!_≤‴_|} m n))))))).
+
+
+
+def {|!_<‴_|} : Agda.Term (Agda.set (univ.s univ.0)) (Relation__Binary__Core.Rel univ.0 Agda__Builtin__Nat.Nat Level.{|!0ℓ|}).
+[x0, x] {|!_<‴_|} x0 x --> {|!_≤‴_|} (Agda__Builtin__Nat.Nat__suc x0) x.
+ 
+def {|!_≥‴_|} : Agda.Term (Agda.set (univ.s univ.0)) (Relation__Binary__Core.Rel univ.0 Agda__Builtin__Nat.Nat Level.{|!0ℓ|}).
+[x0, x] {|!_≥‴_|} x0 x --> {|!_≤‴_|} x x0.
+ 
+def {|!_>‴_|} : Agda.Term (Agda.set (univ.s univ.0)) (Relation__Binary__Core.Rel univ.0 Agda__Builtin__Nat.Nat Level.{|!0ℓ|}).
+[x0, x] {|!_>‴_|} x0 x --> {|!_<‴_|} x x0.
+ 
+TYPE__Ordering : (_0 : Agda.Term (Agda.set univ.0) Agda__Builtin__Nat.Nat) -> (_0 : Agda.Term (Agda.set univ.0) Agda__Builtin__Nat.Nat) -> Type.
+Ordering : Agda.Term (Agda.set (univ.s Level.{|!0ℓ|})) (Agda.prod (Agda.set univ.0) (Agda.set (univ.s Level.{|!0ℓ|})) Agda__Builtin__Nat.Nat (_0 => (Agda.prod (Agda.set univ.0) (Agda.set (univ.s Level.{|!0ℓ|})) Agda__Builtin__Nat.Nat (_0 => (Agda.code (Agda.set univ.0)))))).
+[x0, x] Agda.Term _ (Ordering x0 x) --> TYPE__Ordering x0 x.
+Ordering__less : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Nat.Nat (m => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Nat.Nat (k => (Ordering m (Agda__Builtin__Nat.Nat__suc (Agda__Builtin__Nat.{|!_+_|} m k))))))).
+Ordering__equal : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Nat.Nat (m => (Ordering m m))).
+Ordering__greater : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Nat.Nat (m => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Nat.Nat (k => (Ordering (Agda__Builtin__Nat.Nat__suc (Agda__Builtin__Nat.{|!_+_|} m k)) m))))).
+
+
+
+
+def compare : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Nat.Nat (m => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Nat.Nat (n => (Ordering m n))))).
+def {|!with-284|} : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Nat.Nat (m => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Nat.Nat (n => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) (Ordering m n) (w => (Ordering (Agda__Builtin__Nat.Nat__suc m) (Agda__Builtin__Nat.Nat__suc n)))))))).
+[] compare Agda__Builtin__Nat.Nat__zero Agda__Builtin__Nat.Nat__zero --> Ordering__equal Agda__Builtin__Nat.Nat__zero.
+[n] compare Agda__Builtin__Nat.Nat__zero (Agda__Builtin__Nat.Nat__suc n) --> Ordering__less Agda__Builtin__Nat.Nat__zero n.
+[m] compare (Agda__Builtin__Nat.Nat__suc m) Agda__Builtin__Nat.Nat__zero --> Ordering__greater Agda__Builtin__Nat.Nat__zero m.
+[m, n] compare (Agda__Builtin__Nat.Nat__suc m) (Agda__Builtin__Nat.Nat__suc n) --> {|!with-284|} m n (compare m n).
+ 
+[m, k] {|!with-284|} m {Agda__Builtin__Nat.Nat__suc (Agda__Builtin__Nat.{|!_+_|} m k)} (Ordering__less m k) --> Ordering__less (Agda__Builtin__Nat.Nat__suc m) k.
+[m] {|!with-284|} m m (Ordering__equal m) --> Ordering__equal (Agda__Builtin__Nat.Nat__suc m).
+[n, k] {|!with-284|} {Agda__Builtin__Nat.Nat__suc (Agda__Builtin__Nat.{|!_+_|} n k)} n (Ordering__greater n k) --> Ordering__greater (Agda__Builtin__Nat.Nat__suc n) k.
+ 

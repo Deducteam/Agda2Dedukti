@@ -1,0 +1,6 @@
+def Costring : Agda.Term (Agda.set (univ.s univ.0)) (Agda.code (Agda.set univ.0)).
+[] Costring --> Codata__Musical__Colist__Base.Colist univ.0 Agda__Builtin__Char.Char.
+ 
+def toCostring : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__String.String (_0 => Costring)).
+[x] toCostring x --> Codata__Musical__Colist__Base.fromList univ.0 Agda__Builtin__Char.Char (Agda__Builtin__String.primStringToList x).
+ 

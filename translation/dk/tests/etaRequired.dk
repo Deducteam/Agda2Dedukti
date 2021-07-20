@@ -1,0 +1,69 @@
+{|!TYPE___≡_|} : (A : Agda.Term (Agda.set (univ.s univ.0)) (Agda.code (Agda.set univ.0))) -> (_0 : Agda.Term (Agda.set univ.0) A) -> (_0 : Agda.Term (Agda.set univ.0) A) -> Type.
+{|!_≡_|} : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set (univ.s univ.0)) (Agda.code (Agda.set univ.0)) (A => (Agda.prod (Agda.set univ.0) (Agda.set (univ.s univ.0)) A (_0 => (Agda.prod (Agda.set univ.0) (Agda.set (univ.s univ.0)) A (_0 => (Agda.code (Agda.set univ.0)))))))).
+[A, x0, x] Agda.Term _ ({|!_≡_|} A x0 x) --> {|!TYPE___≡_|} A (Agda.etaExpand univ.0 A x0) (Agda.etaExpand univ.0 A x).
+{|!_≡___refl|} : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set univ.0) (Agda.code (Agda.set univ.0)) (A => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) A (a => ({|!_≡_|} A (Agda.etaExpand univ.0 A a) (Agda.etaExpand univ.0 A a)))))).
+[A, a] Agda.etaExpand _ ({|!_≡_|} _ _ _) ({|!_≡___refl|} A a) --> {|!_≡___refl|} A (Agda.etaExpand univ.0 A a).
+ 
+
+TYPE__Box : Type.
+Box : Agda.Term (Agda.set (univ.s univ.0)) (Agda.code (Agda.set univ.0)).
+[] Agda.Term _ Box --> TYPE__Box.
+def Box__openBox : Agda.Term (Agda.set univ.0) (Agda.proj_prod (Agda.set univ.0) (Agda.set univ.0) Box (r => Agda__Builtin__Nat.Nat)).
+cons : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Nat.Nat (openBox => Box)).
+[y] Agda.etaExpand _ Box y --> cons (Agda.etaExpand univ.0 Agda__Builtin__Nat.Nat (Box__openBox y)).
+ 
+[openBox] Box__openBox (cons openBox) --> Agda.etaExpand univ.0 Agda__Builtin__Nat.Nat openBox.
+ 
+
+def b1 : Agda.Term (Agda.set univ.0) Box.
+[] Box__openBox b1 --> Agda.etaExpand univ.0 Agda__Builtin__Nat.Nat (Agda__Builtin__Nat.Nat__suc (Agda__Builtin__Nat.Nat__suc (Agda__Builtin__Nat.Nat__suc Agda__Builtin__Nat.Nat__zero))).
+ 
+def b2 : Agda.Term (Agda.set univ.0) Box.
+[] b2 --> Agda.etaExpand univ.0 Box (cons (Agda.etaExpand univ.0 Agda__Builtin__Nat.Nat (Agda__Builtin__Nat.Nat__suc (Agda__Builtin__Nat.Nat__suc (Agda__Builtin__Nat.Nat__suc Agda__Builtin__Nat.Nat__zero))))).
+ 
+def {|!b2'|} : Agda.Term (Agda.set univ.0) Box.
+[] {|!b2'|} --> Agda.etaExpand univ.0 Box (cons (Agda.etaExpand univ.0 Agda__Builtin__Nat.Nat (Agda__Builtin__Nat.Nat__suc (Agda__Builtin__Nat.Nat__suc (Agda__Builtin__Nat.Nat__suc Agda__Builtin__Nat.Nat__zero))))).
+ 
+def b3 : Agda.Term (Agda.set univ.0) Box.
+[] Box__openBox b3 --> Agda.etaExpand univ.0 Agda__Builtin__Nat.Nat (Agda__Builtin__Nat.Nat__suc (Agda__Builtin__Nat.Nat__suc (Agda__Builtin__Nat.Nat__suc Agda__Builtin__Nat.Nat__zero))).
+ 
+def b4 : Agda.Term (Agda.set univ.0) Box.
+def {|!'extendedlambda0|} : Agda.Term (Agda.set univ.0) Box.
+[] b4 --> Agda.etaExpand univ.0 Box {|!'extendedlambda0|}.
+ 
+[] Box__openBox {|!'extendedlambda0|} --> Agda.etaExpand univ.0 Agda__Builtin__Nat.Nat (Agda__Builtin__Nat.Nat__suc (Agda__Builtin__Nat.Nat__suc (Agda__Builtin__Nat.Nat__suc Agda__Builtin__Nat.Nat__zero))).
+ 
+def b5 : Agda.Term (Agda.set univ.0) Box.
+def {|!'extendedlambda1|} : Agda.Term (Agda.set univ.0) Box.
+[] b5 --> Agda.etaExpand univ.0 Box {|!'extendedlambda1|}.
+ 
+[] Box__openBox {|!'extendedlambda1|} --> Agda.etaExpand univ.0 Agda__Builtin__Nat.Nat (Agda__Builtin__Nat.Nat__suc (Agda__Builtin__Nat.Nat__suc (Agda__Builtin__Nat.Nat__suc Agda__Builtin__Nat.Nat__zero))).
+ 
+def p : Agda.Term (Agda.set univ.0) ({|!_≡_|} Box (Agda.etaExpand univ.0 Box b1) (Agda.etaExpand univ.0 Box b2)).
+[] p --> Agda.etaExpand univ.0 ({|!_≡_|} Box (Agda.etaExpand univ.0 Box b1) (Agda.etaExpand univ.0 Box b2)) ({|!_≡___refl|} Box (Agda.etaExpand univ.0 Box b1)).
+ 
+def {|!p'|} : Agda.Term (Agda.set univ.0) ({|!_≡_|} Box (Agda.etaExpand univ.0 Box {|!b2'|}) (Agda.etaExpand univ.0 Box b2)).
+[] {|!p'|} --> Agda.etaExpand univ.0 ({|!_≡_|} Box (Agda.etaExpand univ.0 Box {|!b2'|}) (Agda.etaExpand univ.0 Box b2)) ({|!_≡___refl|} Box (Agda.etaExpand univ.0 Box {|!b2'|})).
+ 
+def p2 : Agda.Term (Agda.set univ.0) ({|!_≡_|} Box (Agda.etaExpand univ.0 Box b3) (Agda.etaExpand univ.0 Box b1)).
+[] p2 --> Agda.etaExpand univ.0 ({|!_≡_|} Box (Agda.etaExpand univ.0 Box b3) (Agda.etaExpand univ.0 Box b1)) ({|!_≡___refl|} Box (Agda.etaExpand univ.0 Box b3)).
+ 
+def p3 : Agda.Term (Agda.set univ.0) ({|!_≡_|} Box (Agda.etaExpand univ.0 Box b1) (Agda.etaExpand univ.0 Box b5)).
+[] p3 --> Agda.etaExpand univ.0 ({|!_≡_|} Box (Agda.etaExpand univ.0 Box b1) (Agda.etaExpand univ.0 Box b5)) ({|!_≡___refl|} Box (Agda.etaExpand univ.0 Box b1)).
+ 
+def p4 : Agda.Term (Agda.set univ.0) ({|!_≡_|} Box (Agda.etaExpand univ.0 Box b4) (Agda.etaExpand univ.0 Box b5)).
+[] p4 --> Agda.etaExpand univ.0 ({|!_≡_|} Box (Agda.etaExpand univ.0 Box b4) (Agda.etaExpand univ.0 Box b5)) ({|!_≡___refl|} Box (Agda.etaExpand univ.0 Box b4)).
+ 
+TYPE__Nat2 : Type.
+Nat2 : Agda.Term (Agda.set (univ.s univ.0)) (Agda.code (Agda.set univ.0)).
+[] Agda.Term _ Nat2 --> TYPE__Nat2.
+def Nat2__a : Agda.Term (Agda.set univ.0) (Agda.proj_prod (Agda.set univ.0) (Agda.set univ.0) Nat2 (r => Agda__Builtin__Nat.Nat)).
+def Nat2__b : Agda.Term (Agda.set univ.0) (Agda.proj_prod (Agda.set univ.0) (Agda.set univ.0) Nat2 (r => Agda__Builtin__Nat.Nat)).
+{|!Nat2'constructor|} : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Nat.Nat (a => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Nat.Nat (b => Nat2)))).
+[y] Agda.etaExpand _ Nat2 y --> {|!Nat2'constructor|} (Agda.etaExpand univ.0 Agda__Builtin__Nat.Nat (Nat2__a y)) (Agda.etaExpand univ.0 Agda__Builtin__Nat.Nat (Nat2__b y)).
+ 
+[a, b] Nat2__a ({|!Nat2'constructor|} a b) --> Agda.etaExpand univ.0 Agda__Builtin__Nat.Nat a.
+ 
+[a, b] Nat2__b ({|!Nat2'constructor|} a b) --> Agda.etaExpand univ.0 Agda__Builtin__Nat.Nat b.
+ 
+

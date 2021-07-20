@@ -5,12 +5,13 @@ Pair : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set (univ.s univ.0)
 def Pair__n1 : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set univ.0) (Agda.code (Agda.set univ.0)) (A => (Agda.proj_prod (Agda.set univ.0) (Agda.set univ.0) (Pair A) (r => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Nat.Nat (_0 => A)))))).
 def Pair__n2 : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set univ.0) (Agda.code (Agda.set univ.0)) (A => (Agda.proj_prod (Agda.set univ.0) (Agda.set univ.0) (Pair A) (r => A)))).
 
-
-[A, n1, n2] Pair__n1 A ({|!Pair'constructor|} A n1 n2) --> n1.
+[A, y] Agda.etaExpand _ (Pair A) y --> {|!Pair'constructor|} A (_0 : Agda.Term (Agda.set univ.0) Agda__Builtin__Nat.Nat => Agda.etaExpand univ.0 A (Pair__n1 A y (Agda.etaExpand univ.0 Agda__Builtin__Nat.Nat _0))) (Agda.etaExpand univ.0 A (Pair__n2 A y)).
  
-[A, n1, n2] Pair__n2 A ({|!Pair'constructor|} A n1 n2) --> n2.
+[A, n1, n2] Pair__n1 A ({|!Pair'constructor|} A n1 n2) --> _0 => Agda.etaExpand univ.0 A (n1 (Agda.etaExpand univ.0 Agda__Builtin__Nat.Nat _0)).
+ 
+[A, n1, n2] Pair__n2 A ({|!Pair'constructor|} A n1 n2) --> Agda.etaExpand univ.0 A n2.
  
 def el : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Nat.Nat (_0 => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Agda__Builtin__Nat.Nat (_0 => (Pair Agda__Builtin__Nat.Nat))))).
-[x1, x0, x] Pair__n1 {Agda__Builtin__Nat.Nat} (el x1 x0) x --> Agda__Builtin__Nat.{|!_+_|} x1 x.
-[x0, x] Pair__n2 {Agda__Builtin__Nat.Nat} (el x0 x) --> x.
+[x1, x0, x] Pair__n1 {Agda__Builtin__Nat.Nat} (el x1 x0) x --> Agda.etaExpand univ.0 Agda__Builtin__Nat.Nat (Agda__Builtin__Nat.{|!_+_|} (Agda.etaExpand univ.0 Agda__Builtin__Nat.Nat x1) (Agda.etaExpand univ.0 Agda__Builtin__Nat.Nat x)).
+[x0, x] Pair__n2 {Agda__Builtin__Nat.Nat} (el x0 x) --> Agda.etaExpand univ.0 Agda__Builtin__Nat.Nat x.
  

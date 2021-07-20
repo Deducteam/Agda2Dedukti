@@ -3,23 +3,26 @@ N : Agda.Term (Agda.set (univ.s univ.0)) (Agda.code (Agda.set univ.0)).
 [] Agda.Term _ N --> TYPE__N.
 N__zero : Agda.Term (Agda.set univ.0) N.
 N__suc : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) N (_0 => N)).
-
+[] Agda.etaExpand _ N N__zero --> N__zero.
+[x] Agda.etaExpand _ N (N__suc x) --> N__suc (Agda.etaExpand univ.0 N x).
+ 
 
 
 TYPE__Eq : (A : Agda.Term (Agda.set (univ.s univ.0)) (Agda.code (Agda.set univ.0))) -> (_0 : Agda.Term (Agda.set univ.0) A) -> (_0 : Agda.Term (Agda.set univ.0) A) -> Type.
 Eq : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set (univ.s univ.0)) (Agda.code (Agda.set univ.0)) (A => (Agda.prod (Agda.set univ.0) (Agda.set (univ.s univ.0)) A (_0 => (Agda.prod (Agda.set univ.0) (Agda.set (univ.s univ.0)) A (_0 => (Agda.code (Agda.set univ.0)))))))).
-[A, x0, x] Agda.Term _ (Eq A x0 x) --> TYPE__Eq A x0 x.
-Eq__refl : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set univ.0) (Agda.code (Agda.set univ.0)) (A => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) A (a => (Eq A a a))))).
+[A, x0, x] Agda.Term _ (Eq A x0 x) --> TYPE__Eq A (Agda.etaExpand univ.0 A x0) (Agda.etaExpand univ.0 A x).
+Eq__refl : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set univ.0) (Agda.code (Agda.set univ.0)) (A => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) A (a => (Eq A (Agda.etaExpand univ.0 A a) (Agda.etaExpand univ.0 A a)))))).
+[A, a] Agda.etaExpand _ (Eq _ _ _) (Eq__refl A a) --> Eq__refl A (Agda.etaExpand univ.0 A a).
+ 
 
-
-def cong : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) N (x => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) N (y => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) (Eq N x y) (_0 => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) N (_0 => N)) (f => (Eq N (f x) (f y)))))))))).
-[x, f] cong x x (Eq__refl {N} x) f --> Eq__refl N (f x).
+def cong : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) N (x => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) N (y => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) (Eq N (Agda.etaExpand univ.0 N x) (Agda.etaExpand univ.0 N y)) (_0 => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) N (_0 => N)) (f => (Eq N (Agda.etaExpand univ.0 N (f (Agda.etaExpand univ.0 N x))) (Agda.etaExpand univ.0 N (f (Agda.etaExpand univ.0 N y)))))))))))).
+[x, f] cong x {Agda.etaExpand univ.0 N x} (Eq__refl {N} {Agda.etaExpand univ.0 N x}) f --> Agda.etaExpand univ.0 (Eq N (Agda.etaExpand univ.0 N (f (Agda.etaExpand univ.0 N x))) (Agda.etaExpand univ.0 N (f (Agda.etaExpand univ.0 N x)))) (Eq__refl N (Agda.etaExpand univ.0 N (f (Agda.etaExpand univ.0 N x)))).
  
 def sum : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) N (_0 => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) N (_0 => N)))).
-[x] sum N__zero x --> x.
-[x0, x] sum (N__suc x0) x --> N__suc (sum x0 x).
+[x] sum N__zero x --> Agda.etaExpand univ.0 N x.
+[x0, x] sum (N__suc x0) x --> Agda.etaExpand univ.0 N (N__suc (Agda.etaExpand univ.0 N (sum (Agda.etaExpand univ.0 N x0) (Agda.etaExpand univ.0 N x)))).
  
-def sum0 : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) N (x => (Eq N x (sum x N__zero)))).
-[] sum0 N__zero --> Eq__refl N N__zero.
-[x] sum0 (N__suc x) --> cong x (sum x N__zero) (sum0 x) N__suc.
+def sum0 : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) N (x => (Eq N (Agda.etaExpand univ.0 N x) (Agda.etaExpand univ.0 N (sum (Agda.etaExpand univ.0 N x) (Agda.etaExpand univ.0 N N__zero)))))).
+[] sum0 N__zero --> Agda.etaExpand univ.0 (Eq N (Agda.etaExpand univ.0 N N__zero) (Agda.etaExpand univ.0 N (sum (Agda.etaExpand univ.0 N N__zero) (Agda.etaExpand univ.0 N N__zero)))) (Eq__refl N (Agda.etaExpand univ.0 N N__zero)).
+[x] sum0 (N__suc x) --> Agda.etaExpand univ.0 (Eq N (Agda.etaExpand univ.0 N (N__suc (Agda.etaExpand univ.0 N x))) (Agda.etaExpand univ.0 N (sum (Agda.etaExpand univ.0 N (N__suc (Agda.etaExpand univ.0 N x))) (Agda.etaExpand univ.0 N N__zero)))) (cong (Agda.etaExpand univ.0 N x) (Agda.etaExpand univ.0 N (sum (Agda.etaExpand univ.0 N x) (Agda.etaExpand univ.0 N N__zero))) (Agda.etaExpand univ.0 (Eq N (Agda.etaExpand univ.0 N x) (Agda.etaExpand univ.0 N (sum (Agda.etaExpand univ.0 N x) (Agda.etaExpand univ.0 N N__zero)))) (sum0 (Agda.etaExpand univ.0 N x))) (_0 => Agda.etaExpand univ.0 N (N__suc (Agda.etaExpand univ.0 N _0)))).
  

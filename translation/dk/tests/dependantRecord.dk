@@ -4,9 +4,10 @@ r : Agda.Term (Agda.set (univ.s (univ.s univ.0))) (Agda.code (Agda.set (univ.s u
 def r__A : Agda.Term (Agda.set (univ.s univ.0)) (Agda.proj_prod (Agda.set (univ.s univ.0)) (Agda.set (univ.s univ.0)) r (r => (Agda.code (Agda.set univ.0)))).
 def r__b : Agda.Term (Agda.set (univ.s univ.0)) (Agda.proj_prod (Agda.set (univ.s univ.0)) (Agda.set univ.0) r (r => (r__A r))).
 cons : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set (univ.s univ.0)) (Agda.code (Agda.set univ.0)) (A => (Agda.prod (Agda.set univ.0) (Agda.set (univ.s univ.0)) A (b => r)))).
-
+[y] Agda.etaExpand _ r y --> cons (r__A y) (Agda.etaExpand univ.0 (r__A y) (r__b y)).
+ 
 [A, b] r__A (cons A b) --> A.
  
-[A, b] r__b (cons A b) --> b.
+[A, b] r__b (cons A b) --> Agda.etaExpand univ.0 A b.
  
 

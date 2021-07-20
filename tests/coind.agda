@@ -12,6 +12,19 @@ record Stream (A : Set) : Set where
 
 open Stream
 
+makeStream : Nat → Stream Nat
+hd (makeStream n) = n
+tl (makeStream n) = makeStream n
+
+nth : Nat → Stream Nat → Nat
+nth zero st = hd st
+nth (suc n) st = nth n (tl st)
+
+times2 : Stream Nat → Stream Nat
+hd (times2 st) = (hd st) + (hd st)
+tl (times2 st) = times2 (tl st)
+
+
 zeros : Stream Nat
 hd zeros = 0
 tl zeros = zeros

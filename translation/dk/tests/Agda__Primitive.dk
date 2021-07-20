@@ -2,8 +2,6 @@ def Set : Agda.Term (Agda.set (univ.s (univ.s univ.0))) (Agda.code (Agda.set (un
 
 def Prop : Agda.Term (Agda.set (univ.s (univ.s univ.0))) (Agda.code (Agda.set (univ.s univ.0))).
 
-
-
 Level : Agda.Term (Agda.set (univ.s univ.0)) (Agda.code (Agda.set univ.0)).
 [] Agda.Term _ Level --> univ.Lvl.
 

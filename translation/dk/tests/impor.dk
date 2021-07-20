@@ -3,5 +3,5 @@ B : Agda.Term (Agda.set (univ.s univ.0)) (Agda.code (Agda.set univ.0)).
 [] Agda.Term _ B --> TYPE__B.
 
 def fun_inst : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) B (_0 => B)).
-[x] fun_inst x --> paramMod.fun B x x.
+[x] fun_inst x --> Agda.etaExpand univ.0 B (paramMod.fun B (Agda.etaExpand univ.0 B x) (Agda.etaExpand univ.0 B x)).
  

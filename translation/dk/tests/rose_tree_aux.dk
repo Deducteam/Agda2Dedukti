@@ -7,15 +7,18 @@ rose_tree_l : Agda.Term (Agda.set (univ.s univ.0)) (Agda.code (Agda.set univ.0))
 rose_tree__Nd : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) rose_tree_l (_0 => rose_tree)).
 rose_tree_l__Nil : Agda.Term (Agda.set univ.0) rose_tree_l.
 rose_tree_l__Cons : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) rose_tree (_0 => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) rose_tree_l (_0 => rose_tree_l)))).
-
-
+[x] Agda.etaExpand _ rose_tree (rose_tree__Nd x) --> rose_tree__Nd (Agda.etaExpand univ.0 rose_tree_l x).
+ 
+[] Agda.etaExpand _ rose_tree_l rose_tree_l__Nil --> rose_tree_l__Nil.
+[x0, x] Agda.etaExpand _ rose_tree_l (rose_tree_l__Cons x0 x) --> rose_tree_l__Cons (Agda.etaExpand univ.0 rose_tree x0) (Agda.etaExpand univ.0 rose_tree_l x).
+ 
 
 
 
 def map : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) rose_tree (_0 => rose_tree_l)) (_0 => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) rose_tree (_0 => rose_tree)))).
 def aux : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) rose_tree (_0 => rose_tree_l)) (_0 => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) rose_tree_l (_0 => rose_tree_l)))).
-[x0, x] map x0 (rose_tree__Nd x) --> rose_tree__Nd (aux x0 x).
+[x0, x] map x0 (rose_tree__Nd x) --> Agda.etaExpand univ.0 rose_tree (rose_tree__Nd (Agda.etaExpand univ.0 rose_tree_l (aux (_0 => Agda.etaExpand univ.0 rose_tree_l (x0 (Agda.etaExpand univ.0 rose_tree _0))) (Agda.etaExpand univ.0 rose_tree_l x)))).
  
-[x] aux x rose_tree_l__Nil --> x (rose_tree__Nd rose_tree_l__Nil).
-[x1, x0, x] aux x1 (rose_tree_l__Cons x0 x) --> rose_tree_l__Cons (map x1 x0) (aux x1 x).
+[x] aux x rose_tree_l__Nil --> Agda.etaExpand univ.0 rose_tree_l (x (Agda.etaExpand univ.0 rose_tree (rose_tree__Nd (Agda.etaExpand univ.0 rose_tree_l rose_tree_l__Nil)))).
+[x1, x0, x] aux x1 (rose_tree_l__Cons x0 x) --> Agda.etaExpand univ.0 rose_tree_l (rose_tree_l__Cons (Agda.etaExpand univ.0 rose_tree (map (_0 => Agda.etaExpand univ.0 rose_tree_l (x1 (Agda.etaExpand univ.0 rose_tree _0))) (Agda.etaExpand univ.0 rose_tree x0))) (Agda.etaExpand univ.0 rose_tree_l (aux (_0 => Agda.etaExpand univ.0 rose_tree_l (x1 (Agda.etaExpand univ.0 rose_tree _0))) (Agda.etaExpand univ.0 rose_tree_l x)))).
  

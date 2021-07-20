@@ -3,11 +3,13 @@ N : Agda.Term (Agda.set (univ.s univ.0)) (Agda.code (Agda.set univ.0)).
 [] Agda.Term _ N --> TYPE__N.
 N__zero : Agda.Term (Agda.set univ.0) N.
 N__suc : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) N (_0 => N)).
-
+[] Agda.etaExpand _ N N__zero --> N__zero.
+[x] Agda.etaExpand _ N (N__suc x) --> N__suc (Agda.etaExpand univ.0 N x).
+ 
 
 
 def max : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) N (_0 => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) N (_0 => N)))).
-[x] max N__zero x --> x.
-[x] max (N__suc x) N__zero --> N__suc x.
-[x0, x] max (N__suc x0) (N__suc x) --> N__suc (max x0 x).
+[x] max N__zero x --> Agda.etaExpand univ.0 N x.
+[x] max (N__suc x) N__zero --> Agda.etaExpand univ.0 N (N__suc (Agda.etaExpand univ.0 N x)).
+[x0, x] max (N__suc x0) (N__suc x) --> Agda.etaExpand univ.0 N (N__suc (Agda.etaExpand univ.0 N (max (Agda.etaExpand univ.0 N x0) (Agda.etaExpand univ.0 N x)))).
  

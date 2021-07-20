@@ -1,3 +1,3 @@
 def tet : Agda.Term (Agda.set univ.0) (Agda.qLevel (i => Agda.set univ.0) (i => Agda__Builtin__Equality.{|!_≡_|} univ.0 Agda__Primitive.Level i i)).
-[i] tet i --> Agda__Builtin__Equality.{|!_≡___refl|} univ.0 Agda__Primitive.Level i.
+[i] tet i --> Agda.etaExpand univ.0 (Agda__Builtin__Equality.{|!_≡_|} univ.0 Agda__Primitive.Level i i) (Agda__Builtin__Equality.{|!_≡___refl|} univ.0 Agda__Primitive.Level i).
  

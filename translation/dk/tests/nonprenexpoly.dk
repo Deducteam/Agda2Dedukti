@@ -1,0 +1,3 @@
+def comp : Agda.Term Agda.sortOmega (Agda.prod Agda.sortOmega Agda.sortOmega (Agda.qLevel (i => Agda.set (univ.s i)) (i => Agda.prod (Agda.set (univ.s i)) (Agda.set (univ.s i)) (Agda.code (Agda.set i)) (_0 => (Agda.code (Agda.set i))))) (_0 => (Agda.prod Agda.sortOmega Agda.sortOmega (Agda.qLevel (i => Agda.set (univ.s i)) (i => Agda.code (Agda.set i))) (_0 => (Agda.qLevel (i => Agda.set (univ.s i)) (i => Agda.code (Agda.set i))))))).
+[x0, x, i] comp x0 x i --> x0 i (x i).
+ 

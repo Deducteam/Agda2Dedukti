@@ -6,5 +6,6 @@
 {|!⊤|} : Agda.Term (Agda.set (univ.s univ.0)) (Agda.code (Agda.prop univ.0)).
 [] Agda.Term _ {|!⊤|} --> {|!TYPE__⊤|}.
 tt : Agda.Term (Agda.prop univ.0) {|!⊤|}.
-
+[y] Agda.etaExpand _ {|!⊤|} y --> tt.
+ 
 

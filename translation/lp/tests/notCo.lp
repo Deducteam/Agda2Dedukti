@@ -1,4 +1,4 @@
-require open AgdaTheory.noEta.Base;
+require open AgdaTheory.eta.Base;
 require open AgdaTheory.Levels;
 
 require tests.Agda__Builtin__List as Agda__Builtin__List;
@@ -8,9 +8,10 @@ rule El _ (Tree $A) ↪ TYPE__Tree $A;
 symbol Tree__elem : El (set (s (sₙ 0ₙ) z)) (⇝ (set (s (sₙ 0ₙ) z)) (set (s 0ₙ z)) (⋄ (set (s 0ₙ z))) (λ A, (⇝proj (set (s 0ₙ z)) (set (s 0ₙ z)) (Tree A) (λ r, A))));
 symbol Tree__subtrees : El (set (s (sₙ 0ₙ) z)) (⇝ (set (s (sₙ 0ₙ) z)) (set (s 0ₙ z)) (⋄ (set (s 0ₙ z))) (λ A, (⇝proj (set (s 0ₙ z)) (set (s 0ₙ z)) (Tree A) (λ r, (Agda__Builtin__List.List (s 0ₙ z) (Tree A))))));
 constant symbol tree : El (set (s (sₙ 0ₙ) z)) (⇝ (set (s (sₙ 0ₙ) z)) (set (s 0ₙ z)) (⋄ (set (s 0ₙ z))) (λ A, (⇝ (set (s 0ₙ z)) (set (s 0ₙ z)) A (λ elem, (⇝ (set (s 0ₙ z)) (set (s 0ₙ z)) (Agda__Builtin__List.List (s 0ₙ z) (Tree A)) (λ subtrees, (Tree A)))))));
-
-rule Tree__elem $A (tree _ $elem $subtrees) ↪ $elem;
+rule η _ (Tree $A) $y ↪ tree $A (η (s 0ₙ z) $A (Tree__elem $A $y)) (η (s 0ₙ z) (Agda__Builtin__List.List (s 0ₙ z) (Tree $A)) (Tree__subtrees $A $y));
  
-rule Tree__subtrees $A (tree _ $elem $subtrees) ↪ $subtrees;
+rule Tree__elem $A (tree _ $elem $subtrees) ↪ η (s 0ₙ z) $A $elem;
+ 
+rule Tree__subtrees $A (tree _ $elem $subtrees) ↪ η (s 0ₙ z) (Agda__Builtin__List.List (s 0ₙ z) (Tree $A)) $subtrees;
  
 

@@ -1,4 +1,4 @@
-require open AgdaTheory.noEta.Base;
+require open AgdaTheory.eta.Base;
 require open AgdaTheory.Levels;
 
 require tests.Agda__Primitive as Agda__Primitive;

@@ -1,4 +1,4 @@
-require open AgdaTheory.noEta.Base;
+require open AgdaTheory.eta.Base;
 require open AgdaTheory.Levels;
 
 require tests.Agda__Builtin__Nat as Agda__Builtin__Nat;
@@ -9,13 +9,14 @@ constant symbol {|!Stream'constructor|} : El (set (s (sₙ 0ₙ) z)) (⇝ (set (
 symbol Stream__hd : El (set (s (sₙ 0ₙ) z)) (⇝ (set (s (sₙ 0ₙ) z)) (set (s 0ₙ z)) (⋄ (set (s 0ₙ z))) (λ A, (⇝proj (set (s 0ₙ z)) (set (s 0ₙ z)) (Stream A) (λ r, A))));
 symbol Stream__tl : El (set (s (sₙ 0ₙ) z)) (⇝ (set (s (sₙ 0ₙ) z)) (set (s 0ₙ z)) (⋄ (set (s 0ₙ z))) (λ A, (⇝proj (set (s 0ₙ z)) (set (s 0ₙ z)) (Stream A) (λ r, (Stream A)))));
 
-
-rule Stream__hd $A ({|!Stream'constructor|} _ $hd $tl) ↪ $hd;
+rule η _ (Stream $A) $y ↪ $y;
+ 
+rule Stream__hd $A ({|!Stream'constructor|} _ $hd $tl) ↪ η (s 0ₙ z) $A $hd;
  
 rule Stream__tl $A ({|!Stream'constructor|} _ $hd $tl) ↪ $tl;
  
 symbol {|!zeros'|} : El (set (s 0ₙ z)) (Stream Agda__Builtin__Nat.Nat);
-rule Stream__hd _ {|!zeros'|} ↪ Agda__Builtin__Nat.Nat__zero;
-rule Stream__hd _ (Stream__tl _ {|!zeros'|}) ↪ Agda__Builtin__Nat.Nat__suc Agda__Builtin__Nat.Nat__zero;
+rule Stream__hd _ {|!zeros'|} ↪ η (s 0ₙ z) Agda__Builtin__Nat.Nat Agda__Builtin__Nat.Nat__zero;
+rule Stream__hd _ (Stream__tl _ {|!zeros'|}) ↪ η (s 0ₙ z) Agda__Builtin__Nat.Nat (Agda__Builtin__Nat.Nat__suc Agda__Builtin__Nat.Nat__zero);
 rule Stream__tl _ (Stream__tl _ {|!zeros'|}) ↪ {|!zeros'|};
  

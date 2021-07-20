@@ -1,53 +1,68 @@
-stdcoind.dko : stdcoind.dk ../../../theory/dk/noEta/Agda.dko Agda__Builtin__Nat.dko ../../../theory/dk/noEta/univ.dko
-rose_tree_aux.dko : rose_tree_aux.dk ../../../theory/dk/noEta/Agda.dko ../../../theory/dk/noEta/univ.dko
-mutualDef.dko : mutualDef.dk ../../../theory/dk/noEta/Agda.dko Agda__Builtin__Nat.dko ../../../theory/dk/noEta/univ.dko
-lift.dko : lift.dk ../../../theory/dk/noEta/Agda.dko ../../../theory/dk/noEta/univ.dko
-dependantRecord2.dko : dependantRecord2.dk ../../../theory/dk/noEta/Agda.dko ../../../theory/dk/noEta/univ.dko
-thiago_clause.dko : thiago_clause.dk ../../../theory/dk/noEta/Agda.dko Agda__Builtin__Nat.dko ../../../theory/dk/noEta/univ.dko
-testRecord.dko : testRecord.dk ../../../theory/dk/noEta/Agda.dko Agda__Builtin__Nat.dko ../../../theory/dk/noEta/univ.dko
-impor.dko : impor.dk ../../../theory/dk/noEta/Agda.dko paramMod.dko ../../../theory/dk/noEta/univ.dko
-Agda__Builtin__Equality.dko : Agda__Builtin__Equality.dk ../../../theory/dk/noEta/Agda.dko ../../../theory/dk/noEta/univ.dko
-etaExpansionRequired.dko : etaExpansionRequired.dk ../../../theory/dk/noEta/Agda.dko Agda__Builtin__Equality.dko Agda__Builtin__Nat.dko Agda__Primitive.dko ../../../theory/dk/noEta/univ.dko
-thiago_test5.dko : thiago_test5.dk ../../../theory/dk/noEta/Agda.dko ../../../theory/dk/noEta/univ.dko
-proofs2.dko : proofs2.dk ../../../theory/dk/noEta/Agda.dko Agda__Builtin__Nat.dko ../../../theory/dk/noEta/univ.dko
-pair.dko : pair.dk ../../../theory/dk/noEta/Agda.dko ../../../theory/dk/noEta/univ.dko
-testCovering.dko : testCovering.dk ../../../theory/dk/noEta/Agda.dko ../../../theory/dk/noEta/univ.dko
-copat.dko : copat.dk ../../../theory/dk/noEta/Agda.dko Agda__Builtin__Nat.dko ../../../theory/dk/noEta/univ.dko
-Agda__Builtin__Sigma.dko : Agda__Builtin__Sigma.dk ../../../theory/dk/noEta/Agda.dko ../../../theory/dk/noEta/univ.dko
-recordtest.dko : recordtest.dk ../../../theory/dk/noEta/Agda.dko Agda__Builtin__Nat.dko ../../../theory/dk/noEta/univ.dko
-Agda__Primitive.dko : Agda__Primitive.dk ../../../theory/dk/noEta/Agda.dko ../../../theory/dk/noEta/univ.dko
-recordProj.dko : recordProj.dk ../../../theory/dk/noEta/Agda.dko Agda__Builtin__Equality.dko Agda__Builtin__Nat.dko ../../../theory/dk/noEta/univ.dko
-notCo.dko : notCo.dk ../../../theory/dk/noEta/Agda.dko Agda__Builtin__List.dko ../../../theory/dk/noEta/univ.dko
-coveringCheckTest.dko : coveringCheckTest.dk ../../../theory/dk/noEta/Agda.dko Agda__Builtin__Nat.dko ../../../theory/dk/noEta/univ.dko
-non_terminating.dko : non_terminating.dk ../../../theory/dk/noEta/Agda.dko ../../../theory/dk/noEta/univ.dko
-multipleProj.dko : multipleProj.dk ../../../theory/dk/noEta/Agda.dko Agda__Builtin__Nat.dko ../../../theory/dk/noEta/univ.dko
-cong.dko : cong.dk ../../../theory/dk/noEta/Agda.dko ../../../theory/dk/noEta/univ.dko
-mynat.dko : mynat.dk ../../../theory/dk/noEta/Agda.dko ../../../theory/dk/noEta/univ.dko
-coind2.dko : coind2.dk ../../../theory/dk/noEta/Agda.dko Agda__Builtin__Nat.dko proofs2.dko ../../../theory/dk/noEta/univ.dko
-thiago_test6.dko : thiago_test6.dk ../../../theory/dk/noEta/Agda.dko ../../../theory/dk/noEta/univ.dko
-thiago_test1.dko : thiago_test1.dk ../../../theory/dk/noEta/Agda.dko ../../../theory/dk/noEta/univ.dko
-paramMod.dko : paramMod.dk ../../../theory/dk/noEta/Agda.dko ../../../theory/dk/noEta/univ.dko
-thiago_test3.dko : thiago_test3.dk ../../../theory/dk/noEta/Agda.dko Agda__Builtin__Equality.dko ../../../theory/dk/noEta/univ.dko
-recordPattern.dko : recordPattern.dk ../../../theory/dk/noEta/Agda.dko Agda__Builtin__Nat.dko Agda__Primitive.dko ../../../theory/dk/noEta/univ.dko
-prop.dko : prop.dk ../../../theory/dk/noEta/Agda.dko ../../../theory/dk/noEta/univ.dko
-Agda__Builtin__Bool.dko : Agda__Builtin__Bool.dk ../../../theory/dk/noEta/Agda.dko ../../../theory/dk/noEta/univ.dko
-thiago_test2.dko : thiago_test2.dk ../../../theory/dk/noEta/Agda.dko Agda__Builtin__Equality.dko Agda__Primitive.dko ../../../theory/dk/noEta/univ.dko
-proofs_simpl.dko : proofs_simpl.dk ../../../theory/dk/noEta/Agda.dko ../../../theory/dk/noEta/univ.dko
-mynat2.dko : mynat2.dk ../../../theory/dk/noEta/Agda.dko ../../../theory/dk/noEta/univ.dko
-leveltest.dko : leveltest.dk ../../../theory/dk/noEta/Agda.dko ../../../theory/dk/noEta/univ.dko
-dependantRecord.dko : dependantRecord.dk ../../../theory/dk/noEta/Agda.dko ../../../theory/dk/noEta/univ.dko
-box2.dko : box2.dk ../../../theory/dk/noEta/Agda.dko ../../../theory/dk/noEta/univ.dko
-simple_arithm.dko : simple_arithm.dk ../../../theory/dk/noEta/Agda.dko ../../../theory/dk/noEta/univ.dko
-Agda__Builtin__List.dko : Agda__Builtin__List.dk ../../../theory/dk/noEta/Agda.dko ../../../theory/dk/noEta/univ.dko
-thiago_test7.dko : thiago_test7.dk ../../../theory/dk/noEta/Agda.dko Agda__Primitive.dko ../../../theory/dk/noEta/univ.dko
-coind.dko : coind.dk ../../../theory/dk/noEta/Agda.dko Agda__Builtin__Equality.dko Agda__Builtin__Nat.dko proofs.dko ../../../theory/dk/noEta/univ.dko
-sized_types_erasure.dko : sized_types_erasure.dk ../../../theory/dk/noEta/Agda.dko Agda__Builtin__Bool.dko Agda__Builtin__List.dko ../../../theory/dk/noEta/univ.dko
-proofs.dko : proofs.dk ../../../theory/dk/noEta/Agda.dko Agda__Builtin__Equality.dko Agda__Builtin__Nat.dko ../../../theory/dk/noEta/univ.dko
-functionalRecord.dko : functionalRecord.dk ../../../theory/dk/noEta/Agda.dko Agda__Builtin__Nat.dko ../../../theory/dk/noEta/univ.dko
-dottedPatts.dko : dottedPatts.dk ../../../theory/dk/noEta/Agda.dko ../../../theory/dk/noEta/univ.dko
-coind_simpl.dko : coind_simpl.dk ../../../theory/dk/noEta/Agda.dko Agda__Builtin__Nat.dko ../../../theory/dk/noEta/univ.dko
-Agda__Builtin__Nat.dko : Agda__Builtin__Nat.dk ../../../theory/dk/noEta/Agda.dko Agda__Builtin__Bool.dko ../../../theory/dk/noEta/univ.dko
-thiago_test4.dko : thiago_test4.dk ../../../theory/dk/noEta/Agda.dko Agda__Primitive.dko ../../../theory/dk/noEta/univ.dko
-box.dko : box.dk ../../../theory/dk/noEta/Agda.dko ../../../theory/dk/noEta/univ.dko
-bis.dko : bis.dk ../../../theory/dk/noEta/Agda.dko Agda__Builtin__Equality.dko Agda__Builtin__Nat.dko ../../../theory/dk/noEta/univ.dko
-thiago_test8.dko : thiago_test8.dk ../../../theory/dk/noEta/Agda.dko Agda__Builtin__Equality.dko Agda__Primitive.dko ../../../theory/dk/noEta/univ.dko
+stdcoind.dko : stdcoind.dk ../../../theory/dk/eta/Agda.dko Agda__Builtin__Nat.dko ../../../theory/dk/eta/univ.dko
+dependantRecord2.dko : dependantRecord2.dk ../../../theory/dk/eta/Agda.dko ../../../theory/dk/eta/univ.dko
+thiago_clause.dko : thiago_clause.dk ../../../theory/dk/eta/Agda.dko Agda__Builtin__Nat.dko ../../../theory/dk/eta/univ.dko
+testRecord.dko : testRecord.dk ../../../theory/dk/eta/Agda.dko Agda__Builtin__Nat.dko ../../../theory/dk/eta/univ.dko
+impor.dko : impor.dk ../../../theory/dk/eta/Agda.dko paramMod.dko ../../../theory/dk/eta/univ.dko
+Agda__Builtin__Equality.dko : Agda__Builtin__Equality.dk ../../../theory/dk/eta/Agda.dko ../../../theory/dk/eta/univ.dko
+coindMus2.dko : coindMus2.dk ../../../theory/dk/eta/Agda.dko Agda__Builtin__Coinduction.dko Agda__Builtin__Nat.dko ../../../theory/dk/eta/univ.dko
+proofs2.dko : proofs2.dk ../../../theory/dk/eta/Agda.dko Agda__Builtin__Nat.dko ../../../theory/dk/eta/univ.dko
+pair.dko : pair.dk ../../../theory/dk/eta/Agda.dko ../../../theory/dk/eta/univ.dko
+testCovering.dko : testCovering.dk ../../../theory/dk/eta/Agda.dko ../../../theory/dk/eta/univ.dko
+copat.dko : copat.dk ../../../theory/dk/eta/Agda.dko Agda__Builtin__Nat.dko ../../../theory/dk/eta/univ.dko
+coindMus.dko : coindMus.dk ../../../theory/dk/eta/Agda.dko Agda__Builtin__Coinduction.dko Agda__Builtin__Nat.dko ../../../theory/dk/eta/univ.dko
+coindFormLangnoEq.dko : coindFormLangnoEq.dk ../../../theory/dk/eta/Agda.dko Agda__Builtin__Bool.dko ../../../theory/dk/eta/univ.dko
+Agda__Builtin__Sigma.dko : Agda__Builtin__Sigma.dk ../../../theory/dk/eta/Agda.dko ../../../theory/dk/eta/univ.dko
+etaExpNOTRequired.dko : etaExpNOTRequired.dk ../../../theory/dk/eta/Agda.dko Agda__Builtin__Equality.dko Agda__Builtin__Nat.dko Agda__Primitive.dko ../../../theory/dk/eta/univ.dko
+Agda__Primitive.dko : Agda__Primitive.dk ../../../theory/dk/eta/Agda.dko ../../../theory/dk/eta/univ.dko
+recordProj.dko : recordProj.dk ../../../theory/dk/eta/Agda.dko Agda__Builtin__Equality.dko Agda__Builtin__Nat.dko ../../../theory/dk/eta/univ.dko
+non_terminating.dko : non_terminating.dk ../../../theory/dk/eta/Agda.dko ../../../theory/dk/eta/univ.dko
+mynat.dko : mynat.dk ../../../theory/dk/eta/Agda.dko ../../../theory/dk/eta/univ.dko
+recordPattern.dko : recordPattern.dk ../../../theory/dk/eta/Agda.dko Agda__Builtin__Nat.dko Agda__Primitive.dko ../../../theory/dk/eta/univ.dko
+prop.dko : prop.dk ../../../theory/dk/eta/Agda.dko ../../../theory/dk/eta/univ.dko
+proofs_simpl.dko : proofs_simpl.dk ../../../theory/dk/eta/Agda.dko ../../../theory/dk/eta/univ.dko
+nonprenexpoly.dko : nonprenexpoly.dk ../../../theory/dk/eta/Agda.dko ../../../theory/dk/eta/univ.dko
+leveltest.dko : leveltest.dk ../../../theory/dk/eta/Agda.dko ../../../theory/dk/eta/univ.dko
+dependantRecord.dko : dependantRecord.dk ../../../theory/dk/eta/Agda.dko ../../../theory/dk/eta/univ.dko
+coindMusFormLang.dko : coindMusFormLang.dk ../../../theory/dk/eta/Agda.dko Agda__Builtin__Bool.dko Agda__Builtin__Coinduction.dko Agda__Builtin__Equality.dko Agda__Builtin__List.dko ../../../theory/dk/eta/univ.dko
+box2.dko : box2.dk ../../../theory/dk/eta/Agda.dko ../../../theory/dk/eta/univ.dko
+functionalRecord.dko : functionalRecord.dk ../../../theory/dk/eta/Agda.dko Agda__Builtin__Nat.dko ../../../theory/dk/eta/univ.dko
+dottedPatts.dko : dottedPatts.dk ../../../theory/dk/eta/Agda.dko ../../../theory/dk/eta/univ.dko
+coind_simpl.dko : coind_simpl.dk ../../../theory/dk/eta/Agda.dko Agda__Builtin__Nat.dko ../../../theory/dk/eta/univ.dko
+coindFormLang.dko : coindFormLang.dk ../../../theory/dk/eta/Agda.dko Agda__Builtin__Bool.dko Agda__Builtin__Equality.dko Agda__Builtin__List.dko ../../../theory/dk/eta/univ.dko
+etaReq.dko : etaReq.dk ../../../theory/dk/eta/Agda.dko Agda__Builtin__Nat.dko ../../../theory/dk/eta/univ.dko
+Agda__Builtin__Coinduction.dko : Agda__Builtin__Coinduction.dk ../../../theory/dk/eta/Agda.dko ../../../theory/dk/eta/univ.dko
+coveringCheckBug.dko : coveringCheckBug.dk ../../../theory/dk/eta/Agda.dko Agda__Builtin__Nat.dko ../../../theory/dk/eta/univ.dko
+thiago_test8.dko : thiago_test8.dk ../../../theory/dk/eta/Agda.dko Agda__Builtin__Equality.dko Agda__Primitive.dko ../../../theory/dk/eta/univ.dko
+rose_tree_aux.dko : rose_tree_aux.dk ../../../theory/dk/eta/Agda.dko ../../../theory/dk/eta/univ.dko
+mutualDef.dko : mutualDef.dk ../../../theory/dk/eta/Agda.dko Agda__Builtin__Nat.dko ../../../theory/dk/eta/univ.dko
+lift.dko : lift.dk ../../../theory/dk/eta/Agda.dko ../../../theory/dk/eta/univ.dko
+etaRequired.dko : etaRequired.dk ../../../theory/dk/eta/Agda.dko Agda__Builtin__Nat.dko ../../../theory/dk/eta/univ.dko
+thiago_test5.dko : thiago_test5.dk ../../../theory/dk/eta/Agda.dko ../../../theory/dk/eta/univ.dko
+builtins.dko : builtins.dk ../../../theory/dk/eta/Agda.dko Agda__Builtin__Sigma.dko ../../../theory/dk/eta/univ.dko
+recordtest.dko : recordtest.dk ../../../theory/dk/eta/Agda.dko Agda__Builtin__Nat.dko ../../../theory/dk/eta/univ.dko
+notCo.dko : notCo.dk ../../../theory/dk/eta/Agda.dko Agda__Builtin__List.dko ../../../theory/dk/eta/univ.dko
+coveringCheckTest.dko : coveringCheckTest.dk ../../../theory/dk/eta/Agda.dko Agda__Builtin__Nat.dko ../../../theory/dk/eta/univ.dko
+multipleProj.dko : multipleProj.dk ../../../theory/dk/eta/Agda.dko Agda__Builtin__Nat.dko ../../../theory/dk/eta/univ.dko
+etaRequired2.dko : etaRequired2.dk ../../../theory/dk/eta/Agda.dko ../../../theory/dk/eta/univ.dko
+etaExpNOTRequired2.dko : etaExpNOTRequired2.dk ../../../theory/dk/eta/Agda.dko Agda__Builtin__Equality.dko Agda__Builtin__Nat.dko ../../../theory/dk/eta/univ.dko
+cong.dko : cong.dk ../../../theory/dk/eta/Agda.dko ../../../theory/dk/eta/univ.dko
+coind2.dko : coind2.dk ../../../theory/dk/eta/Agda.dko Agda__Builtin__Nat.dko proofs2.dko ../../../theory/dk/eta/univ.dko
+thiago_test6.dko : thiago_test6.dk ../../../theory/dk/eta/Agda.dko ../../../theory/dk/eta/univ.dko
+thiago_test1.dko : thiago_test1.dk ../../../theory/dk/eta/Agda.dko ../../../theory/dk/eta/univ.dko
+paramMod.dko : paramMod.dk ../../../theory/dk/eta/Agda.dko ../../../theory/dk/eta/univ.dko
+thiago_test3.dko : thiago_test3.dk ../../../theory/dk/eta/Agda.dko Agda__Builtin__Equality.dko ../../../theory/dk/eta/univ.dko
+Agda__Builtin__Bool.dko : Agda__Builtin__Bool.dk ../../../theory/dk/eta/Agda.dko ../../../theory/dk/eta/univ.dko
+thiago_test2.dko : thiago_test2.dk ../../../theory/dk/eta/Agda.dko Agda__Builtin__Equality.dko Agda__Primitive.dko ../../../theory/dk/eta/univ.dko
+mynat2.dko : mynat2.dk ../../../theory/dk/eta/Agda.dko ../../../theory/dk/eta/univ.dko
+coindMusFormLangThunk.dko : coindMusFormLangThunk.dk ../../../theory/dk/eta/Agda.dko Agda__Builtin__Bool.dko Agda__Builtin__Equality.dko Agda__Builtin__List.dko ../../../theory/dk/eta/univ.dko
+simple_arithm.dko : simple_arithm.dk ../../../theory/dk/eta/Agda.dko ../../../theory/dk/eta/univ.dko
+Agda__Builtin__List.dko : Agda__Builtin__List.dk ../../../theory/dk/eta/Agda.dko ../../../theory/dk/eta/univ.dko
+extendedLambda.dko : extendedLambda.dk ../../../theory/dk/eta/Agda.dko Agda__Builtin__Nat.dko ../../../theory/dk/eta/univ.dko
+thiago_test7.dko : thiago_test7.dk ../../../theory/dk/eta/Agda.dko Agda__Primitive.dko ../../../theory/dk/eta/univ.dko
+coind.dko : coind.dk ../../../theory/dk/eta/Agda.dko Agda__Builtin__Equality.dko Agda__Builtin__Nat.dko proofs.dko ../../../theory/dk/eta/univ.dko
+sized_types_erasure.dko : sized_types_erasure.dk ../../../theory/dk/eta/Agda.dko Agda__Builtin__Bool.dko Agda__Builtin__List.dko ../../../theory/dk/eta/univ.dko
+proofs.dko : proofs.dk ../../../theory/dk/eta/Agda.dko Agda__Builtin__Equality.dko Agda__Builtin__Nat.dko ../../../theory/dk/eta/univ.dko
+Agda__Builtin__Nat.dko : Agda__Builtin__Nat.dk ../../../theory/dk/eta/Agda.dko Agda__Builtin__Bool.dko ../../../theory/dk/eta/univ.dko
+thiago_test4.dko : thiago_test4.dk ../../../theory/dk/eta/Agda.dko Agda__Primitive.dko ../../../theory/dk/eta/univ.dko
+box.dko : box.dk ../../../theory/dk/eta/Agda.dko ../../../theory/dk/eta/univ.dko
+bis.dko : bis.dk ../../../theory/dk/eta/Agda.dko Agda__Builtin__Equality.dko Agda__Builtin__Nat.dko ../../../theory/dk/eta/univ.dko

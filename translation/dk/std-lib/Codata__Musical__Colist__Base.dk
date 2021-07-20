@@ -1,0 +1,76 @@
+TYPE__Colist : (a : univ.Lvl) -> (A : Agda.Term (Agda.set (univ.s a)) (Agda.code (Agda.set a))) -> Type.
+Colist : Agda.Term Agda.sortOmega (Agda.qLevel (a => Agda.set (univ.s a)) (a => Agda.prod (Agda.set (univ.s a)) (Agda.set (univ.s a)) (Agda.code (Agda.set a)) (A => (Agda.code (Agda.set a))))).
+[a, A] Agda.Term _ (Colist a A) --> TYPE__Colist a A.
+{|!Colist__[]|} : Agda.Term Agda.sortOmega (Agda.qLevel (a => Agda.set (univ.s a)) (a => Agda.prod (Agda.set (univ.s a)) (Agda.set a) (Agda.code (Agda.set a)) (A => (Colist a A)))).
+{|!Colist___∷_|} : Agda.Term Agda.sortOmega (Agda.qLevel (a => Agda.set (univ.s a)) (a => Agda.prod (Agda.set (univ.s a)) (Agda.set a) (Agda.code (Agda.set a)) (A => (Agda.prod (Agda.set a) (Agda.set a) A (x => (Agda.prod (Agda.set a) (Agda.set a) (Agda__Builtin__Coinduction.{|!∞|} a (Colist a A)) (xs => (Colist a A)))))))).
+
+
+
+def null : Agda.Term Agda.sortOmega (Agda.qLevel ({|!A'a|} => Agda.set (univ.s {|!A'a|})) ({|!A'a|} => Agda.prod (Agda.set (univ.s {|!A'a|})) (Agda.set {|!A'a|}) (Agda.code (Agda.set {|!A'a|})) (A => (Agda.prod (Agda.set {|!A'a|}) (Agda.set univ.0) (Colist {|!A'a|} A) (_0 => Agda__Builtin__Bool.Bool))))).
+[{|!A'a|}, A] null {|!A'a|} A ({|!Colist__[]|} {|!A'a|} A) --> Agda__Builtin__Bool.Bool__true.
+[{|!A'a|}, A, x, xs] null {|!A'a|} A ({|!Colist___∷_|} {|!A'a|} A x xs) --> Agda__Builtin__Bool.Bool__false.
+ 
+def length : Agda.Term Agda.sortOmega (Agda.qLevel ({|!A'a|} => Agda.set (univ.s {|!A'a|})) ({|!A'a|} => Agda.prod (Agda.set (univ.s {|!A'a|})) (Agda.set {|!A'a|}) (Agda.code (Agda.set {|!A'a|})) (A => (Agda.prod (Agda.set {|!A'a|}) (Agda.set univ.0) (Colist {|!A'a|} A) (_0 => Codata__Musical__Conat__Base.{|!Coℕ|}))))).
+def {|!___♯-0|} : Agda.Term Agda.sortOmega (Agda.qLevel ({|!A'a|} => Agda.set (univ.s {|!A'a|})) ({|!A'a|} => Agda.prod (Agda.set (univ.s {|!A'a|})) (Agda.set {|!A'a|}) (Agda.code (Agda.set {|!A'a|})) (A => (Agda.prod (Agda.set {|!A'a|}) (Agda.set {|!A'a|}) A (x => (Agda.prod (Agda.set {|!A'a|}) (Agda.set univ.0) (Agda__Builtin__Coinduction.{|!∞|} {|!A'a|} (Colist {|!A'a|} A)) (xs => (Agda__Builtin__Coinduction.{|!∞|} univ.0 Codata__Musical__Conat__Base.{|!Coℕ|})))))))).
+[{|!A'a|}, A] length {|!A'a|} A ({|!Colist__[]|} {|!A'a|} A) --> Codata__Musical__Conat__Base.{|!Coℕ__zero|}.
+[{|!A'a|}, A, x, xs] length {|!A'a|} A ({|!Colist___∷_|} {|!A'a|} A x xs) --> Codata__Musical__Conat__Base.{|!Coℕ__suc|} ({|!___♯-0|} {|!A'a|} A x xs).
+ 
+[{|!A'a|}, A, x, xs] Agda__Builtin__Coinduction.{|!♭|} {univ.0} {Codata__Musical__Conat__Base.{|!Coℕ|}} ({|!___♯-0|} {|!A'a|} A x xs) --> length {|!A'a|} A (Agda__Builtin__Coinduction.{|!♭|} {|!A'a|} (Colist {|!A'a|} A) xs).
+ 
+def map : Agda.Term Agda.sortOmega (Agda.qLevel ({|!A'a|} => Agda.sortOmega) ({|!A'a|} => Agda.prod (Agda.set (univ.s {|!A'a|})) Agda.sortOmega (Agda.code (Agda.set {|!A'a|})) (A => (Agda.qLevel ({|!B'b|} => Agda.set (univ.max univ.0 (univ.max {|!A'a|} (univ.s {|!B'b|})))) ({|!B'b|} => Agda.prod (Agda.set (univ.s {|!B'b|})) (Agda.set (univ.max univ.0 (univ.max {|!A'a|} {|!B'b|}))) (Agda.code (Agda.set {|!B'b|})) (B => (Agda.prod (Agda.set (univ.max univ.0 (univ.max {|!A'a|} {|!B'b|}))) (Agda.set (univ.max univ.0 (univ.max {|!A'a|} {|!B'b|}))) (Agda.prod (Agda.set {|!A'a|}) (Agda.set {|!B'b|}) A (_0 => B)) (_0 => (Agda.prod (Agda.set {|!A'a|}) (Agda.set {|!B'b|}) (Colist {|!A'a|} A) (_0 => (Colist {|!B'b|} B))))))))))).
+def {|!___♯-1|} : Agda.Term Agda.sortOmega (Agda.qLevel ({|!A'a|} => Agda.sortOmega) ({|!A'a|} => Agda.prod (Agda.set (univ.s {|!A'a|})) Agda.sortOmega (Agda.code (Agda.set {|!A'a|})) (A => (Agda.qLevel ({|!B'b|} => Agda.set (univ.max univ.0 (univ.max {|!A'a|} (univ.s {|!B'b|})))) ({|!B'b|} => Agda.prod (Agda.set (univ.s {|!B'b|})) (Agda.set (univ.max univ.0 (univ.max {|!A'a|} {|!B'b|}))) (Agda.code (Agda.set {|!B'b|})) (B => (Agda.prod (Agda.set (univ.max univ.0 (univ.max {|!A'a|} {|!B'b|}))) (Agda.set (univ.max univ.0 (univ.max {|!A'a|} {|!B'b|}))) (Agda.prod (Agda.set {|!A'a|}) (Agda.set {|!B'b|}) A (_0 => B)) (f => (Agda.prod (Agda.set {|!A'a|}) (Agda.set (univ.max univ.0 (univ.max {|!A'a|} {|!B'b|}))) A (x => (Agda.prod (Agda.set {|!A'a|}) (Agda.set {|!B'b|}) (Agda__Builtin__Coinduction.{|!∞|} {|!A'a|} (Colist {|!A'a|} A)) (xs => (Agda__Builtin__Coinduction.{|!∞|} {|!B'b|} (Colist {|!B'b|} B)))))))))))))).
+[{|!A'a|}, A, {|!B'b|}, B, x] map {|!A'a|} A {|!B'b|} B x ({|!Colist__[]|} {|!A'a|} A) --> {|!Colist__[]|} {|!B'b|} B.
+[{|!A'a|}, A, {|!B'b|}, B, x0, x, xs] map {|!A'a|} A {|!B'b|} B x0 ({|!Colist___∷_|} {|!A'a|} A x xs) --> {|!Colist___∷_|} {|!B'b|} B (x0 x) ({|!___♯-1|} {|!A'a|} A {|!B'b|} B x0 x xs).
+ 
+[{|!A'a|}, A, {|!B'b|}, B, f, x, xs] Agda__Builtin__Coinduction.{|!♭|} {|!B'b|} {Colist {|!B'b|} B} ({|!___♯-1|} {|!A'a|} A {|!B'b|} B f x xs) --> map {|!A'a|} A {|!B'b|} B f (Agda__Builtin__Coinduction.{|!♭|} {|!A'a|} (Colist {|!A'a|} A) xs).
+ 
+def fromList : Agda.Term Agda.sortOmega (Agda.qLevel ({|!A'a|} => Agda.set (univ.s {|!A'a|})) ({|!A'a|} => Agda.prod (Agda.set (univ.s {|!A'a|})) (Agda.set {|!A'a|}) (Agda.code (Agda.set {|!A'a|})) (A => (Agda.prod (Agda.set {|!A'a|}) (Agda.set {|!A'a|}) (Agda__Builtin__List.List {|!A'a|} A) (_0 => (Colist {|!A'a|} A)))))).
+def {|!___♯-2|} : Agda.Term Agda.sortOmega (Agda.qLevel ({|!A'a|} => Agda.set (univ.s {|!A'a|})) ({|!A'a|} => Agda.prod (Agda.set (univ.s {|!A'a|})) (Agda.set {|!A'a|}) (Agda.code (Agda.set {|!A'a|})) (A => (Agda.prod (Agda.set {|!A'a|}) (Agda.set {|!A'a|}) A (x => (Agda.prod (Agda.set {|!A'a|}) (Agda.set {|!A'a|}) (Agda__Builtin__List.List {|!A'a|} A) (xs => (Agda__Builtin__Coinduction.{|!∞|} {|!A'a|} (Colist {|!A'a|} A))))))))).
+[{|!A'a|}, A] fromList {|!A'a|} A (Agda__Builtin__List.{|!List__[]|} {|!A'a|} A) --> {|!Colist__[]|} {|!A'a|} A.
+[{|!A'a|}, A, x0, x] fromList {|!A'a|} A (Agda__Builtin__List.{|!List___∷_|} {|!A'a|} A x0 x) --> {|!Colist___∷_|} {|!A'a|} A x0 ({|!___♯-2|} {|!A'a|} A x0 x).
+ 
+[{|!A'a|}, A, x, xs] Agda__Builtin__Coinduction.{|!♭|} {|!A'a|} {Colist {|!A'a|} A} ({|!___♯-2|} {|!A'a|} A x xs) --> fromList {|!A'a|} A xs.
+ 
+def replicate : Agda.Term Agda.sortOmega (Agda.qLevel ({|!A'a|} => Agda.set (univ.s {|!A'a|})) ({|!A'a|} => Agda.prod (Agda.set (univ.s {|!A'a|})) (Agda.set {|!A'a|}) (Agda.code (Agda.set {|!A'a|})) (A => (Agda.prod (Agda.set univ.0) (Agda.set {|!A'a|}) Codata__Musical__Conat__Base.{|!Coℕ|} (_0 => (Agda.prod (Agda.set {|!A'a|}) (Agda.set {|!A'a|}) A (_0 => (Colist {|!A'a|} A)))))))).
+def {|!___♯-3|} : Agda.Term Agda.sortOmega (Agda.qLevel ({|!A'a|} => Agda.set (univ.s {|!A'a|})) ({|!A'a|} => Agda.prod (Agda.set (univ.s {|!A'a|})) (Agda.set {|!A'a|}) (Agda.code (Agda.set {|!A'a|})) (A => (Agda.prod (Agda.set univ.0) (Agda.set {|!A'a|}) (Agda__Builtin__Coinduction.{|!∞|} univ.0 Codata__Musical__Conat__Base.{|!Coℕ|}) (n => (Agda.prod (Agda.set {|!A'a|}) (Agda.set {|!A'a|}) A (x => (Agda__Builtin__Coinduction.{|!∞|} {|!A'a|} (Colist {|!A'a|} A))))))))).
+[{|!A'a|}, A, x] replicate {|!A'a|} A Codata__Musical__Conat__Base.{|!Coℕ__zero|} x --> {|!Colist__[]|} {|!A'a|} A.
+[{|!A'a|}, A, n, x] replicate {|!A'a|} A (Codata__Musical__Conat__Base.{|!Coℕ__suc|} n) x --> {|!Colist___∷_|} {|!A'a|} A x ({|!___♯-3|} {|!A'a|} A n x).
+ 
+[{|!A'a|}, A, n, x] Agda__Builtin__Coinduction.{|!♭|} {|!A'a|} {Colist {|!A'a|} A} ({|!___♯-3|} {|!A'a|} A n x) --> replicate {|!A'a|} A (Agda__Builtin__Coinduction.{|!♭|} univ.0 Codata__Musical__Conat__Base.{|!Coℕ|} n) x.
+ 
+def lookup : Agda.Term Agda.sortOmega (Agda.qLevel ({|!A'a|} => Agda.set (univ.s {|!A'a|})) ({|!A'a|} => Agda.prod (Agda.set (univ.s {|!A'a|})) (Agda.set {|!A'a|}) (Agda.code (Agda.set {|!A'a|})) (A => (Agda.prod (Agda.set univ.0) (Agda.set {|!A'a|}) Agda__Builtin__Nat.Nat (_0 => (Agda.prod (Agda.set {|!A'a|}) (Agda.set {|!A'a|}) (Colist {|!A'a|} A) (_0 => (Agda__Builtin__Maybe.Maybe {|!A'a|} A)))))))).
+[{|!A'a|}, A, x] lookup {|!A'a|} A x ({|!Colist__[]|} {|!A'a|} A) --> Agda__Builtin__Maybe.Maybe__nothing {|!A'a|} A.
+[{|!A'a|}, A, x, xs] lookup {|!A'a|} A Agda__Builtin__Nat.Nat__zero ({|!Colist___∷_|} {|!A'a|} A x xs) --> Agda__Builtin__Maybe.Maybe__just {|!A'a|} A x.
+[{|!A'a|}, A, x0, x, xs] lookup {|!A'a|} A (Agda__Builtin__Nat.Nat__suc x0) ({|!Colist___∷_|} {|!A'a|} A x xs) --> lookup {|!A'a|} A x0 (Agda__Builtin__Coinduction.{|!♭|} {|!A'a|} (Colist {|!A'a|} A) xs).
+ 
+def {|!_++_|} : Agda.Term Agda.sortOmega (Agda.qLevel ({|!A'a|} => Agda.set (univ.s {|!A'a|})) ({|!A'a|} => Agda.prod (Agda.set (univ.s {|!A'a|})) (Agda.set {|!A'a|}) (Agda.code (Agda.set {|!A'a|})) (A => (Agda.prod (Agda.set {|!A'a|}) (Agda.set {|!A'a|}) (Colist {|!A'a|} A) (_0 => (Agda.prod (Agda.set {|!A'a|}) (Agda.set {|!A'a|}) (Colist {|!A'a|} A) (_0 => (Colist {|!A'a|} A)))))))).
+def {|!___♯-4|} : Agda.Term Agda.sortOmega (Agda.qLevel ({|!A'a|} => Agda.set (univ.s {|!A'a|})) ({|!A'a|} => Agda.prod (Agda.set (univ.s {|!A'a|})) (Agda.set {|!A'a|}) (Agda.code (Agda.set {|!A'a|})) (A => (Agda.prod (Agda.set {|!A'a|}) (Agda.set {|!A'a|}) A (x => (Agda.prod (Agda.set {|!A'a|}) (Agda.set {|!A'a|}) (Agda__Builtin__Coinduction.{|!∞|} {|!A'a|} (Colist {|!A'a|} A)) (xs => (Agda.prod (Agda.set {|!A'a|}) (Agda.set {|!A'a|}) (Colist {|!A'a|} A) (ys => (Agda__Builtin__Coinduction.{|!∞|} {|!A'a|} (Colist {|!A'a|} A))))))))))).
+[{|!A'a|}, A, x] {|!_++_|} {|!A'a|} A ({|!Colist__[]|} {|!A'a|} A) x --> x.
+[{|!A'a|}, A, x0, xs, x] {|!_++_|} {|!A'a|} A ({|!Colist___∷_|} {|!A'a|} A x0 xs) x --> {|!Colist___∷_|} {|!A'a|} A x0 ({|!___♯-4|} {|!A'a|} A x0 xs x).
+ 
+[{|!A'a|}, A, x, xs, ys] Agda__Builtin__Coinduction.{|!♭|} {|!A'a|} {Colist {|!A'a|} A} ({|!___♯-4|} {|!A'a|} A x xs ys) --> {|!_++_|} {|!A'a|} A (Agda__Builtin__Coinduction.{|!♭|} {|!A'a|} (Colist {|!A'a|} A) xs) ys.
+ 
+def {|!_⋎_|} : Agda.Term Agda.sortOmega (Agda.qLevel ({|!A'a|} => Agda.set (univ.s {|!A'a|})) ({|!A'a|} => Agda.prod (Agda.set (univ.s {|!A'a|})) (Agda.set {|!A'a|}) (Agda.code (Agda.set {|!A'a|})) (A => (Agda.prod (Agda.set {|!A'a|}) (Agda.set {|!A'a|}) (Colist {|!A'a|} A) (_0 => (Agda.prod (Agda.set {|!A'a|}) (Agda.set {|!A'a|}) (Colist {|!A'a|} A) (_0 => (Colist {|!A'a|} A)))))))).
+def {|!___♯-5|} : Agda.Term Agda.sortOmega (Agda.qLevel ({|!A'a|} => Agda.set (univ.s {|!A'a|})) ({|!A'a|} => Agda.prod (Agda.set (univ.s {|!A'a|})) (Agda.set {|!A'a|}) (Agda.code (Agda.set {|!A'a|})) (A => (Agda.prod (Agda.set {|!A'a|}) (Agda.set {|!A'a|}) A (x => (Agda.prod (Agda.set {|!A'a|}) (Agda.set {|!A'a|}) (Agda__Builtin__Coinduction.{|!∞|} {|!A'a|} (Colist {|!A'a|} A)) (xs => (Agda.prod (Agda.set {|!A'a|}) (Agda.set {|!A'a|}) (Colist {|!A'a|} A) (ys => (Agda__Builtin__Coinduction.{|!∞|} {|!A'a|} (Colist {|!A'a|} A))))))))))).
+[{|!A'a|}, A, x] {|!_⋎_|} {|!A'a|} A ({|!Colist__[]|} {|!A'a|} A) x --> x.
+[{|!A'a|}, A, x0, xs, x] {|!_⋎_|} {|!A'a|} A ({|!Colist___∷_|} {|!A'a|} A x0 xs) x --> {|!Colist___∷_|} {|!A'a|} A x0 ({|!___♯-5|} {|!A'a|} A x0 xs x).
+ 
+[{|!A'a|}, A, x, xs, ys] Agda__Builtin__Coinduction.{|!♭|} {|!A'a|} {Colist {|!A'a|} A} ({|!___♯-5|} {|!A'a|} A x xs ys) --> {|!_⋎_|} {|!A'a|} A ys (Agda__Builtin__Coinduction.{|!♭|} {|!A'a|} (Colist {|!A'a|} A) xs).
+ 
+def concat : Agda.Term Agda.sortOmega (Agda.qLevel ({|!A'a|} => Agda.set (univ.s {|!A'a|})) ({|!A'a|} => Agda.prod (Agda.set (univ.s {|!A'a|})) (Agda.set {|!A'a|}) (Agda.code (Agda.set {|!A'a|})) (A => (Agda.prod (Agda.set {|!A'a|}) (Agda.set {|!A'a|}) (Colist {|!A'a|} (Data__List__NonEmpty__Base.{|!List⁺|} {|!A'a|} A)) (_0 => (Colist {|!A'a|} A)))))).
+def {|!___♯-6|} : Agda.Term Agda.sortOmega (Agda.qLevel ({|!A'a|} => Agda.set (univ.s {|!A'a|})) ({|!A'a|} => Agda.prod (Agda.set (univ.s {|!A'a|})) (Agda.set {|!A'a|}) (Agda.code (Agda.set {|!A'a|})) (A => (Agda.prod (Agda.set {|!A'a|}) (Agda.set {|!A'a|}) A (x => (Agda.prod (Agda.set {|!A'a|}) (Agda.set {|!A'a|}) (Agda__Builtin__Coinduction.{|!∞|} {|!A'a|} (Colist {|!A'a|} (Data__List__NonEmpty__Base.{|!List⁺|} {|!A'a|} A))) (xss => (Agda__Builtin__Coinduction.{|!∞|} {|!A'a|} (Colist {|!A'a|} A))))))))).
+def {|!___♯-7|} : Agda.Term Agda.sortOmega (Agda.qLevel ({|!A'a|} => Agda.set (univ.s {|!A'a|})) ({|!A'a|} => Agda.prod (Agda.set (univ.s {|!A'a|})) (Agda.set {|!A'a|}) (Agda.code (Agda.set {|!A'a|})) (A => (Agda.prod (Agda.set {|!A'a|}) (Agda.set {|!A'a|}) A (x => (Agda.prod (Agda.set {|!A'a|}) (Agda.set {|!A'a|}) A (y => (Agda.prod (Agda.set {|!A'a|}) (Agda.set {|!A'a|}) (Agda__Builtin__List.List {|!A'a|} A) (xs => (Agda.prod (Agda.set {|!A'a|}) (Agda.set {|!A'a|}) (Agda__Builtin__Coinduction.{|!∞|} {|!A'a|} (Colist {|!A'a|} (Data__List__NonEmpty__Base.{|!List⁺|} {|!A'a|} A))) (xss => (Agda__Builtin__Coinduction.{|!∞|} {|!A'a|} (Colist {|!A'a|} A))))))))))))).
+[{|!A'a|}, A] concat {|!A'a|} A ({|!Colist__[]|} {|!A'a|} {Data__List__NonEmpty__Base.{|!List⁺|} {|!A'a|} A}) --> {|!Colist__[]|} {|!A'a|} A.
+[{|!A'a|}, A, head, xs] concat {|!A'a|} A ({|!Colist___∷_|} {|!A'a|} {Data__List__NonEmpty__Base.{|!List⁺|} {|!A'a|} A} (Data__List__NonEmpty__Base.{|!_∷_|} {|!A'a|} A head (Agda__Builtin__List.{|!List__[]|} {|!A'a|} A)) xs) --> {|!Colist___∷_|} {|!A'a|} A head ({|!___♯-6|} {|!A'a|} A head xs).
+[{|!A'a|}, A, head, x, tail, xs] concat {|!A'a|} A ({|!Colist___∷_|} {|!A'a|} {Data__List__NonEmpty__Base.{|!List⁺|} {|!A'a|} A} (Data__List__NonEmpty__Base.{|!_∷_|} {|!A'a|} A head (Agda__Builtin__List.{|!List___∷_|} {|!A'a|} A x tail)) xs) --> {|!Colist___∷_|} {|!A'a|} A head ({|!___♯-7|} {|!A'a|} A head x tail xs).
+ 
+[{|!A'a|}, A, x, xss] Agda__Builtin__Coinduction.{|!♭|} {|!A'a|} {Colist {|!A'a|} A} ({|!___♯-6|} {|!A'a|} A x xss) --> concat {|!A'a|} A (Agda__Builtin__Coinduction.{|!♭|} {|!A'a|} (Colist {|!A'a|} (Data__List__NonEmpty__Base.{|!List⁺|} {|!A'a|} A)) xss).
+ 
+[{|!A'a|}, A, x, y, xs, xss] Agda__Builtin__Coinduction.{|!♭|} {|!A'a|} {Colist {|!A'a|} A} ({|!___♯-7|} {|!A'a|} A x y xs xss) --> concat {|!A'a|} A ({|!Colist___∷_|} {|!A'a|} (Data__List__NonEmpty__Base.{|!List⁺|} {|!A'a|} A) (Data__List__NonEmpty__Base.{|!_∷_|} {|!A'a|} A y xs) xss).
+ 
+def {|![_]|} : Agda.Term Agda.sortOmega (Agda.qLevel ({|!A'a|} => Agda.set (univ.s {|!A'a|})) ({|!A'a|} => Agda.prod (Agda.set (univ.s {|!A'a|})) (Agda.set {|!A'a|}) (Agda.code (Agda.set {|!A'a|})) (A => (Agda.prod (Agda.set {|!A'a|}) (Agda.set {|!A'a|}) A (_0 => (Colist {|!A'a|} A)))))).
+def {|!___♯-8|} : Agda.Term Agda.sortOmega (Agda.qLevel ({|!A'a|} => Agda.set (univ.s {|!A'a|})) ({|!A'a|} => Agda.prod (Agda.set (univ.s {|!A'a|})) (Agda.set {|!A'a|}) (Agda.code (Agda.set {|!A'a|})) (A => (Agda.prod (Agda.set {|!A'a|}) (Agda.set {|!A'a|}) A (x => (Agda__Builtin__Coinduction.{|!∞|} {|!A'a|} (Colist {|!A'a|} A))))))).
+[{|!A'a|}, A, x] {|![_]|} {|!A'a|} A x --> {|!Colist___∷_|} {|!A'a|} A x ({|!___♯-8|} {|!A'a|} A x).
+ 
+[{|!A'a|}, A, x] Agda__Builtin__Coinduction.{|!♭|} {|!A'a|} {Colist {|!A'a|} A} ({|!___♯-8|} {|!A'a|} A x) --> {|!Colist__[]|} {|!A'a|} A.
+ 

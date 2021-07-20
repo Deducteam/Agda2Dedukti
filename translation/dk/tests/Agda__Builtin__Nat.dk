@@ -3,39 +3,41 @@ Nat : Agda.Term (Agda.set (univ.s univ.0)) (Agda.code (Agda.set univ.0)).
 [] Agda.Term _ Nat --> TYPE__Nat.
 Nat__zero : Agda.Term (Agda.set univ.0) Nat.
 Nat__suc : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Nat (n => Nat)).
-
+[] Agda.etaExpand _ Nat Nat__zero --> Nat__zero.
+[n] Agda.etaExpand _ Nat (Nat__suc n) --> Nat__suc (Agda.etaExpand univ.0 Nat n).
+ 
 
 
 def {|!_+_|} : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Nat (_0 => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Nat (_0 => Nat)))).
-[m] {|!_+_|} Nat__zero m --> m.
-[n, m] {|!_+_|} (Nat__suc n) m --> Nat__suc ({|!_+_|} n m).
+[m] {|!_+_|} Nat__zero m --> Agda.etaExpand univ.0 Nat m.
+[n, m] {|!_+_|} (Nat__suc n) m --> Agda.etaExpand univ.0 Nat (Nat__suc (Agda.etaExpand univ.0 Nat ({|!_+_|} (Agda.etaExpand univ.0 Nat n) (Agda.etaExpand univ.0 Nat m)))).
  
 def {|!_-_|} : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Nat (_0 => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Nat (_0 => Nat)))).
-[n] {|!_-_|} n Nat__zero --> n.
-[m] {|!_-_|} Nat__zero (Nat__suc m) --> Nat__zero.
-[n, m] {|!_-_|} (Nat__suc n) (Nat__suc m) --> {|!_-_|} n m.
+[n] {|!_-_|} n Nat__zero --> Agda.etaExpand univ.0 Nat n.
+[m] {|!_-_|} Nat__zero (Nat__suc m) --> Agda.etaExpand univ.0 Nat Nat__zero.
+[n, m] {|!_-_|} (Nat__suc n) (Nat__suc m) --> Agda.etaExpand univ.0 Nat ({|!_-_|} (Agda.etaExpand univ.0 Nat n) (Agda.etaExpand univ.0 Nat m)).
  
 def {|!_*_|} : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Nat (_0 => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Nat (_0 => Nat)))).
-[m] {|!_*_|} Nat__zero m --> Nat__zero.
-[n, m] {|!_*_|} (Nat__suc n) m --> {|!_+_|} m ({|!_*_|} n m).
+[m] {|!_*_|} Nat__zero m --> Agda.etaExpand univ.0 Nat Nat__zero.
+[n, m] {|!_*_|} (Nat__suc n) m --> Agda.etaExpand univ.0 Nat ({|!_+_|} (Agda.etaExpand univ.0 Nat m) (Agda.etaExpand univ.0 Nat ({|!_*_|} (Agda.etaExpand univ.0 Nat n) (Agda.etaExpand univ.0 Nat m)))).
  
 def {|!_==_|} : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Nat (_0 => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Nat (_0 => Agda__Builtin__Bool.Bool)))).
-[] {|!_==_|} Nat__zero Nat__zero --> Agda__Builtin__Bool.Bool__true.
-[n, m] {|!_==_|} (Nat__suc n) (Nat__suc m) --> {|!_==_|} n m.
-[x0, x] {|!_==_|} x0 x --> Agda__Builtin__Bool.Bool__false.
+[] {|!_==_|} Nat__zero Nat__zero --> Agda.etaExpand univ.0 Agda__Builtin__Bool.Bool Agda__Builtin__Bool.Bool__true.
+[n, m] {|!_==_|} (Nat__suc n) (Nat__suc m) --> Agda.etaExpand univ.0 Agda__Builtin__Bool.Bool ({|!_==_|} (Agda.etaExpand univ.0 Nat n) (Agda.etaExpand univ.0 Nat m)).
+[x0, x] {|!_==_|} x0 x --> Agda.etaExpand univ.0 Agda__Builtin__Bool.Bool Agda__Builtin__Bool.Bool__false.
  
 def {|!_<_|} : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Nat (_0 => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Nat (_0 => Agda__Builtin__Bool.Bool)))).
-[x] {|!_<_|} x Nat__zero --> Agda__Builtin__Bool.Bool__false.
-[n] {|!_<_|} Nat__zero (Nat__suc n) --> Agda__Builtin__Bool.Bool__true.
-[n, m] {|!_<_|} (Nat__suc n) (Nat__suc m) --> {|!_<_|} n m.
+[x] {|!_<_|} x Nat__zero --> Agda.etaExpand univ.0 Agda__Builtin__Bool.Bool Agda__Builtin__Bool.Bool__false.
+[n] {|!_<_|} Nat__zero (Nat__suc n) --> Agda.etaExpand univ.0 Agda__Builtin__Bool.Bool Agda__Builtin__Bool.Bool__true.
+[n, m] {|!_<_|} (Nat__suc n) (Nat__suc m) --> Agda.etaExpand univ.0 Agda__Builtin__Bool.Bool ({|!_<_|} (Agda.etaExpand univ.0 Nat n) (Agda.etaExpand univ.0 Nat m)).
  
 def {|!div-helper|} : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Nat (k => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Nat (m => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Nat (n => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Nat (j => Nat)))))))).
-[k, m, j] {|!div-helper|} k m Nat__zero j --> k.
-[k, m, n] {|!div-helper|} k m (Nat__suc n) Nat__zero --> {|!div-helper|} (Nat__suc k) m n m.
-[k, m, n, j] {|!div-helper|} k m (Nat__suc n) (Nat__suc j) --> {|!div-helper|} k m n j.
+[k, m, j] {|!div-helper|} k m Nat__zero j --> Agda.etaExpand univ.0 Nat k.
+[k, m, n] {|!div-helper|} k m (Nat__suc n) Nat__zero --> Agda.etaExpand univ.0 Nat ({|!div-helper|} (Agda.etaExpand univ.0 Nat (Nat__suc (Agda.etaExpand univ.0 Nat k))) (Agda.etaExpand univ.0 Nat m) (Agda.etaExpand univ.0 Nat n) (Agda.etaExpand univ.0 Nat m)).
+[k, m, n, j] {|!div-helper|} k m (Nat__suc n) (Nat__suc j) --> Agda.etaExpand univ.0 Nat ({|!div-helper|} (Agda.etaExpand univ.0 Nat k) (Agda.etaExpand univ.0 Nat m) (Agda.etaExpand univ.0 Nat n) (Agda.etaExpand univ.0 Nat j)).
  
 def {|!mod-helper|} : Agda.Term (Agda.set univ.0) (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Nat (k => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Nat (m => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Nat (n => (Agda.prod (Agda.set univ.0) (Agda.set univ.0) Nat (j => Nat)))))))).
-[k, m, j] {|!mod-helper|} k m Nat__zero j --> k.
-[k, m, n] {|!mod-helper|} k m (Nat__suc n) Nat__zero --> {|!mod-helper|} Nat__zero m n m.
-[k, m, n, j] {|!mod-helper|} k m (Nat__suc n) (Nat__suc j) --> {|!mod-helper|} (Nat__suc k) m n j.
+[k, m, j] {|!mod-helper|} k m Nat__zero j --> Agda.etaExpand univ.0 Nat k.
+[k, m, n] {|!mod-helper|} k m (Nat__suc n) Nat__zero --> Agda.etaExpand univ.0 Nat ({|!mod-helper|} (Agda.etaExpand univ.0 Nat Nat__zero) (Agda.etaExpand univ.0 Nat m) (Agda.etaExpand univ.0 Nat n) (Agda.etaExpand univ.0 Nat m)).
+[k, m, n, j] {|!mod-helper|} k m (Nat__suc n) (Nat__suc j) --> Agda.etaExpand univ.0 Nat ({|!mod-helper|} (Agda.etaExpand univ.0 Nat (Nat__suc (Agda.etaExpand univ.0 Nat k))) (Agda.etaExpand univ.0 Nat m) (Agda.etaExpand univ.0 Nat n) (Agda.etaExpand univ.0 Nat j)).
  

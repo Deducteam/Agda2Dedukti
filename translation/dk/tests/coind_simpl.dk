@@ -5,12 +5,13 @@ Stream : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set (univ.s univ.
 def Stream__hd : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set univ.0) (Agda.code (Agda.set univ.0)) (A => (Agda.proj_prod (Agda.set univ.0) (Agda.set univ.0) (Stream A) (r => A)))).
 def Stream__tl : Agda.Term (Agda.set (univ.s univ.0)) (Agda.prod (Agda.set (univ.s univ.0)) (Agda.set univ.0) (Agda.code (Agda.set univ.0)) (A => (Agda.proj_prod (Agda.set univ.0) (Agda.set univ.0) (Stream A) (r => (Stream A))))).
 
-
-[A, hd, tl] Stream__hd A ({|!Stream'constructor|} A hd tl) --> hd.
+[A, y] Agda.etaExpand _ (Stream A) y --> y.
+ 
+[A, hd, tl] Stream__hd A ({|!Stream'constructor|} A hd tl) --> Agda.etaExpand univ.0 A hd.
  
 [A, hd, tl] Stream__tl A ({|!Stream'constructor|} A hd tl) --> tl.
  
 def zeros : Agda.Term (Agda.set univ.0) (Stream Agda__Builtin__Nat.Nat).
-[] Stream__hd {Agda__Builtin__Nat.Nat} zeros --> Agda__Builtin__Nat.Nat__zero.
+[] Stream__hd {Agda__Builtin__Nat.Nat} zeros --> Agda.etaExpand univ.0 Agda__Builtin__Nat.Nat Agda__Builtin__Nat.Nat__zero.
 [] Stream__tl {Agda__Builtin__Nat.Nat} zeros --> zeros.
  

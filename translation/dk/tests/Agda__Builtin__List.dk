@@ -3,6 +3,8 @@ List : Agda.Term Agda.sortOmega (Agda.qLevel (a => Agda.set (univ.s a)) (a => Ag
 [a, A] Agda.Term _ (List a A) --> TYPE__List a A.
 {|!List__[]|} : Agda.Term Agda.sortOmega (Agda.qLevel (a => Agda.set (univ.s a)) (a => Agda.prod (Agda.set (univ.s a)) (Agda.set a) (Agda.code (Agda.set a)) (A => (List a A)))).
 {|!List___∷_|} : Agda.Term Agda.sortOmega (Agda.qLevel (a => Agda.set (univ.s a)) (a => Agda.prod (Agda.set (univ.s a)) (Agda.set a) (Agda.code (Agda.set a)) (A => (Agda.prod (Agda.set a) (Agda.set a) A (x => (Agda.prod (Agda.set a) (Agda.set a) (List a A) (xs => (List a A)))))))).
-
+[a, A] Agda.etaExpand _ (List _ _) ({|!List__[]|} a A) --> {|!List__[]|} a A.
+[a, A, x, xs] Agda.etaExpand _ (List _ _) ({|!List___∷_|} a A x xs) --> {|!List___∷_|} a A (Agda.etaExpand a A x) (Agda.etaExpand a (List a A) xs).
+ 
 
 

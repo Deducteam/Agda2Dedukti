@@ -395,6 +395,7 @@ printPattern pos mods dkMode boundCtx (DkPattBuiltin t) =
 -- We do not guard variables, since non-linear rules are more efficient.
 -- For certain cases in dedukti, if we print a guarded variable
 -- without the brackets it will complain
+
 printPattern pos mods dkMode boundCtx (DkGuarded (DkDB n _)) =
   case dkMode of
     DkMode -> printIdent dkMode boundCtx n
@@ -405,6 +406,7 @@ printPattern pos mods dkMode boundCtx (DkGuarded t) =
     DkMode -> braces (printTerm Top mods dkMode boundCtx t)
     LpMode ->
       text "_" -- no brace patterns in lambdapi
+
 printPattern pos mods dkMode boundCtx DkJoker =
   char '_'
 
@@ -449,7 +451,7 @@ data IsStatic = Static | Defin | TypeConstr deriving (Show)
 keywords = ["Type", "def", "thm", "injective", "defac", "defacu", "symbol", "constant",
             "TYPE", "rule", "with", "builtin", "notation", "infix", "right", "left",
             "associative", "commutative", "compute", "assert", "set", "prop", "U", "Sort",
-            "∨", "□", "El", "⋄", "∀", "⇝", "⇝proj", "η", "⊕", "L", "z", "s"]
+            "∨", "□", "El", "⋄", "∀", "⇝", "⇝proj", "η", "⊕", "L", "z", "s", "as"]
 
 encapsulate :: String -> String
 encapsulate l =

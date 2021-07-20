@@ -1,4 +1,4 @@
-AGDA_STD_DIR = /home/thiago/git/Agda2Dedukti/agda-stdlib
+AGDA_STD_DIR = /home/thiago/git/Agda2Dedukti/agda-stdlib/src/Codata/Musical
 EXEC = $(shell pwd)/dist/build/Agda2Dedukti/Agda2Dedukti
 
 DK_TEST_DIR = translation/dk/tests/
@@ -36,10 +36,10 @@ test-dk-noEta: compile rm-agdai $(DKS)
 	cd $(DK_TEST_DIR) && make BASE_LOC="-I ../../../theory/dk/noEta"
 
 test-lp-eta: set-eta compile rm-agdai $(LPS)
-	cd $(LP_TEST_DIR) && make
+	cd $(LP_TEST_DIR) && make eta
 
 test-lp-noEta: compile rm-agdai $(LPS)
-	cd $(LP_TEST_DIR) && make
+	cd $(LP_TEST_DIR) && make noEta
 
 clean-tests-dk:
 	rm $(DK_TEST_DIR)/*.dk* $(DK_TEST_DIR)/.depend
@@ -51,7 +51,7 @@ clean-tests-lp:
 NB ?= -1
 TIMEOUT ?=0
 
-std-lib: compile
+std-lib-no-eta: compile
 	bash "./translation/dk/generate_std-lib.sh" $(AGDA_STD_DIR) $(EXEC) "--dk $(OPTS)" $(shell pwd)/$(DK_STD_DIR) $(NB)
 	cd $(STD_DIR) && make FLAGS="-e --snf $(DK_FLAGS)" TIMEOUT=$(TIMEOUT);
 
