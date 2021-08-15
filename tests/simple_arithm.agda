@@ -126,9 +126,3 @@ euclid (suc .(sum (sum a (mult y a)) y)) (suc y) p | exintro a (exintro y (inand
   exintro (suc a) (exintro zero (inand (Sleq 0leq)
     (cong (trs (trs (sym (sumassos {a} {mult y a} {y})) (cong (trs (sumcom {mult y a} {y}) (trs (cong (multcom {y} {a}) (λ s → sum y s)) (multcom {suc a} {y}))) (λ s → sum a s))) (sum0 (sum a (mult y (suc a))))) suc)))
 
---Snm : (x y : N) → (Neq (suc (sum x y)) (sum x (suc y)))
-
---even : (x : N) →  (exists N (λ k → Neq x (mult (suc (suc zero)) k))) →
---  (exists N (λ k → Neq (suc (suc x)) (mult (suc (suc zero)) k)))
---even .(sum a (sum a zero)) (exintro a (refl .(sum a (sum a zero)))) = exintro (suc a) (cong (Snm a (sum a zero)) suc)
-

@@ -1,9 +1,0 @@
-variable 
-  A : Set
-
-data _≡_ : A -> A -> Set where
-  refl : {a : A} -> a ≡ a
-infix 4 _≡_
-
-sym : {x y : A} → x ≡ y → y ≡ x
-sym refl = refl

@@ -451,7 +451,7 @@ data IsStatic = Static | Defin | TypeConstr deriving (Show)
 keywords = ["Type", "def", "thm", "injective", "defac", "defacu", "symbol", "constant",
             "TYPE", "rule", "with", "builtin", "notation", "infix", "right", "left",
             "associative", "commutative", "compute", "assert", "set", "prop", "U", "Sort",
-            "∨", "□", "El", "⋄", "∀", "⇝", "⇝proj", "η", "⊕", "L", "z", "s", "as"]
+            "∨", "□", "El", "⋄", "∀", "⇝", "⇝proj", "η", "⊕", "L", "z", "s", "as", "begin", "end"]
 
 encapsulate :: String -> String
 encapsulate l =
