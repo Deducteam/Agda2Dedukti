@@ -1,7 +1,7 @@
 module Main where
 
 import Agda.Main (runAgda)
-import Agda2Dk.Compiler
+import Compiler
 
 main :: IO ()
 main = runAgda [dkBackend]

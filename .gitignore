@@ -1,3 +1,4 @@
+.stack-work/
 *~
 *.hi
 *.o
@@ -5,23 +6,8 @@
 #*
 .#*
 *.dko
-*.dk
-*.lp
 *.lpo
-theory/*.dk
-theory/*.lp
-!translation/lp/Agda__Primitive-eta.lp
-!translation/lp/Agda__Primitive-noEta.lp
-
-# normally very big file
-src/Main
-
+*.depend
+tests/output/dk/tests/*.dk*
+tests/output/lp/tests/*.lp*
 agda/
-translation/tests_/
-agda-stdlib-1.6/
-agda-stdlib/
-dist/
-.cabal-sandbox/
-
-cabal.sandbox.config
-TAGS

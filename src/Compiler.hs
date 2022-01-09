@@ -2,7 +2,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 
 
-module Agda2Dk.Compiler where
+module Compiler where
 
 -- hides (<>), as there was a conflit with the (<>) defined here
 import Prelude hiding ((<>))
@@ -51,7 +51,7 @@ import Agda.Utils.Monad
 import Agda.Utils.Pretty (pretty)
 import Agda.Utils.Impossible
 
-import Agda2Dk.DkSyntax
+import DkSyntax
 
 ------------------------------------------------------------------------------
 -- Backend callbacks

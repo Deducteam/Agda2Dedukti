@@ -1,51 +1,57 @@
-AGDA_STD_DIR = /home/thiago/git/Agda2Dedukti/agda-stdlib/src/Codata/Musical
-EXEC = $(shell pwd)/dist/build/Agda2Dedukti/Agda2Dedukti
+AGDA_STD_DIR = 
+EXEC = stack exec -- Agda2Dedukti-exe
 
-DK_TEST_DIR = translation/dk/tests/
-LP_TEST_DIR = translation/lp/tests/
+TEST_FILES = tests/files/
+TEST_OUTPUT_DK = tests/output/dk/tests/
+TEST_OUTPUT_LP = tests/output/lp/tests/
 
-DK_STD_DIR = translation/dk/std-lib/
-LP_STD_DIR = translation/lp/std-lib/
+DK_STD_DIR = 
+LP_STD_DIR = 
 
-AGDAS = $(wildcard tests/*.agda)
-DKS = $(patsubst tests/%.agda, translation/dk/tests/%.dk, $(AGDAS))
-LPS = $(patsubst tests/%.agda, translation/lp/tests/%.lp, $(AGDAS))
+AGDAS = $(wildcard $(TEST_FILES)/*.agda)
+DKS = $(patsubst $(TEST_FILES)/%.agda, $(TEST_OUTPUT_DK)/%.dk, $(AGDAS))
+LPS = $(patsubst $(TEST_FILES)/%.agda, $(TEST_OUTPUT_LP)/%.lp, $(AGDAS))
 
 all: compile
 
 compile:
-	cabal build
+	stack build
 
-translation/dk/tests/%.dk: tests/%.agda
-	cd tests && $(EXEC) --dk $(OPTS) --outDir=../$(DK_TEST_DIR) $(<F)
+theory-objects:
+	cd theory/dk/eta && rm *.dko ; dkcheck -e univ.dk && dkcheck -e Agda.dk
+	cd theory/dk/noEta && rm *.dko ; dkcheck -e univ.dk && dkcheck -e Agda.dk
+	cd theory/lp/AgdaTheory && make clean && make install
 
-translation/lp/tests/%.lp: tests/%.agda
-	cd tests && $(EXEC) --dk --lp $(OPTS) --outDir=../$(LP_TEST_DIR) $(<F)
+tests/output/dk/tests/%.dk: tests/files/%.agda
+	cd $(TEST_FILES) && $(EXEC) --dk $(OPTS) --outDir=../../$(TEST_OUTPUT_DK) $(<F)
+
+tests/output/lp/tests/%.lp: tests/files/%.agda
+	cd $(TEST_FILES) && $(EXEC) --dk --lp $(OPTS) --outDir=../../$(TEST_OUTPUT_LP) $(<F)
 
 # sometimes using an old .agdai causes some problems
 rm-agdai:
-	cd tests && rm -f *.agdai && cd ..
+	-cd $(TEST_FILES) && rm *.agdai
 
 set-eta:
 	$(eval OPTS+= --eta)
 
-test-dk-eta: set-eta compile rm-agdai $(DKS)
-	cd $(DK_TEST_DIR) && make BASE_LOC="-I ../../../theory/dk/eta"
+test-dk-eta: clean-tests-dk set-eta compile rm-agdai $(DKS) theory-objects
+	cd $(TEST_OUTPUT_DK) && make BASE_LOC="-I ../../../../theory/dk/eta"
 
-test-dk-noEta: compile rm-agdai $(DKS)
-	cd $(DK_TEST_DIR) && make BASE_LOC="-I ../../../theory/dk/noEta"
+test-dk-noEta: clean-tests-dk compile rm-agdai $(DKS) theory-objects
+	cd $(TEST_OUTPUT_DK) && make BASE_LOC="-I ../../../../theory/dk/noEta"
 
-test-lp-eta: set-eta compile rm-agdai $(LPS)
-	cd $(LP_TEST_DIR) && make eta
+test-lp-eta: clean-tests-lp set-eta compile rm-agdai $(LPS) theory-objects
+	cd $(TEST_OUTPUT_LP) && make eta
 
-test-lp-noEta: compile rm-agdai $(LPS)
-	cd $(LP_TEST_DIR) && make noEta
+test-lp-noEta: clean-tests-lp compile rm-agdai $(LPS) theory-objects
+	cd $(TEST_OUTPUT_LP) && make noEta
 
 clean-tests-dk:
-	rm $(DK_TEST_DIR)/*.dk* $(DK_TEST_DIR)/.depend
+	-rm $(TEST_OUTPUT_DK)/*.dk* $(TEST_OUTPUT_DK)/.depend
 
 clean-tests-lp:
-	rm $(LP_TEST_DIR)/*.lp*
+	-rm $(TEST_OUTPUT_LP)/*.lp*
 
 
 NB ?= -1

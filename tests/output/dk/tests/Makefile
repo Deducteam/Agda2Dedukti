@@ -7,7 +7,7 @@ DKS=$(wildcard *.dk)
 DKOS=$(shell cut -d ':' -f 1 .depend)
 
 # BASE_LOC = -I ../../../theory/dk
-FLAGS = -e --snf
+FLAGS = -e --errors-in-snf
 
 DKDEP=dkdep $(BASE_LOC)
 DKCHECK=dkcheck $(BASE_LOC) $(FLAGS)

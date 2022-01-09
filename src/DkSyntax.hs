@@ -1,4 +1,4 @@
-module Agda2Dk.DkSyntax where
+module DkSyntax where
 
 import Data.Word
 import Data.List (sort)
