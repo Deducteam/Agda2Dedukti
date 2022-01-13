@@ -36,7 +36,9 @@ packages:
 # forks / in-progress versions pinned to a git hash. For example:
 #
 extra-deps:
-  - agda
+# - agda
+  - git: https://github.com/Deducteam/agda.git
+    commit: b026db1fa2fbc4bafeff0d0a997d36ac07a94dc5
   - Unique-0.4.7.9@sha256:a7e154cf6d05169777a1e54aadab24fb3a6eae3ee167e5e77d7ba96d182436c7,2064
 # - acme-missiles-0.3
 # - git: https://github.com/commercialhaskell/stack.git

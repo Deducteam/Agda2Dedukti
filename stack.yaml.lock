@@ -5,6 +5,17 @@
 
 packages:
 - completed:
+    name: Agda
+    version: 2.6.3
+    git: https://github.com/Deducteam/agda.git
+    pantry-tree:
+      size: 848490
+      sha256: 72a78b9fe1d96389729044c32d46c6fc892446522ed81b4aa4ca12c40f88d829
+    commit: b026db1fa2fbc4bafeff0d0a997d36ac07a94dc5
+  original:
+    git: https://github.com/Deducteam/agda.git
+    commit: b026db1fa2fbc4bafeff0d0a997d36ac07a94dc5
+- completed:
     hackage: Unique-0.4.7.9@sha256:a7e154cf6d05169777a1e54aadab24fb3a6eae3ee167e5e77d7ba96d182436c7,2064
     pantry-tree:
       size: 1366
