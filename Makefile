@@ -18,8 +18,8 @@ compile:
 	stack build
 
 theory-objects:
-	cd theory/dk/eta && rm *.dko ; dkcheck -e univ.dk && dkcheck -e Agda.dk
-	cd theory/dk/noEta && rm *.dko ; dkcheck -e univ.dk && dkcheck -e Agda.dk
+	cd theory/dk/eta && rm -f *.dko ; dkcheck -e univ.dk && dkcheck -e Agda.dk
+	cd theory/dk/noEta && rm -f *.dko ; dkcheck -e univ.dk && dkcheck -e Agda.dk
 	cd theory/lp/AgdaTheory && make clean && make install
 
 tests/output/dk/tests/%.dk: tests/files/%.agda
@@ -30,7 +30,7 @@ tests/output/lp/tests/%.lp: tests/files/%.agda
 
 # sometimes using an old .agdai causes some problems
 rm-agdai:
-	-cd $(TEST_FILES) && rm *.agdai
+	-cd $(TEST_FILES) && rm -f *.agdai
 
 set-eta:
 	$(eval OPTS+= --eta)
