@@ -4,7 +4,7 @@ This is a translator from the Agda proof assistant to an encoding of its logic i
 
 ## How to install
 
-This translator is written as an Agda backend, and thus needs Agda to be present. To have the last Agda version tested with this package, from the project root run `git clone https://github.com/thiagofelicissimo/agda`, `cd agda` and `git checkout last-version-jesper-pr` (we are using a different branch then master in order to have a small modification needed for the translator to work). Stack is already configured to look for Agda in the directory `agda` in the project root, thus if you run `stack build` on the Agda2Dedukti project root it will correctly build using the right Agda version. 
+This translator is written as an Agda backend, and thus needs Agda to be present. To have the last Agda version tested with this package, from the project root run `git clone https://github.com/thiagofelicissimo/agda`, `cd agda` and `git checkout last-version-jesper-pr` (we are using a different branch than master in order to have a small modification needed for the translator to work). Stack is already configured to look for Agda in the directory `agda` in the project root, thus if you run `stack build` on the Agda2Dedukti project root it will correctly build using the right Agda version. 
 
 Once Agda2Dedukti is built, you can already translate files, but in order to typecheck them you will need to install Dedukti or Lambdapi. The following versions should work: `4cf69db4` for Lambdapi and `c65e7e6` for Dedukti. Then in order to check that everything is working you can do `make test-dk-eta`, which should translate and typecheck most of the test files.
 
@@ -14,7 +14,7 @@ The translator has two modes which are used to specify the target of the transla
 
 - Lambdapi mode : By default, the translator produces a Dedukti file, and the user needs to use the theory files in `theory/dk` to check the file. However, by using the `--lp` flag, the translator enters Lambdapi mode, and produces a Lambdapi file which needs to be checked with the theory files in `theory/lp`.
 
-- Eta-conversion mode : Agda is a proof assistant which has eta-equality in its conversion system. This is not always needed when translating proofs, but if it should be the case, the user can use the fla `--eta`, which produces a files that should be checked using the theory files with eta conversion. In this case, in the directory `theory/dk` (or `theory/lp/AgdaTheory`) we should use the files in the folder `eta`. Note that when using eta conversion the size of the files becomes much bigger, and some files that can be checked with Dedukti won't work with Lambdapi.
+- Eta-conversion mode : Agda is a proof assistant which has eta-equality in its conversion system. This is not always needed when translating proofs, but if it should be the case, the user can use the flag `--eta`, which produces a files that should be checked using the theory files with eta conversion. In this case, in the directory `theory/dk` (or `theory/lp/AgdaTheory`) we should use the files in the folder `eta`. Note that when using eta conversion the size of the files becomes much bigger, and some files that can be checked with Dedukti may not work with Lambdapi.
 
 Explicitly, given an Agda file, and assuming we have already runned `stack build`, we use the following commands to translate it to Dedukti or Lambdapi, with or without eta-conversion.
 ```
@@ -24,7 +24,7 @@ stack exec -- Agda2Dedukti-exe --dk --lp  file.agda         (Lambdapi, no eta)
 stack exec -- Agda2Dedukti-exe --dk --lp --eta file.agda    (Lambdapi, with eta)
 ```
 
-Obs .: If we are translating a file which uses Agda.Primitive into Lambdapi, then the translator will produce a file `Agda__Primitive.lp` which will not work. To get a working translator of Agda.Primitive, one should copy the file `Agda__Primitive-noEta.lp` (or `Agda__Primitive-eta.lp`) in `tests/output/lp` into the working directory, and rename it into `Agda__Primitive.lp`.
+If we are translating a file which uses Agda.Primitive into Lambdapi, then the translator will produce a file `Agda__Primitive.lp` which will not work. To get a working translator of Agda.Primitive, one should copy the file `Agda__Primitive-noEta.lp` (or `Agda__Primitive-eta.lp`) from `tests/output/lp` into the working directory, and rename it into `Agda__Primitive.lp`.
 
 ## Typechecking
 
