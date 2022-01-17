@@ -11,7 +11,12 @@ To install Agda2Dedukti you will need:
 
 This translator is written as an Agda backend and thus needs it to run. However by running `stack build` Stack should already install an apropriate Agda version in a sandbox and proceed with the build of Agda2Dedukti  --- currently, we are using a branch of Agda in https://github.com/Deducteam/agda/tree/to_dk with a small modification, but in the future it should work with the master branch. 
 
-Once Agda2Dedukti is built, you can already translate Agda files. However, in order to typecheck them you will need to install Dedukti or Lambdapi. The following versions are checked to work: `4cf69db4` for Lambdapi and `c65e7e6` for Dedukti. Then in order to check that everything is working you can do `make test-dk-eta`, which should translate and typecheck most of the test files.
+Once Agda2Dedukti is built, you can already translate Agda files. However, in order to typecheck them you will need to install Dedukti or Lambdapi. The following versions are checked to work.
+
+- `Lambdapi 2.1.0` (hash `215a0e2`)
+- `Dedukti` hash `c65e7e6`
+
+Then in order to check that everything is working you can do `make test-dk-eta`, which should translate and typecheck most of the test files.
 
 ## Modes
 
