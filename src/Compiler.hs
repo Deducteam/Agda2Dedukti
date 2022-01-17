@@ -354,7 +354,7 @@ extractRules env etaMode n (funDef@Function {}) ty =
             return $ getFunCovering
           Just _ -> do
         -- record projection, we take funClauses because projections don't go
-        -- trought the covering checker          
+        -- throught the covering checker          
             reportSDoc "toDk.clause" 20 $
               (text " taking clauses from funClauses : " <+>) <$>
               (return $ pretty $ funClauses funDef )
@@ -445,11 +445,11 @@ clause2rule env@(_,eta) etaMode nam c = do
       addContext (clauseTel c) $
       unsafeModifyContext separateVars $
       do
-        reportSDoc "bla" 3 $ return $ text "On a changé le contexte"
+        reportSDoc "toDk2" 3 $ return $ text "On a changé le contexte"
         tele <- getContext
         ctx <- extractContextNames tele
 
-        -- record projections clauses don't go trought the covering checker, so in
+        -- record projections clauses don't go throught the covering checker, so in
         -- particular the clauses do not contain the implicit arguments (which in
         -- this case are simply the record parameters), which are inserted by the
         -- covering checker. therefore, we get the number of implicit arguments, so we
@@ -465,7 +465,7 @@ clause2rule env@(_,eta) etaMode nam c = do
               (fromMaybe __IMPOSSIBLE__) <$> getNumberOfParameters n
         let impArgs = implicitArgs implicits (reverse ctx)
         
-        reportSDoc "bla" 3 $ return $ text "On a les implicites"
+        reportSDoc "toDk2" 3 $ return $ text "On a les implicites"
 
         -- eta expands the rhs and reconstructs the parameters
         rhsExpanded <-
@@ -476,13 +476,13 @@ clause2rule env@(_,eta) etaMode nam c = do
               return r
             Just t  -> do
               -- We use the type to eta expand
-              reportSDoc "bla" 3 $ return $ text "On a bien un type"
+              reportSDoc "toDk2" 3 $ return $ text "On a bien un type"
               r1 <- checkInternal' (etaExpandAction eta etaMode) r CmpLeq (unArg t)
-              reportSDoc "bla" 3 $ return $ text "On a fait le premier chkIn"
+              reportSDoc "toDk2" 3 $ return $ text "On a fait le premier chkIn"
               reconstructParameters' (etaExpandAction eta etaMode) (unArg t) r1
         reportSDoc "toDk.clause" 30 $ return $ text "    Parameters reconstructed"
         reportSDoc "toDk.clause" 40 $ return $ text "    The final body is" <+> pretty rhsExpanded
-        reportSDoc "bla" 3 $ return $ text "On a reconstruit les paramètres"
+        reportSDoc "toDk2" 3 $ return $ text "On a reconstruit les paramètres"
 
         -- translates rhs
         rhsDk <- translateTerm env etaMode rhsExpanded
@@ -491,18 +491,18 @@ clause2rule env@(_,eta) etaMode nam c = do
         tyHd <- defType <$> getConstInfo nam
 
         
-        reportSDoc "bla" 3 $ return $ text "On a traduit à droite"
+        reportSDoc "toDk2" 3 $ return $ text "On a traduit à droite"
         let tyInst = piApply tyHd (map (defaultArg . patternToTerm . snd) impArgs)
-        reportSDoc "bla" 3 $ return $ text "On extrait les patterns"
+        reportSDoc "toDk2" 3 $ return $ text "On extrait les patterns"
 
 
         Right headSymb <- qName2DkName env etaMode nam -- nam is not a copy
 
         (headSymb, patts) <- extractPatterns env etaMode (namedClausePats c) tyInst (map fst impArgs) headSymb
 
-        reportSDoc "bla" 3 $ return $ text "On a extrait les patterns"
-        reportSDoc "bla" 3 $ return $ text "On a extrait les p " <+> pretty (namedClausePats c)
-        reportSDoc "bla" 3 $ return $ text "On a extrait les p " <+> pretty nam
+        reportSDoc "toDk2" 3 $ return $ text "On a extrait les patterns"
+        reportSDoc "toDk2" 3 $ return $ text "On a extrait les p " <+> pretty (namedClausePats c)
+        reportSDoc "toDk2" 3 $ return $ text "On a extrait les p " <+> pretty nam
 
         return $ Just DkRule
           { decoding  = False
@@ -569,7 +569,7 @@ extractPattern env@(_,eta) etaMode p applyingType = do
   let patt = namedThing (unArg p)
   case patt of
     VarP _ (DBPatVar {dbPatVarIndex=i})  -> do
-      reportSDoc "bla" 3 $ return $ text "VarP"
+      reportSDoc "toDk2" 3 $ return $ text "VarP"
       nam <- nameOfBV i
 
       -- gets type of f e1 ... ek p
@@ -578,7 +578,7 @@ extractPattern env@(_,eta) etaMode p applyingType = do
       return $ (DkVar (name2DkIdent nam) i [], finalTy)
 
     DotP _ t                             -> do
-      reportSDoc "bla" 3 $ return $ text "DotP"
+      reportSDoc "toDk2" 3 $ return $ text "DotP"
       
       let patternType = case applyingType of
                           El _ (Pi (Dom{unDom=domainType}) _) -> domainType
@@ -595,7 +595,7 @@ extractPattern env@(_,eta) etaMode p applyingType = do
 --      return $ (DkJoker, finalTy)
 
     ConP (ConHead {conName=h}) ci tl     -> do
-      reportSDoc "bla" 3 $ return $ text "ConP" <+> pretty h
+      reportSDoc "toDk2" 3 $ return $ text "ConP" <+> pretty h
 
       -- let f e1 ... ek the part of the patterns already translated and applyingType
       -- its type. the pattern p we are translating applies to the right of it
@@ -658,12 +658,12 @@ extractPattern env@(_,eta) etaMode p applyingType = do
       return $ (translatedPatt, finalTy)
 
     LitP _ l                            -> do
-      reportSDoc "bla" 3 $ return $ text "LitP"
+      reportSDoc "toDk2" 3 $ return $ text "LitP"
       -- gets type of f e1 ... ek p
       let finalTy = piApply applyingType [defaultArg (patternToTerm (namedArg p))]
       return $ (DkPattBuiltin (translateLiteral l), finalTy)
     ProjP _ nam                         -> do
-      reportSDoc "bla" 3 $ return $ text "ProjP"
+      reportSDoc "toDk2" 3 $ return $ text "ProjP"
 
       -- we are translating a projection p which is applied to the term f e1 .. ek of
       -- type applyingType. the term f e1 ... ek must be of a record type, so we
@@ -722,22 +722,22 @@ extractPattern env@(_,eta) etaMode p applyingType = do
 
     caseParamFun :: Type -> Elims -> TCM (Type,[DkPattern])
     caseParamFun tyCons els = do
-      reportSDoc "bla" 3 $ return $ text "ELIMS ARE ..."
+      reportSDoc "toDk2" 3 $ return $ text "ELIMS ARE ..."
       caseParamFun' tyCons els []
 
     caseParamFun' tyCons [] acc = do
       return (tyCons, reverse acc)
     caseParamFun' tyCons@(El _ (Pi (Dom {unDom=tyArg}) _)) ((Apply (Arg _ t)):tl) acc = do
-      reportSDoc "bla" 3 $ return $ text "We start caseParamFun' with ..."
-      reportSDoc "bla" 3 $ return $ text "The type is ..."
+      reportSDoc "toDk2" 3 $ return $ text "We start caseParamFun' with ..."
+      reportSDoc "toDk2" 3 $ return $ text "The type is ..."
       ctxHere <- getContext
-      reportSDoc "bla" 3 $ return $ text "The context is ..."
+      reportSDoc "toDk2" 3 $ return $ text "The context is ..."
       tEta <- checkInternal' (etaExpandAction eta etaMode) t CmpLeq tyArg
-      reportSDoc "bla" 3 $ return $ text "Eta-expansion done"
+      reportSDoc "toDk2" 3 $ return $ text "Eta-expansion done"
       tPar <- reconstructParameters' (etaExpandAction eta etaMode) tyArg tEta
-      reportSDoc "bla" 3 $ return $ text "params reconstructed"
+      reportSDoc "toDk2" 3 $ return $ text "params reconstructed"
       tDk <- translateTerm env etaMode tPar
-      reportSDoc "bla" 3 $ return $ text "term translated"
+      reportSDoc "toDk2" 3 $ return $ text "term translated"
       caseParamFun' (piApply tyCons [defaultArg t]) tl (DkGuarded tDk:acc)
 
 substi :: [DkPattern] -> DkTerm -> DkTerm
@@ -967,17 +967,17 @@ qName2DkName env@(_,eta) etaMode qn@QName{qnameModule=mods, qnameName=nam}
         let ty = defType def
         -- why do we need to do etaExpansion here? why do we need to do this
         -- only to get the name?
-        reportSDoc "bla" 3 $ return $ text "ty Here" <+> pretty ty
+        reportSDoc "toDk2" 3 $ return $ text "ty Here" <+> pretty ty
         -- this first step is just to eta-expand, in order to trigger reduction
         tChk <- checkInternal' (etaExpandAction eta etaMode) (Def qn []) CmpLeq ty
-        reportSDoc "bla" 3 $ return $ text "tChk OK"
+        reportSDoc "toDk2" 3 $ return $ text "tChk OK"
         tRed <- normalise tChk
-        reportSDoc "bla" 3 $ return $ text "tRed OK"
+        reportSDoc "toDk2" 3 $ return $ text "tRed OK"
         -- We have to do it again since normalise eliminated it
         tChk2 <- checkInternal' (etaExpandAction eta etaMode) tRed CmpLeq ty
-        reportSDoc "bla" 3 $ return $ text "tChk2 OK"
+        reportSDoc "toDk2" 3 $ return $ text "tChk2 OK"
         tRecons <- reconstructParameters' (etaExpandAction eta etaMode) ty tChk2
-        reportSDoc "bla" 3 $ return $ text "tRecons OK"
+        reportSDoc "toDk2" 3 $ return $ text "tRecons OK"
         return $ Left tRecons
       else
         let otherMods = stripPrefix (mnameToList topMod) (mnameToList mods) in

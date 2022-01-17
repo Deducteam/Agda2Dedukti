@@ -61,6 +61,15 @@ The mode Dedukti with eta is the one which typechecks most files, whereas Lambda
 
 Introducing a new feature into the translation should help to typecheck more files. However, in the case of Lambdapi, when introducing eta we see that the number of checked files decreases. This is because, when introducing the eta symbol (used in the encoding of eta-conversion), the algorithm used to verify subject reduction of rewrite rules in Lambdapi and Dedukti is currently not able to check that some of the generated rules preserve typing. This is avoided in Dedukti with bracket arguments, which is not a completely safe feature and therefore is not implemented in Lambdapi. It is future work to improve Lambdapi to enable it to handle such cases. 
 
+## Debugging
+
+For debugging, one can use the option `-v keyword:level`. The main keyword used for debuging is `toDk`, but there is also the keyword `toDk2`, which prints less organized information.
+
+For instance, to debug the translation of a file with level `20`, one should run
+```
+stack exec -- Agda2Dedukti-exe --dk -v toDk:20 file.agda
+```
+
 ## Supported features
 
 A non-exhaustive list of totally or partially supported features :
