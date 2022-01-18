@@ -1,0 +1,56 @@
+# Configures the files that go through each test
+# 1: --dk
+# 2: --dk --eta
+# 3: --dk --lp
+# 4: --dk --lp --eta
+
+coindMus
+coindMusFormLang
+musical-Stream
+sized_types
+bool-aux 1 2 3
+box 1 2 3 4
+builtins 1 2 3
+coindMusFormLangThunk
+copat 1 2 3 4
+copattern-FormLang 1 2 3
+copattern-Stream 1 2 3
+coveringCheckTest 1 2 3 4
+coveringcheck-with-alias 1 2 3 4
+dependantRecord2 1 2 3
+dependantRecord 1 2 3 4
+eq-aux 1 2 3
+eta-needed-2 2 4
+eta-needed-3 2 4
+eta-needed 2 4
+eta-not-needed-2 1 2 3 4
+eta-not-needed 1 2 3
+extendedLambda 1 2 3 4
+functionalRecord 1 2 3 4
+impor 1 2 3 4
+leveltest 1 2 3 4
+lift 1 2 3 4
+multipleProj 1 2 3 4
+mutualDef 1 2 3 4
+nat-aux 1 2 3
+non-prenex-poly 
+non_terminating 1 2 3 4
+pair 1 2 3 4
+paramMod 1 2 3 4
+prop 1 2 3
+recordPattern 1 2 3 4
+recordProj 1 2 3 4
+recordtest 1 2 3 4
+rose_tree_aux 1 2 3 4
+simple_arithm 1 2 3
+std-coind 1 2 3 4
+testCovering 1 2 3 4
+testRecord 1 2 3 4
+univ-levels-test-1 1 2 3 4
+univ-levels-test-2
+univ-levels-test-3 1 2 3 4
+univ-levels-test-4 1 2 3 4
+univ-levels-test-5 1 2 3 4
+univ-levels-test-6 1 2 3 4
+univ-levels-test-7 1 2 3 4
+univ-levels-test-8

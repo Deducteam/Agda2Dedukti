@@ -9,6 +9,8 @@ TAGS
 *.dko
 *.lpo
 *.depend
-tests/output/dk/tests/*.dk*
-tests/output/lp/tests/*.lp*
+tests/output/dk/eta/*.dk*
+tests/output/dk/no-eta/*.dk*
+tests/output/lp/eta/*.lp*
+tests/output/lp/no-eta/*.lp*
 agda/

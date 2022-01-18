@@ -16,7 +16,7 @@ Once Agda2Dedukti is built, you can already translate Agda files. However, in or
 - `Lambdapi 2.1.0` (hash `215a0e2`)
 - `Dedukti` hash `c65e7e6`
 
-Then in order to check that everything is working you can do `make test-dk-eta`, which should translate and typecheck most of the test files.
+Then in order to check that everything is working you can run `make test`.
 
 ## Modes
 
@@ -50,19 +50,19 @@ lambdapi check file.lp
 
 ## Running tests
 
-The directory `tests` contains test files which can be used to test the translator, using the following commands.
+The directory `tests/files` contains test files which can be used to test the translator, using the following commands.
 ```
-make test-dk-noEta
-make test-dk-eta
-make test-lp-noEta
-make test-lp-eta
+make test  (runs all tests)
+make test-verbose (runs all tests, showing the output of all commands)
+make test-dk (runs only dk tests)
+make test-lp (runs only lp tests)
 ```
 The mode Dedukti with eta is the one which typechecks most files, whereas Lambdapi with eta typechecks the least. For each mode, expect the following number of files to typecheck.
 
-- Dedukti with eta : 50 / 54
-- Dedukti without eta : 47 / 54
-- Lambdapi with eta : 39 / 54
-- Lambdapi whithout eta : 47 / 54
+- Dedukti with eta : 50
+- Dedukti without eta : 47
+- Lambdapi with eta : 39
+- Lambdapi whithout eta : 47
 
 Introducing a new feature into the translation should help to typecheck more files. However, in the case of Lambdapi, when introducing eta we see that the number of checked files decreases. This is because, when introducing the eta symbol (used in the encoding of eta-conversion), the algorithm used to verify subject reduction of rewrite rules in Lambdapi and Dedukti is currently not able to check that some of the generated rules preserve typing. This is avoided in Dedukti with bracket arguments, which is not a completely safe feature and therefore is not implemented in Lambdapi. It is future work to improve Lambdapi to enable it to handle such cases. 
 
