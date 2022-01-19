@@ -1,0 +1,55 @@
+name:                Agda2Dedukti
+version:             0.1.0.0
+github:              "thiagofelicissimo/Agda2Dedukti"
+license:             BSD3
+author:              "Thiago Felicissimo"
+maintainer:          "thiagofelicissimo@inria.fr"
+
+extra-source-files:
+- README.md
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Web
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:         Please see the README on GitHub at <https://github.com/githubuser/Agda2Dedukti#readme>
+
+dependencies:
+- base >= 4.7 && < 5
+- Agda
+- Unique
+- extra
+- text
+- pretty
+- mtl
+- directory
+- deepseq
+- regex-tdfa
+
+library:
+  source-dirs: src
+
+executables:
+  Agda2Dedukti-exe:
+    main:                Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - Agda2Dedukti
+
+#tests:
+#  Agda2Dedukti-test:
+#    main:                Spec.hs
+#    source-dirs:         test
+#    ghc-options:
+#    - -threaded
+#    - -rtsopts
+#n    - -with-rtsopts=-N
+#    dependencies:
+#    - Agda2Dedukti

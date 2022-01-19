@@ -1,0 +1,51 @@
+(; Sorts ;)
+
+Sort : Type.
+
+set  : univ.Lvl -> Sort.
+prop : univ.Lvl -> Sort.
+sortOmega : Sort.
+sizeUniv : Sort.
+
+(; Universe successors ;)
+def axiom : Sort -> Sort.
+[i] axiom (set i)  --> set (univ.s i).
+[i] axiom (prop i) --> set (univ.s i).
+
+(; Universe product rules ;)
+def rule : Sort -> Sort -> Sort.
+[i, j] rule (set i)  (set j)   --> set  (univ.max i j).
+[i, j] rule (set i)  (prop j)  --> prop (univ.max i j).
+[i, j] rule (prop i) (set j)   --> set  (univ.max i j).
+[i, j] rule (prop i) (prop j)  --> prop (univ.max i j).
+[]     rule _        sortOmega --> sortOmega.
+
+[]    rule _        sizeUniv  --> sizeUniv.
+[s]   rule sizeUniv s         --> s.
+
+
+
+(; Types and terms ;)
+
+Univ : s : Sort -> Type.
+
+def Term : s : Sort -> a : Univ s -> Type.
+
+size : Univ sizeUniv.
+
+
+code : s : Sort -> Univ (axiom s).
+prod : s1 : Sort -> s2 : Sort -> A : Univ s1 -> B : (Term s1 A -> Univ s2) -> Univ (rule s1 s2).
+proj_prod : s1 : Sort -> s2 : Sort -> A : Univ s1 -> B : (Term s1 A -> Univ s2) -> Univ (rule s1 s2).
+
+qLevel : f: (univ.Lvl -> Sort) -> (l : univ.Lvl -> Univ (f l)) -> Univ sortOmega.
+
+[s] Term _ (code s) --> Univ s.
+[f, t] Term _ (qLevel f t) --> l : univ.Lvl -> Term (f l) (t l).
+
+[a, b, A, B] Term _ (prod (set a) b A B) --> x : Term (set a) A -> Term b (B x).
+[a, b, A, B] Term _ (prod (prop a) b A B) --> x : Term (prop a) A -> Term b (B x).
+[a, b, A, B] Term _ (proj_prod a  b A B) --> x : Term a A -> Term b (B x).
+
+[b, B, t]       Term _ (prod sizeUniv b t B) --> x : Term sizeUniv t -> Term b (B x).
+
