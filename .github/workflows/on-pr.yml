@@ -1,0 +1,31 @@
+on:
+  pull_request:
+    types: [opened, synchronize, edited, reopened]
+  push:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checking out repo
+        uses: actions/checkout@v2
+      - name: setting up haskell and stack
+        uses: haskell/actions/setup@v1
+        with:
+          enable-stack: true
+          stack-version: 'latest'
+      - name: setting up ocaml
+        uses: ocaml/setup-ocaml@v2
+        with:
+          ocaml-compiler: 4.13.x
+      - name: installing lambdapi and dedukti
+        run: |
+          opam update
+          opam upgrade
+          opam pin add lambdapi https://github.com/Deducteam/lambdapi.git
+          opam install lambdapi
+          opam pin add dedukti https://github.com/Deducteam/dedukti.git
+          opam install dedukti
+      - name: building agda2dedukti
+        run: make compile
+      - name: testing agda2dedukti
+        run: make test
