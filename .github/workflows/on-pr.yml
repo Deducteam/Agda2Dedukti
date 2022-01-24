@@ -1,0 +1,52 @@
+on:
+  pull_request:
+    types: [opened, synchronize, edited, reopened]
+  push:
+  workflow_dispatch:    
+jobs:
+  test:
+    strategy:
+      matrix:
+        ocaml-version: [4.13.1]
+    runs-on: ubuntu-latest
+    steps:
+      - name: checking out repo
+        uses: actions/checkout@v2
+      - name: recovering cached stack files
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.stack
+            .stack-work
+          key: ${{ runner.os }}-stack-${{ hashFiles('stack.yaml.lock', 'package.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-stack
+      - name: recovering cached opam files
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.opam
+          key: ${{ runner.os }}-ocaml-${{ matrix.ocaml-version }}
+      - name: setting up haskell and stack
+        uses: haskell/actions/setup@v1
+        with:
+          enable-stack: true
+          stack-version: 'latest'
+      - name: setting up ocaml
+        uses: avsm/setup-ocaml@v1
+        with:
+          ocaml-version: 4.13.1
+      - name: installing lambdapi and dedukti
+        run: |
+          opam update
+          opam upgrade
+          opam pin add lambdapi https://github.com/Deducteam/lambdapi.git
+          opam install lambdapi
+          opam pin add dedukti https://github.com/Deducteam/dedukti.git
+          opam install dedukti
+      - name: building agda2dedukti
+        run: make compile
+      - name: testing agda2dedukti
+        run: |
+          eval $(opam env)          
+          make test
