@@ -45,6 +45,8 @@ jobs:
           opam pin add dedukti https://github.com/Deducteam/dedukti.git
           opam install dedukti
           eval $(opam env)
+          dkcheck --help
+          lambdapi check --help
       - name: building agda2dedukti
         run: make compile
       - name: testing agda2dedukti
