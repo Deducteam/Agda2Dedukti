@@ -16,7 +16,7 @@ jobs:
       - name: setting up ocaml
         uses: avsm/setup-ocaml@v1
         with:
-          ocaml-version: 4.13.x
+          ocaml-version: 4.13.1
       - name: installing lambdapi and dedukti
         run: |
           opam update
