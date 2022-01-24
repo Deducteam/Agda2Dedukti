@@ -14,9 +14,9 @@ jobs:
           enable-stack: true
           stack-version: 'latest'
       - name: setting up ocaml
-        uses: ocaml/setup-ocaml@v2
+        uses: avsm/setup-ocaml@v1
         with:
-          ocaml-compiler: 4.13.x
+          ocaml-version: 4.13.x
       - name: installing lambdapi and dedukti
         run: |
           opam update
